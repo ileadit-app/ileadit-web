@@ -1,0 +1,20 @@
+@import "tailwindcss";
+
+@theme inline {
+  --color-primary: #192F5F;
+  --color-primary-dark: #0D1B3D;
+  --color-accent: #E91E63;
+  --color-secondary: #F8A92F;
+  --color-purple: #7755FE;
+  --color-success: #4CAF50;
+  --color-error: #F44336;
+  --color-warning: #FF9800;
+  --color-gray-light: #E7EDF3;
+  --color-text-primary: #333333;
+  --font-sans: var(--font-inter);
+}
+
+body {
+  font-family: var(--font-sans), system-ui, sans-serif;
+  color: var(--color-text-primary);
+}
