@@ -1,20 +1,74 @@
 @import "tailwindcss";
 
+/*
+ * Brand tokens — Lacey Bedspread's design system, approved by Paul
+ * 2026-09-19 (see automation-hub/docs/ileadit-web-landing-design-20260919.md).
+ * This supersedes the older pink/Inter palette (#E91E63, Inter) that
+ * previously lived here; CLAUDE.md's brand table has been updated to match.
+ *
+ * Contrast note: muted-foreground is #44566c (7.25:1 on #fafbfb), NOT the
+ * #8a97ac (2.85:1) that failed accessibility review in an earlier pass —
+ * see the landing page design spec and this file's history for why.
+ */
 @theme inline {
-  --color-primary: #192F5F;
-  --color-primary-dark: #0D1B3D;
-  --color-accent: #E91E63;
-  --color-secondary: #F8A92F;
-  --color-purple: #7755FE;
-  --color-success: #4CAF50;
-  --color-error: #F44336;
-  --color-warning: #FF9800;
-  --color-gray-light: #E7EDF3;
-  --color-text-primary: #333333;
-  --font-sans: var(--font-inter);
+  /* neutrals */
+  --color-background: #fafbfb;
+  --color-foreground: #12172a;
+  --color-card: #ffffff;
+  --color-card-foreground: #12172a;
+
+  /* brand: navy — primary */
+  --color-primary: #192f5f;
+  --color-primary-foreground: #ffffff;
+  --color-primary-dark: #0d1b3d;
+
+  --color-secondary: #eef0f7;
+  --color-secondary-foreground: #192f5f;
+
+  --color-muted: #e9ebf3;
+  --color-muted-foreground: #44566c;
+
+  /* brand: gold — the energetic accent */
+  --color-accent: #f8a92f;
+  --color-accent-foreground: #12172a;
+
+  /* brand: coral — warnings / lives lost / destructive */
+  --color-destructive: #d14451;
+  --color-destructive-foreground: #ffffff;
+
+  --color-border: #dfe2ee;
+  --color-input: #dfe2ee;
+  --color-ring: #192f5f;
+  --radius: 1.25rem;
+  --radius-sm: calc(var(--radius) - 8px);
+  --radius-md: calc(var(--radius) - 4px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 6px);
+
+  /* extra brand tokens, used directly (bg-brand-navy, text-brand-gold, etc.) */
+  --color-brand-navy: #192f5f;
+  --color-brand-navy-deep: #101f42;
+  --color-brand-navy-light: #2a4478;
+  --color-brand-gold: #f8a92f;
+  --color-brand-coral: #d14451;
+  --color-brand-pink: #e94f8a;
+  --color-brand-cream: #fbf6ec;
+
+  /* text/border tokens for content placed on a navy background */
+  --color-on-navy-foreground: #ffffff;
+  --color-on-navy-muted: #aab4d1;
+  --color-on-navy-border: #33447a;
+
+  --font-sans: var(--font-plus-jakarta-sans), ui-sans-serif, system-ui,
+    sans-serif;
+}
+
+html {
+  scroll-behavior: smooth;
 }
 
 body {
-  font-family: var(--font-sans), system-ui, sans-serif;
-  color: var(--color-text-primary);
+  font-family: var(--font-sans);
+  background-color: var(--color-background);
+  color: var(--color-foreground);
 }

@@ -24,38 +24,55 @@ ileadit is a game where walking/steps is the input mechanic — "a game that req
 
 ## Brand System
 
-All brand assets come from the Android app repo (`ileadit-app/ileadit`).
+> **Rewritten 2026-09-19 (ticket W-2).** This replaces the pink/Inter palette below, which was the
+> pre-rebuild brand. Paul approved Lacey Bedspread's design system (see
+> `automation-hub/docs/ileadit-web-landing-design-20260919.md`, the approved landing page spec) as
+> the current brand direction for the web portal. The Android app's own in-app colours have **not**
+> been re-themed as part of this change — this table describes the web portal only. If the two ever
+> diverge further, treat this file as the source of truth for `ileadit-web`.
+
+All brand tokens are wired as CSS custom properties in `src/app/globals.css` (`@theme inline`),
+which auto-generates the matching Tailwind utility classes (`bg-primary`, `text-brand-gold`, etc).
 
 ### Colours
 
 | Name | Hex | Tailwind Token | Usage |
 |---|---|---|---|
-| Navy Blue | `#192F5F` | `primary` | Main brand colour, headers, dark backgrounds |
-| Dark Navy | `#0D1B3D` | `primary-dark` | Cards on dark backgrounds |
-| Pink/Accent | `#E91E63` | `accent` | Logo, CTA buttons, highlights |
-| Coins Orange | `#F8A92F` | `secondary` | Secondary actions, rewards, coins |
-| Purple | `#7755FE` | `purple` | Feature highlights |
-| Progress Green | `#4CAF50` | `success` | Success states, progress |
-| Error Red | `#F44336` | `error` | Error states |
-| Warning Orange | `#FF9800` | `warning` | Warnings |
-| Light Gray | `#E7EDF3` | `gray-light` | Backgrounds, borders |
-| Text Primary | `#333333` | `text-primary` | Body text on light backgrounds |
-| White | `#FFFFFF` | `white` | Text on dark backgrounds |
+| Navy | `#192F5F` | `primary` / `brand-navy` | Main brand colour, hero/footer dark sections, headings |
+| Deep Navy | `#101F42` | `brand-navy-deep` | Darkest navy, rarely used directly |
+| Light Navy | `#2A4478` | `brand-navy-light` | Lighter navy accents |
+| Gold | `#F8A92F` | `accent` / `brand-gold` | Primary CTA colour, rewards, the energetic accent |
+| Coral | `#D14451` | `destructive` / `brand-coral` | Warnings, lives lost, eyebrow labels |
+| Pink/Magenta | `#E94F8A` | `brand-pink` | Decorative accent (hero background glow) |
+| Cream | `#FBF6EC` | `brand-cream` | Warm off-white, spot usage |
+| Background | `#FAFBFB` | `background` | Page background |
+| Foreground | `#12172A` | `foreground` | Body text on light backgrounds |
+| Muted text | `#44566C` | `muted-foreground` | Secondary/body copy on light backgrounds — passes 4.5:1 on `#FAFBFB` (7.25:1 measured). **Do not use `#8A97AC`** for body text on light backgrounds; it fails contrast (2.85:1). |
+| On-navy text | `#FFFFFF` | `on-navy-foreground` | Primary text on navy backgrounds |
+| On-navy muted | `#AAB4D1` | `on-navy-muted` | Secondary text on navy backgrounds (6.3:1 on `#192F5F`) |
+| Border | `#DFE2EE` | `border` | Card/input borders on light backgrounds |
 
 ### Typography
 
-- **Headings:** Inter (Google Fonts) — clean, modern, works well at large sizes
-- **Body:** Inter — same family for consistency
-- **Fallback:** system-ui, sans-serif
+- **Headings & body:** Plus Jakarta Sans (Google Fonts, via `next/font/google`) — one family for the
+  whole site, matches the approved design spec.
+- **Fallback:** ui-sans-serif, system-ui, sans-serif.
 
 ### Logo
 
-The app icon is in the Android repo at:
-- `app/src/main/res/drawable/ic_launcher_foreground.xml` (vector)
-- `app/src/main/res/drawable/logo_min.xml` (minimal version)
-- `app/src/main/res/mipmap-xxxhdpi/ic_launcher.webp` (raster, largest)
+**The real, shipped ileadit mark** — not a placeholder or an invented graphic — is reproduced in
+`src/components/brand/Logo.tsx`. It's sourced from the Android app repo's
+`app/src/main/res/drawable/splash_logo_circle.xml`: a circular badge with a gold-to-pink diagonal
+gradient (`#F7A82F` → `#BC1062`) and three navy (`#192F5F`) parallelogram "steps" climbing across
+it. The path data and gradient stops in `Logo.tsx` are copied 1:1 from that vector.
 
-The logo is a pink (`#E91E63`) circle mark on navy (`#192F5F`) background.
+The Figma file (colour logo node `1:22819` and variants) is the canonical source per the Figma style
+guide, but the shared Figma API token was expired (`403 Token expired`) at the time this page was
+built — re-pull from Figma and swap into `Logo.tsx` when the token is refreshed, rather than treating
+the current SVG as permanent. The Android app's launcher icon (a separate asset,
+`app/src/main/res/mipmap-xxxhdpi/ic_launcher.webp`, pink-on-transparent "steps" foreground over a
+solid pink adaptive-icon background) is a different mark from the splash badge used here — don't
+conflate the two when asked for "the app icon" specifically.
 
 For the website, export or recreate the logo as SVG. Place in `public/logo.svg` and `public/logo-white.svg` (for dark backgrounds).
 

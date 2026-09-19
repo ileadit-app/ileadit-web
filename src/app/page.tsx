@@ -1,11 +1,21 @@
+import { HeroSection } from "@/components/marketing/HeroSection";
+import { HowItWorksSection } from "@/components/marketing/HowItWorksSection";
+import { AverageMechanicSection } from "@/components/marketing/AverageMechanicSection";
+import { TeamsSection } from "@/components/marketing/TeamsSection";
+import { PrivacySection } from "@/components/marketing/PrivacySection";
+import { PricingSection } from "@/components/marketing/PricingSection";
+import { DownloadSection } from "@/components/marketing/DownloadSection";
+
 export default function Home() {
   return (
-    <div className="mx-auto max-w-7xl px-4 py-16">
-      <h1 className="text-4xl font-bold text-primary">Welcome to ileadit</h1>
-      <p className="mt-4 text-lg text-text-primary">
-        A game that requires movement — create competitions and compete on
-        points.
-      </p>
-    </div>
+    <>
+      <HeroSection />
+      <HowItWorksSection />
+      <AverageMechanicSection />
+      <TeamsSection />
+      <PrivacySection />
+      <PricingSection />
+      <DownloadSection />
+    </>
   );
 }

@@ -1,29 +1,40 @@
 import Link from "next/link";
+import { Logo } from "@/components/brand/Logo";
 
-const footerLinks = [
-  { href: "/privacy", label: "Privacy" },
-  { href: "/terms", label: "Terms" },
-  { href: "/account-deletion", label: "Account Deletion" },
+const FOOTER_LINKS = [
+  { href: "/#how-it-works", label: "How it works" },
+  { href: "/#average", label: "Why average wins" },
+  { href: "/#teams", label: "Teams" },
+  { href: "/#privacy", label: "Privacy" },
+  { href: "/#pricing", label: "Pricing" },
   { href: "/download", label: "Download" },
+  { href: "/privacy", label: "Privacy policy" },
+  { href: "/terms", label: "Terms" },
+  { href: "/account-deletion", label: "Account deletion" },
 ];
 
 export default function Footer() {
   return (
-    <footer className="bg-primary-dark text-white">
-      <div className="mx-auto max-w-7xl px-4 py-8">
-        <nav className="flex flex-wrap gap-6 text-sm">
-          {footerLinks.map((link) => (
+    <footer className="border-t border-border bg-background py-10">
+      <div className="mx-auto flex max-w-6xl flex-col items-center gap-6 px-5 sm:flex-row sm:justify-between sm:px-6">
+        <Logo />
+        <nav
+          aria-label="Footer"
+          className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2"
+        >
+          {FOOTER_LINKS.map((link) => (
             <Link
               key={link.href}
               href={link.href}
-              className="transition-colors hover:text-accent"
+              className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
             >
               {link.label}
             </Link>
           ))}
         </nav>
-        <p className="mt-6 text-xs text-white/60">
-          &copy; {new Date().getFullYear()} ileadit. All rights reserved.
+        <p className="text-sm text-muted-foreground">
+          &copy; {new Date().getFullYear()} ileadit. Average is the whole
+          point.
         </p>
       </div>
     </footer>

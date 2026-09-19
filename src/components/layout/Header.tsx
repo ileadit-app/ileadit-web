@@ -2,81 +2,80 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { Menu, X } from "lucide-react";
+import { Logo } from "@/components/brand/Logo";
 
-const navLinks = [
-  { href: "/", label: "Home" },
-  { href: "/pricing", label: "Pricing" },
-  { href: "/about", label: "About" },
+// Nav links point at "/#section" (not "#section") so they resolve correctly
+// from every route, not just from the home page itself.
+const NAV_LINKS = [
+  { href: "/#how-it-works", label: "How it works" },
+  { href: "/#average", label: "Why average wins" },
+  { href: "/#teams", label: "Teams" },
+  { href: "/#pricing", label: "Pricing" },
 ];
 
 export default function Header() {
   const [menuOpen, setMenuOpen] = useState(false);
 
   return (
-    <header className="bg-primary text-white">
-      <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4">
-        <Link href="/" className="text-2xl font-bold tracking-tight">
-          <span className="text-accent">i</span>leadit
+    <header className="sticky top-0 z-50 border-b border-border/80 bg-background/90 backdrop-blur-md">
+      <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-5 py-3.5 sm:px-6">
+        <Link href="/#top" className="shrink-0">
+          <Logo />
+          <span className="sr-only">ileadit home</span>
         </Link>
 
         {/* Desktop nav */}
-        <nav className="hidden items-center gap-6 md:flex">
-          {navLinks.map((link) => (
+        <nav aria-label="Primary" className="hidden items-center gap-7 lg:flex">
+          {NAV_LINKS.map((link) => (
             <Link
               key={link.href}
               href={link.href}
-              className="text-sm font-medium transition-colors hover:text-accent"
+              className="text-sm font-semibold text-foreground/70 transition-colors hover:text-foreground"
             >
               {link.label}
             </Link>
           ))}
+        </nav>
+
+        <div className="hidden items-center gap-2 sm:flex">
           <Link
             href="/dashboard"
-            className="rounded-lg bg-accent px-4 py-2 text-sm font-semibold transition-colors hover:bg-accent/90"
+            className="inline-flex h-10 items-center px-3 text-sm font-semibold text-foreground/70 transition-colors hover:text-foreground"
           >
-            Sign In
+            Log in
           </Link>
-        </nav>
+          <Link
+            href="/#employer"
+            className="inline-flex h-10 items-center rounded-full bg-brand-gold px-4 text-sm font-bold text-brand-navy transition-colors hover:bg-brand-gold/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-gold"
+          >
+            Bring it to your team
+          </Link>
+        </div>
 
         {/* Mobile hamburger */}
         <button
-          className="flex h-11 w-11 items-center justify-center md:hidden"
+          className="flex h-11 w-11 items-center justify-center text-foreground sm:hidden"
           onClick={() => setMenuOpen(!menuOpen)}
           aria-label="Toggle menu"
+          aria-expanded={menuOpen}
         >
-          <svg
-            className="h-6 w-6"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            {menuOpen ? (
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M6 18L18 6M6 6l12 12"
-              />
-            ) : (
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M4 6h16M4 12h16M4 18h16"
-              />
-            )}
-          </svg>
+          {menuOpen ? (
+            <X className="h-6 w-6" aria-hidden="true" />
+          ) : (
+            <Menu className="h-6 w-6" aria-hidden="true" />
+          )}
         </button>
       </div>
 
       {/* Mobile menu */}
       {menuOpen && (
-        <nav className="border-t border-white/10 px-4 pb-4 md:hidden">
-          {navLinks.map((link) => (
+        <nav aria-label="Primary" className="border-t border-border px-5 pb-4 sm:hidden">
+          {NAV_LINKS.map((link) => (
             <Link
               key={link.href}
               href={link.href}
-              className="block py-3 text-sm font-medium transition-colors hover:text-accent"
+              className="block py-3 text-sm font-semibold text-foreground/70 transition-colors hover:text-foreground"
               onClick={() => setMenuOpen(false)}
             >
               {link.label}
@@ -84,10 +83,17 @@ export default function Header() {
           ))}
           <Link
             href="/dashboard"
-            className="mt-2 block rounded-lg bg-accent px-4 py-3 text-center text-sm font-semibold transition-colors hover:bg-accent/90"
+            className="block py-3 text-sm font-semibold text-foreground/70 transition-colors hover:text-foreground"
             onClick={() => setMenuOpen(false)}
           >
-            Sign In
+            Log in
+          </Link>
+          <Link
+            href="/#employer"
+            className="mt-2 block rounded-full bg-brand-gold px-4 py-3 text-center text-sm font-bold text-brand-navy transition-colors hover:bg-brand-gold/90"
+            onClick={() => setMenuOpen(false)}
+          >
+            Bring it to your team
           </Link>
         </nav>
       )}
