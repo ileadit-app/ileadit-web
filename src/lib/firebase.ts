@@ -1,6 +1,6 @@
-import { initializeApp, getApps } from "firebase/app";
-import { getAuth } from "firebase/auth";
-import { getFirestore } from "firebase/firestore";
+import { initializeApp, getApps, type FirebaseApp } from "firebase/app";
+import { getAuth, type Auth } from "firebase/auth";
+import { getFirestore, type Firestore } from "firebase/firestore";
 
 // Firebase config for ileadit-app project.
 // Actual values must be added to .env.local — see .env.example.
@@ -13,7 +13,36 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
+// Everything below is lazily initialized (function-based, not a top-level
+// `const x = getAuth(app)`) DELIBERATELY: `getAuth()` validates the API key
+// format the instant it is called, so an eager top-level call throws
+// `auth/invalid-api-key` the moment this module is evaluated anywhere with
+// no `.env.local` present - including during `next build`'s server-side
+// prerendering of EVERY route (root layout mounts `EngineBootstrap`, which
+// pulls this module in transitively). Lazy getters mean the module can be
+// imported freely; the actual Firebase call only happens when a client
+// component calls one of these functions at runtime in the browser.
+let appInstance: FirebaseApp | null = null;
+let authInstance: Auth | null = null;
+let dbInstance: Firestore | null = null;
 
-export const auth = getAuth(app);
-export const db = getFirestore(app);
+export function getFirebaseApp(): FirebaseApp {
+  if (!appInstance) {
+    appInstance = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
+  }
+  return appInstance;
+}
+
+export function getFirebaseAuth(): Auth {
+  if (!authInstance) {
+    authInstance = getAuth(getFirebaseApp());
+  }
+  return authInstance;
+}
+
+export function getFirebaseDb(): Firestore {
+  if (!dbInstance) {
+    dbInstance = getFirestore(getFirebaseApp());
+  }
+  return dbInstance;
+}

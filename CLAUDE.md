@@ -61,28 +61,101 @@ For the website, export or recreate the logo as SVG. Place in `public/logo.svg` 
 
 ## Firestore Collections (Shared with Android App)
 
-### `users/{userId}`
-Key fields: `uid`, `firstName`, `surname`, `email`, `lives`, `coins`, `points`, `todaySteps`, `dailyAverageSteps`, `profileImageUrl`, `isAdmin`
+> **This section was rewritten 2026-09-19 against the rebuilt engine at commit `c91f9e3`
+> (`admin-web/firestore.rules`, `functions/src/services/{accounts,competitions,ledger}.ts` in the
+> sibling `ileadit` repo). The version before this rewrite described a pre-rebuild (phase-1) schema
+> that the current rules actively reject — see
+> `automation-hub/docs/ileadit-web-gap-audit-20260919.md` for the full diff and reasoning. The
+> headline fact that does not change with any future edit to this file:
+> **the web portal never writes Firestore game state directly — every mutation goes through an
+> engine Cloud Functions callable (`src/lib/functions.ts`, region `europe-west2`).** Reads below are
+> marked per-field with who may read them; "portal: no" means genuinely no client-side read path
+> exists, not just "we choose not to."**
+
+### `users/{userId}` — public profile ONLY
+Fields: `displayName`, `avatarIndex`, `profileImageUrl`, `city`, `createdAt`.
+Portal may **read** (any signed-in user) and the *owner* may **update** `displayName`/`avatarIndex`/
+`profileImageUrl`/`city` directly (client SDK, rules-permitted — this is the one place a direct
+client write of this collection is legal). `create` is engine-only (`ensureAccount` callable) —
+the portal must never attempt `setDoc`/`addDoc` here.
+**Removed from this doc since the last version of this file:** `uid`, `firstName`, `surname`,
+`email`, `lives`, `coins`, `points`, `todaySteps`, `dailyAverageSteps`, `isAdmin` — none of these
+exist at this path any more. See below for where they actually live, and note two of them
+(`todaySteps`, `dailyAverageSteps`) must never be read/displayed by the portal even at their real
+location (Privacy Rules, below).
+
+### `users/{userId}/private/profile` — real name/PII fields
+Fields: `firstName`, `surname`, `dateOfBirth`, `gender`, `country`, `notificationsEnabled`,
+`profileCompleted`, plus `email` (engine-written, copied from the auth token at account creation —
+**never** client-writable, deliberately excluded from the owner's own write list).
+Portal: **owner-read only**, owner-write restricted to the seven fields listed (not `email`). Not
+readable by anyone else, including an admin-claim holder.
+
+### `users/{userId}/private/game` — engine game state
+Fields include `coins`, `lifetimePoints`, `competitionHistory`, `activeCompetitionIds`, `timeZone`,
+`average`, warm-up/close bookkeeping (`warmupEndsOn`, `nextCloseAt`, `lastClosedDate`,
+`closeFailures`, …), `reminder`. **There is no `lives` field here or anywhere else at account
+level** — lives are per-competition (see `players/{userId}` below).
+Portal: **owner-read only. Write: `if false` for every client, always** — this is the coin/points
+source of truth and it is engine-only by design (ledger invariant, see Stripe note below). Any code
+path that would `updateDoc` here to reflect a coin purchase or similar is invalid at the rules
+level, full stop.
+
+### `users/{userId}/days/{date}` — raw step/point records
+Portal: **must not read or display, ever**, even though the rules technically allow the *owner* to
+read their own day record (Privacy Rules, below — this is a project-level ban stricter than the
+rules). Engine-write only.
+
+### `users/{userId}/private/trust` — anti-cheat flags
+Portal: **no read path at all** for a normal user, even the account owner. Admin-claim read only.
+Engine-write only. The portal has no legitimate reason to touch this.
+
+### Admin identity — NOT a Firestore field
+`isAdmin` does not exist anywhere in the data model. Admin identity is the custom Firebase Auth
+claim `request.auth.token.admin`, set out-of-band. **Claims only reach the client on token
+refresh** — any admin-gated UI must force `getIdToken(true)` after sign-in (see `src/lib/adminClaim.ts`
+below) or a freshly-granted claim will appear absent.
 
 ### `competitions/{competitionId}`
-Key fields: `name`, `description`, `startTime` (Timestamp), `durationDays`, `playerCount`, `creatorId`
+**Engine fields** (derived by the `onCompetitionWritten` trigger / `competitionLifecycle` job —
+**unwritable by any client, including the admin claim, ever**): `status`, `startDate`, `endDate`,
+`timeZone`, `playerCount`, `finalisedAt`, `winnerIds`, `configVersion`.
 
-New fields added by the web portal (backwards-compatible):
-- `visibility`: `"public"` or `"private"`
-- `inviteCode`: 8-char alphanumeric
-- `maxPlayers`: int
-- `tier`: `"free"`, `"pro"`, `"enterprise"`
-- `branding`: `{ color, logoUrl }` (Pro tier only)
-- `createdVia`: `"web"`
+**Admin fields** (writable only by the doc's `creatorId` or the `admin` custom claim, and — critical
+— **`create` is currently gated to the `admin` claim ONLY, not "creator or admin"**; there is no
+creator UI today and this is a deliberate, documented engine decision, not an oversight):
+`name`, `description`, `imageUrl`, `backgroundImageUrl`, `startTime` (Timestamp), `durationDays`
+(positive int), `updatedAt`. `creatorId` and `createdAt` may only be set at create time (`creatorId`
+must equal the caller's own uid) and are immutable afterwards.
+
+**PROPOSED — not backed by the engine, do not build against these:** `visibility`, `inviteCode`,
+`maxPlayers`, `tier`, `branding`, `createdVia`. These six fields have **no server-side home at all**
+— a client document containing any of them is rejected outright at the rules door (not silently
+dropped). They require engine tickets E4-web-1 (`createCompetition` callable), E4-web-3
+(organisation/tenant model — foundational, nothing B2B-shaped can be scoped without it first), and
+E4-web-4 (bulk invite) before any web UI can be built against them. See the gap audit §2.1–§3 for
+the full reasoning; do not reintroduce these as "real" schema fields until one of those tickets
+ships.
 
 ### `competitions/{competitionId}/players/{userId}`
-Key fields: `userId`, `firstName`, `lastName`, `joinedAt`, `points`, `livesRemaining`, `eliminated`
+Fields (written only by the `joinCompetition` callable, never by a client): `displayName`,
+`avatarIndex`, `points`, `todayPoints`, `livesRemaining` (seeded to a starting value at join,
+decremented by the engine's daily close job), `eliminated`.
+Portal: **read requires the reader to be a member of that same competition themselves** (proven via
+an `exists()` check on the reader's own player doc) — an org admin who isn't personally playing has
+**no read path to this today**. This is a known gap (audit §2.4/§4.1, ticket E4-web-2), not a bug
+to work around client-side.
+**Removed from this doc since the last version of this file:** `userId`, `firstName`, `lastName`,
+`joinedAt` — none of these are the real field names; use `displayName`/`joinedOn` (on the nested
+`private/state` doc, owner-read only) instead.
 
-### `subscriptions/{userId}` (NEW — web portal only)
-Fields: `stripeCustomerId`, `stripeSubscriptionId`, `tier`, `status`, `currentPeriodEnd`, `maxCompetitions`, `maxPlayersPerCompetition`
-
-### `invites/{inviteCode}` (NEW — web portal only)
-Fields: `competitionId`, `createdBy`, `createdAt`, `maxUses`, `useCount`, `expiresAt`
+### `subscriptions/{userId}` and `invites/{inviteCode}` — REMOVED, no server-side home
+Both collections from the previous version of this file have **no rules block at all** in the
+engine's `firestore.rules` — every unmatched path denies both read and write by default. Neither is
+engine-owned (nothing in `functions/src` writes them) nor portal-writable (default deny). Do not
+create these collections from the portal, directly or via any admin SDK code path, until an engine
+ticket (E4-web-5/6 for subscriptions, E4-web-4 for invites) gives them a real, engine-aware home —
+see the gap audit §2.2, §2.5, §5.
 
 ## Privacy Rules — ABSOLUTE
 
