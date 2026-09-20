@@ -185,6 +185,14 @@ see the gap audit §2.2, §2.5, §5.
 
 ## Pricing Tiers
 
+> **STALE as of Paul's 2026-09-20 billing decision.** The table below describes a monthly
+> SUBSCRIPTION. Billing is now **per competition**, transactional, with the organisation's price
+> band setting the price — an org that runs nothing pays nothing. See the DECISIONS block (Q5) in
+> `automation-hub/docs/ileadit-org-model-design-20260920.md`, and `src/lib/billing/priceBands.ts`,
+> which holds the live band→price table sourced from `ileadit/RULES.md` §8.2. This section is left
+> in place rather than rewritten here because the surrounding org model is being built on the
+> `feat/org-model` branch; whoever lands that should replace this table.
+
 | Feature | Free | Pro (GBP 9.99/mo) | Enterprise (Contact Us) |
 |---|---|---|---|
 | Active competitions | 1 | Unlimited | Unlimited |

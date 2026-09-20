@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { ErrorBanner } from "@/components/auth/formFields";
 import { NumberField, SelectField, TextAreaField, TextField } from "@/components/forms/fields";
+import { newDraftId, startCompetitionCheckout } from "@/lib/billing/checkoutClient";
 import { createCompetition } from "@/lib/createCompetition";
 import { createCompetitionFailureMessage } from "@/lib/createCompetitionErrors";
 import {
@@ -45,8 +46,22 @@ interface FieldErrors {
  * `src/lib/createCompetition.ts`'s header comment). Client validation
  * failing closed here is a UX nicety, not a security or correctness
  * guarantee.
+ *
+ * ── BILLING (branch `feat/stripe-per-competition-billing`) ──────────────
+ * When an `orgId` is supplied, submitting goes through
+ * `startCompetitionCheckout()` instead of calling the engine directly: the
+ * server prices the competition from that org's band and, if there is
+ * anything to pay, sends the browser to Stripe. The competition is created
+ * only after payment — see `src/lib/billing/fulfilCheckout.ts` for why that
+ * order, and what happens when payment succeeds but creation fails.
+ *
+ * With NO `orgId` the behaviour is byte-for-byte what it was before:
+ * straight to `createCompetition()`. That is today's real state — nothing
+ * in this repo knows an org id yet, because the org model is being built on
+ * the `feat/org-model` branch. This prop is the one wire to connect when it
+ * lands; nothing else in this component changes.
  */
-export function CreateCompetitionForm() {
+export function CreateCompetitionForm({ orgId }: { orgId?: string } = {}) {
   const router = useRouter();
 
   const [name, setName] = useState("");
@@ -106,12 +121,41 @@ export function CreateCompetitionForm() {
     if (!parts) return; // Unreachable — validate() above already caught this.
 
     setSubmitting(true);
+
+    const startTime = zonedWallTimeToDate(parts, timeZone);
+
+    if (orgId) {
+      // Paid path. `startCompetitionCheckout` either redirects to Stripe
+      // (and this component is gone before the promise settles) or tells us
+      // there is nothing to pay, in which case we fall through to the same
+      // direct create the free/no-org path uses.
+      const checkout = await startCompetitionCheckout({
+        orgId,
+        draftId: newDraftId(),
+        name: name.trim(),
+        startTimeIso: startTime.toISOString(),
+        durationDays: Number(durationDaysValue),
+        timeZone,
+        description: description.trim() || undefined,
+        imageUrl: imageUrl.trim() || undefined,
+        backgroundImageUrl: backgroundImageUrl.trim() || undefined,
+      });
+
+      if (checkout.status === "redirecting") return; // Leaving the page.
+      if (checkout.status !== "no-payment-required") {
+        setSubmitting(false);
+        setPageError(checkout.message);
+        return;
+      }
+    }
+
     const outcome = await createCompetition({
       name: name.trim(),
       // Wall-clock time as typed, interpreted IN the chosen time zone (not
       // the browser's own zone) — see zonedWallTimeToDate's comment for why
-      // this conversion exists at all.
-      startTime: zonedWallTimeToDate(parts, timeZone),
+      // this conversion exists at all. Computed once above so the paid and
+      // unpaid paths can never disagree about the instant.
+      startTime,
       durationDays: Number(durationDaysValue),
       timeZone,
       description: description.trim() || undefined,
