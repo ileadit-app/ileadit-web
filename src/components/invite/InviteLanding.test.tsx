@@ -196,6 +196,37 @@ describe("InviteLanding", () => {
     expect(link).toHaveAttribute("href", `/competitions/${COMPETITION_ID}`);
   });
 
+  // W9-A11Y. The "You're in!" card is reached by a user ACTION on this same
+  // page (clicking Join) with no route change and no natural focus move —
+  // nothing else would tell a screen reader user the click did anything.
+  // `InviteStatusCard`'s `live` prop wires this to `role="status"
+  // aria-live="polite"`. Mutation-proven: removed the `live` prop from the
+  // `JoinableInvite` success render in `InviteLanding.tsx`, confirmed RED,
+  // reverted, confirmed GREEN.
+  it("MUT-A11Y-JOIN-SUCCESS-LIVE: the join-success card is an announced live region", async () => {
+    useUserMock.mockReturnValue({ status: "signed-in", user: { uid: "u1" } });
+    useCompetitionDetailMock.mockReturnValue({
+      status: "success",
+      competition: baseCompetition({ status: "scheduled" }),
+    });
+    useOwnMembershipMock.mockReturnValue({ status: "not-member" });
+    joinCompetitionMock.mockResolvedValue({
+      status: "success",
+      result: { joined: true, alreadyMember: false, playerCount: 13 },
+    });
+
+    render(<InviteLanding competitionId={COMPETITION_ID} />);
+
+    fireEvent.click(screen.getByRole("button", { name: /join competition/i }));
+
+    await waitFor(() =>
+      expect(screen.getByRole("heading", { name: /you're in!/i })).toBeInTheDocument(),
+    );
+    const status = screen.getByRole("status");
+    expect(status).toHaveAttribute("aria-live", "polite");
+    expect(status).toHaveTextContent(/you're in!/i);
+  });
+
   it("MUT-5b: join failure — surfaces the failure message, does not confirm success", async () => {
     useUserMock.mockReturnValue({ status: "signed-in", user: { uid: "u1" } });
     useCompetitionDetailMock.mockReturnValue({

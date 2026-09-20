@@ -77,7 +77,7 @@ export default function About() {
               <h3 className="mt-5 text-lg font-bold text-foreground">
                 What ileadit is
               </h3>
-              <ul className="mt-4 space-y-3">
+              <ul className="mt-4 space-y-3" role="list">
                 {WHAT_WE_ARE.map((item) => (
                   <li
                     key={item}
@@ -100,7 +100,7 @@ export default function About() {
               <h3 className="mt-5 text-lg font-bold text-foreground">
                 What ileadit is not
               </h3>
-              <ul className="mt-4 space-y-3">
+              <ul className="mt-4 space-y-3" role="list">
                 {WHAT_WE_ARE_NOT.map((item) => (
                   <li
                     key={item}

@@ -135,3 +135,88 @@ describe("CompetitionLeaderboard — finished status wiring", () => {
     expect(names).toEqual(["LowPointsFrozenFirst", "HighPointsFrozenSecond"]);
   });
 });
+
+/**
+ * W9-A11Y additions. Each mutation-proven the same way as the block above
+ * (mutate source, confirm RED, revert, confirm GREEN).
+ */
+describe("CompetitionLeaderboard — accessibility (W9-A11Y)", () => {
+  it('MUT-A11Y-LIST-ROLE: the ranked player <ul> carries an explicit role="list" attribute (Tailwind preflight\'s `list-style: none` strips the native list semantics in real browsers — jsdom\'s role query does not model that CSS-driven demotion, so this asserts the attribute directly rather than via getByRole, which would pass either way)', () => {
+    const players = [
+      makePlayer({ id: "a", displayName: "Amy", points: 500 }),
+      makePlayer({ id: "b", displayName: "Bo", points: 300 }),
+    ];
+
+    const { container } = render(
+      <CompetitionLeaderboard
+        status="active"
+        uid="a"
+        ownPlayer={makeOwnPlayer({ points: 500 })}
+        leaderboardState={{ status: "success", players }}
+        winnerIds={[]}
+      />,
+    );
+
+    const list = container.querySelector("ul");
+    expect(list).toHaveAttribute("role", "list");
+  });
+
+  it("MUT-A11Y-SETTLING-LIVE: the \"wrapping up / still settling\" banner is an announced live region, not silent copy", () => {
+    const players = [
+      makePlayer({ id: "a", displayName: "Amy", points: 500, frozenRank: null }),
+      makePlayer({ id: "b", displayName: "Bo", points: 300, frozenRank: 2 }),
+    ];
+
+    render(
+      <CompetitionLeaderboard
+        status="finished"
+        uid="a"
+        ownPlayer={makeOwnPlayer({ points: 500 })}
+        leaderboardState={{ status: "success", players }}
+        winnerIds={[]}
+      />,
+    );
+
+    const banner = screen.getByText(/wrapping up/i);
+    expect(banner).toHaveAttribute("role", "status");
+    expect(banner).toHaveAttribute("aria-live", "polite");
+  });
+
+  it("MUT-A11Y-RANK-BADGE: a top-3 rank badge exposes an ordinal accessible name (\"1st place\"), not just the bare digit a sighted user sees", () => {
+    const players = [
+      makePlayer({ id: "a", displayName: "Amy", points: 500 }),
+      makePlayer({ id: "b", displayName: "Bo", points: 300 }),
+    ];
+
+    render(
+      <CompetitionLeaderboard
+        status="active"
+        uid="a"
+        ownPlayer={makeOwnPlayer({ points: 500 })}
+        leaderboardState={{ status: "success", players }}
+        winnerIds={[]}
+      />,
+    );
+
+    expect(screen.getByRole("img", { name: "1st place" })).toBeInTheDocument();
+  });
+
+  it('MUT-A11Y-WINNER-ICON-NAME: the winner\'s PartyPopper icon is not silently aria-hidden with zero text alternative — a wrapping role="img" gives screen reader users a "Winner" announcement a sighted user gets from the icon+gold-highlight alone', () => {
+    const players = [
+      makePlayer({ id: "winner", displayName: "Winnie", points: 500, frozenRank: 1 }),
+      makePlayer({ id: "loser", displayName: "Loser", points: 300, frozenRank: 2 }),
+    ];
+
+    render(
+      <CompetitionLeaderboard
+        status="finished"
+        uid="winner"
+        ownPlayer={makeOwnPlayer({ points: 500 })}
+        leaderboardState={{ status: "success", players }}
+        winnerIds={["winner"]}
+      />,
+    );
+
+    expect(screen.getByRole("img", { name: "Winner" })).toBeInTheDocument();
+  });
+});

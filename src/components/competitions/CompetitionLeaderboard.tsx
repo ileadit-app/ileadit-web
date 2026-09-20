@@ -56,6 +56,7 @@ function RankBadge({ rank, shimmer }: { rank: number; shimmer?: boolean }) {
     return (
       <span
         className={`flex size-8 shrink-0 items-center justify-center rounded-full text-xs font-extrabold tabular-nums ${RANK_BADGE_CLASSNAME[rank]} ${shimmer ? "animate-pulse" : ""}`}
+        role="img"
         aria-label={rank === 1 ? "1st place" : rank === 2 ? "2nd place" : "3rd place"}
       >
         {rank}
@@ -107,7 +108,11 @@ function PlayerRow({
               You
             </span>
           ) : null}
-          {isWinner ? <PartyPopper className="size-4 text-brand-gold" aria-hidden="true" /> : null}
+          {isWinner ? (
+            <span role="img" aria-label="Winner">
+              <PartyPopper className="size-4 text-brand-gold" aria-hidden="true" />
+            </span>
+          ) : null}
           {/* Design doc §2: eliminated players get one status word/badge at
               the SAME typographic weight as everyone else — no red X, no
               strikethrough, no "penalty box" separator (that's also why
@@ -213,7 +218,7 @@ function ScheduledRoster({ players }: { players: LeaderboardPlayer[] }) {
   );
 
   return (
-    <ul className="divide-y divide-border">
+    <ul className="divide-y divide-border" role="list">
       {sorted.map((p) => (
         <li key={p.id} className="flex min-h-[64px] items-center gap-3 px-4 py-3">
           <PlayerAvatar displayName={p.displayName} avatarIndex={p.avatarIndex} size={40} />
@@ -290,7 +295,11 @@ export function CompetitionLeaderboard({
             // player rows haven't all delivered their frozen `rank` to
             // THIS client yet) gets the exact same honest copy rather than
             // a premature "Final results" banner.
-            <div className="mb-4 rounded-2xl bg-brand-coral/10 p-3 text-center text-sm font-semibold text-brand-coral">
+            <div
+              className="mb-4 rounded-2xl bg-brand-coral/10 p-3 text-center text-sm font-semibold text-brand-coral"
+              role="status"
+              aria-live="polite"
+            >
               Wrapping up — a few last days are still closing. Final standings can take up to a
               day to lock in.
             </div>
@@ -384,7 +393,7 @@ function LeaderboardBody({
       ) : null}
 
       <div className="mt-4 overflow-hidden rounded-3xl border border-border bg-card">
-        <ul className="divide-y divide-border">
+        <ul className="divide-y divide-border" role="list">
           {ranked.map((p) => (
             <PlayerRow
               key={p.id}

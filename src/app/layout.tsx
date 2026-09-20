@@ -56,9 +56,24 @@ export default function RootLayout({
         suppressHydrationWarning
       >
         <AuthProvider>
+          {/* Skip link (WCAG 2.2 AA, 2.4.1 Bypass Blocks) — first focusable
+              element on every page. Visually hidden until it receives
+              keyboard focus, so a sighted mouse user never sees it, but a
+              keyboard user isn't forced to tab through the full header nav
+              (including the auth-state-dependent desktop nav, mobile menu
+              button, etc.) on every single page just to reach the actual
+              content. */}
+          <a
+            href="#main-content"
+            className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-full focus:bg-brand-navy focus:px-5 focus:py-3 focus:text-sm focus:font-bold focus:text-on-navy-foreground focus:outline-2 focus:outline-offset-2 focus:outline-brand-gold"
+          >
+            Skip to main content
+          </a>
           <EngineBootstrap />
           <Header />
-          <main className="flex-1">{children}</main>
+          <main id="main-content" className="flex-1">
+            {children}
+          </main>
           <Footer />
         </AuthProvider>
       </body>

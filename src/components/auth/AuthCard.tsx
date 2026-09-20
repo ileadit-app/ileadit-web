@@ -389,7 +389,7 @@ export function AuthCard({ mode }: { mode: "signin" | "signup" }) {
         <button
           type="submit"
           disabled={anyLoading}
-          className="mt-2 h-12 w-full rounded-full bg-brand-gold text-base font-bold text-brand-navy transition-colors hover:bg-brand-gold/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-gold disabled:opacity-60"
+          className="mt-2 h-12 w-full rounded-full bg-brand-gold text-base font-bold text-brand-navy transition-colors hover:bg-brand-gold/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-navy disabled:opacity-60"
         >
           {emailLoading ? copy.submitLoadingLabel : copy.submitLabel}
         </button>

@@ -77,6 +77,7 @@ export function TodayCard({ uid, player }: { uid: string; player: OwnPlayerData 
 
       <div
         className="mt-4 flex items-center gap-1.5"
+        role="img"
         aria-label={
           warmup ? "Protected during warm-up — no lives at risk yet" : `${player.livesRemaining} of 3 lives remaining`
         }

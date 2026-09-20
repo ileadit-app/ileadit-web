@@ -160,7 +160,7 @@ function StatusPage({ title, body, isError }: { title: string; body: string; isE
       <p className="mt-2 text-base text-muted-foreground">{body}</p>
       <Link
         href="/dashboard"
-        className="mt-6 inline-flex h-11 items-center justify-center rounded-full bg-brand-gold px-6 text-sm font-bold text-brand-navy transition-colors hover:bg-brand-gold/90"
+        className="mt-6 inline-flex h-11 items-center justify-center rounded-full bg-brand-gold px-6 text-sm font-bold text-brand-navy transition-colors hover:bg-brand-gold/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-navy"
       >
         Back to your dashboard
       </Link>
@@ -406,7 +406,7 @@ function HowItWorksCard() {
   return (
     <div className="mt-4 rounded-3xl border border-border bg-card p-6">
       <p className="text-sm font-bold uppercase tracking-wide text-brand-coral">How this works</p>
-      <ul className="mt-3 space-y-3">
+      <ul className="mt-3 space-y-3" role="list">
         {rows.map((row) => (
           <li key={row.text} className="flex items-start gap-3 text-sm text-muted-foreground">
             <span className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full bg-brand-gold/15 text-brand-navy">
@@ -512,7 +512,7 @@ function MembershipCta({
         type="button"
         onClick={() => void handleJoin()}
         disabled={pending !== null}
-        className="flex h-12 w-full items-center justify-center rounded-full bg-brand-gold text-base font-bold text-brand-navy transition-colors hover:bg-brand-gold/90 disabled:cursor-not-allowed disabled:opacity-60"
+        className="flex h-12 w-full items-center justify-center rounded-full bg-brand-gold text-base font-bold text-brand-navy transition-colors hover:bg-brand-gold/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-navy disabled:cursor-not-allowed disabled:opacity-60"
       >
         {pending === "join" ? "Joining…" : "Join competition"}
       </button>
@@ -521,7 +521,7 @@ function MembershipCta({
     body = isMember ? (
       <a
         href="#leaderboard"
-        className="flex h-12 w-full items-center justify-center rounded-full bg-brand-gold text-base font-bold text-brand-navy transition-colors hover:bg-brand-gold/90"
+        className="flex h-12 w-full items-center justify-center rounded-full bg-brand-gold text-base font-bold text-brand-navy transition-colors hover:bg-brand-gold/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-navy"
       >
         View leaderboard
       </a>
@@ -542,7 +542,7 @@ function MembershipCta({
     body = isMember ? (
       <a
         href="#leaderboard"
-        className="flex h-12 w-full items-center justify-center rounded-full bg-brand-gold text-base font-bold text-brand-navy transition-colors hover:bg-brand-gold/90"
+        className="flex h-12 w-full items-center justify-center rounded-full bg-brand-gold text-base font-bold text-brand-navy transition-colors hover:bg-brand-gold/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-navy"
       >
         See final results
       </a>
