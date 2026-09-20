@@ -5,6 +5,7 @@ import Link from "next/link";
 import { AlertCircle, Calendar, Coins, Heart, Percent } from "lucide-react";
 import { useUser } from "@/context/AuthContext";
 import { LogoMark } from "@/components/brand/Logo";
+import { CompetitionStatusChip } from "@/components/status/CompetitionStatusChip";
 import { PlayerAvatar } from "./PlayerAvatar";
 import {
   useCompetitionDetail,
@@ -172,13 +173,6 @@ function StatusPage({ title, body, isError }: { title: string; body: string; isE
  * Hero
  * ------------------------------------------------------------------ */
 
-const STATUS_LABEL: Record<CompetitionStatus, string> = {
-  scheduled: "Starts soon",
-  active: "Live now",
-  finalising: "Wrapping up",
-  finished: "Finished",
-};
-
 function parseLocalDate(value: string): Date | null {
   const [year, month, day] = value.split("-").map(Number);
   if (!year || !month || !day) return null;
@@ -279,7 +273,7 @@ function Hero({
             fabricated placeholder string. */}
         <div className="relative z-10 mx-auto flex h-full max-w-5xl flex-col justify-end px-5 pb-8 sm:px-6">
           <div className="flex flex-wrap items-center gap-2">
-            <StatusChip status={competition.status} />
+            <CompetitionStatusChip status={competition.status} />
             <span className="text-sm text-on-navy-muted">{dateLineFor(competition)}</span>
           </div>
           <h1 className="mt-2 text-2xl font-extrabold text-on-navy-foreground sm:text-3xl">
@@ -299,17 +293,6 @@ function Hero({
         </span>
       </div>
     </div>
-  );
-}
-
-function StatusChip({ status }: { status: CompetitionStatus | null }) {
-  return (
-    <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-xs font-bold uppercase tracking-wide text-on-navy-foreground">
-      {status === "active" ? (
-        <span className="size-1.5 animate-pulse rounded-full bg-brand-gold" aria-hidden="true" />
-      ) : null}
-      {status ? STATUS_LABEL[status] : "Setting up…"}
-    </span>
   );
 }
 

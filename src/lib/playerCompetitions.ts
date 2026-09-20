@@ -137,9 +137,11 @@ interface PlayerStanding {
  * rendered by this portal (CLAUDE.md's Privacy Rules). A future "your past
  * competitions" dashboard section reading that array would need to project
  * out every field except `averageSteps` explicitly — not built here; this
- * hook's `PlayingCompetitionSummary`/`STATUS_LABEL` union still includes
- * `"finished"` only for type-completeness against `CompetitionStatus`, not
- * because this hook is expected to ever actually emit one.
+ * hook's `PlayingCompetitionSummary.status` (`CompetitionStatus | null`,
+ * rendered via `CompetitionStatusChip` — `src/lib/competition-status.ts`)
+ * still includes `"finished"` only for type-completeness against
+ * `CompetitionStatus`, not because this hook is expected to ever actually
+ * emit one.
  */
 export function usePlayingCompetitions(uid: string | null): PlayingCompetitionsState {
   const [state, setState] = useState<PlayingCompetitionsState>({ status: "loading" });

@@ -4,9 +4,9 @@ import Link from "next/link";
 import { AlertCircle, Medal, Smartphone, Trophy } from "lucide-react";
 import {
   usePlayingCompetitions,
-  type CompetitionStatus,
   type PlayingCompetitionSummary,
 } from "@/lib/playerCompetitions";
+import { CompetitionStatusChip } from "@/components/status/CompetitionStatusChip";
 
 /**
  * "Competitions you're playing in" (P1.5b) — the view every signed-in user
@@ -135,38 +135,6 @@ function EmptyState() {
   );
 }
 
-const STATUS_LABEL: Record<CompetitionStatus, string> = {
-  scheduled: "Starts soon",
-  active: "Live now",
-  finalising: "Wrapping up",
-  finished: "Finished",
-};
-
-const STATUS_BADGE_CLASSNAME: Record<CompetitionStatus, string> = {
-  scheduled: "bg-secondary text-secondary-foreground",
-  active: "bg-brand-gold/15 text-brand-navy",
-  finalising: "bg-brand-coral/10 text-brand-coral",
-  finished: "bg-muted text-muted-foreground",
-};
-
-function StatusBadge({ status }: { status: CompetitionStatus | null }) {
-  if (status === null) {
-    return (
-      <span className="inline-flex items-center rounded-full bg-muted px-3 py-1 text-xs font-bold uppercase tracking-wide text-muted-foreground">
-        Setting up…
-      </span>
-    );
-  }
-
-  return (
-    <span
-      className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wide ${STATUS_BADGE_CLASSNAME[status]}`}
-    >
-      {STATUS_LABEL[status]}
-    </span>
-  );
-}
-
 /** Same `YYYY-MM-DD`-as-local-calendar-components parsing as
  * `CreatedCompetitions.tsx`'s `formatDateRange` — never `new Date(string)`,
  * which would drift a day depending on the browser's own timezone. */
@@ -212,7 +180,7 @@ function PlayingCompetitionCard({ competition }: { competition: PlayingCompetiti
         <h3 className="text-base font-bold text-foreground">
           {competition.name ?? "Untitled competition"}
         </h3>
-        <StatusBadge status={competition.status} />
+        <CompetitionStatusChip status={competition.status} />
       </div>
       <p className="mt-2 text-sm text-muted-foreground">
         {formatDateRange(competition.startDate, competition.endDate)}

@@ -2,6 +2,7 @@
 
 import { AlertCircle, Heart, PartyPopper, Users } from "lucide-react";
 import { PlayerAvatar } from "./PlayerAvatar";
+import { PlayerRowBadge } from "@/components/status/PlayerRowBadge";
 import type {
   CompetitionStatus,
   LeaderboardPlayer,
@@ -118,12 +119,10 @@ function PlayerRow({
               strikethrough, no "penalty box" separator (that's also why
               `LeaderboardBody` below renders one continuous list instead of
               a divided "No longer in it" section). "Locked in," not
-              "failed" — their points total stays visible and proud. */}
-          {player.eliminated ? (
-            <span className="rounded-full bg-brand-coral/15 px-2 py-0.5 text-[10px] font-bold uppercase text-brand-coral">
-              Out — final score locked in
-            </span>
-          ) : null}
+              "failed" — their points total stays visible and proud.
+              `PlayerRowBadge` (W10-STATECHIP) is the single source of this
+              label/style — see `src/lib/player-row-state.ts`. */}
+          <PlayerRowBadge state={player.eliminated ? "eliminated" : null} />
         </div>
         {showLives ? (
           <div className="mt-0.5">
@@ -160,14 +159,16 @@ function YourPositionCard({
   if (ownPlayer.eliminated) {
     return (
       <div className="sticky top-16 z-30 rounded-3xl bg-brand-navy p-5 text-on-navy-foreground shadow-lg">
-        {/* Coral used as a small status accent (the dot), not a wash over
-            the card — the copy itself stays on the same verified on-navy
-            text colour as every other state (design doc §2, §6). */}
-        <p className="flex items-center gap-1.5 text-sm font-semibold text-on-navy-muted">
-          <span className="size-1.5 shrink-0 rounded-full bg-brand-coral" aria-hidden="true" />
-          Out — final score locked in{ownRank !== null ? ` (rank #${ownRank})` : ""}
-        </p>
-        <p className="mt-1 text-2xl font-extrabold">{ownPlayer.points} points</p>
+        {/* Same shared `PlayerRowBadge` (W10-STATECHIP) as every row below —
+            full-strength coral fill, not a wash over the card, and not
+            greyed out (W5 leaderboard design decision, carried through). */}
+        <div className="flex flex-wrap items-center gap-2">
+          <PlayerRowBadge state="eliminated" />
+          {ownRank !== null ? (
+            <span className="text-sm font-semibold text-on-navy-muted">Rank #{ownRank}</span>
+          ) : null}
+        </div>
+        <p className="mt-2 text-2xl font-extrabold">{ownPlayer.points} points</p>
       </div>
     );
   }
