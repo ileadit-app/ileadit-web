@@ -91,7 +91,7 @@ describe("error.tsx — route-level render-error boundary", () => {
     );
 
     const loggedTheBoundaryMessage = consoleErrorSpy.mock.calls.some(
-      (call) =>
+      (call: unknown[]) =>
         typeof call[0] === "string" &&
         call[0].includes("[error boundary]") &&
         call[1] instanceof Error &&

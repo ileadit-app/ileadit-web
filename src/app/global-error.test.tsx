@@ -37,7 +37,7 @@ describe("global-error.tsx — root layout render-error boundary", () => {
     render(<GlobalError error={testError} reset={() => {}} />);
 
     const loggedIt = consoleErrorSpy.mock.calls.some(
-      (call) =>
+      (call: unknown[]) =>
         typeof call[0] === "string" &&
         call[0].includes("[global-error boundary]") &&
         call[1] === testError,

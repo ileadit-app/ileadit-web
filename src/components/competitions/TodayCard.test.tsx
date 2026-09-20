@@ -42,6 +42,9 @@ function player(overrides: Partial<OwnPlayerData> = {}): OwnPlayerData {
     todayPoints: 380,
     livesRemaining: 3,
     eliminated: false,
+    // null is the live-competition value: the engine writes `rank` only at
+    // settlement, so every status before `finished` reads null.
+    frozenRank: null,
     ...overrides,
   };
 }
