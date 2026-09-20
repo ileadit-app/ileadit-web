@@ -11,6 +11,7 @@ import {
 } from "firebase/firestore";
 import { getFirebaseDb } from "./firebase";
 import type { CompetitionStatus } from "./competitions";
+import { findLeaderboardRank } from "./leaderboardRank";
 
 // Re-export so callers of this module don't also need to import from
 // `competitions.ts` just for the status union.
@@ -128,6 +129,7 @@ export function usePlayingCompetitions(uid: string | null): PlayingCompetitionsS
     if (!uid) {
       return;
     }
+    const currentUid = uid;
 
     const db = getFirebaseDb();
     let cancelled = false;
@@ -184,24 +186,40 @@ export function usePlayingCompetitions(uid: string | null): PlayingCompetitionsS
         onFatalError,
       );
 
-      // Ordered by points, same technique as the Android leaderboard
-      // (`CompetitionRepository.observeCompetitionPlayers`) — legal here
-      // specifically because the reader has already proven membership of
-      // THIS competition (it's in their own `activeCompetitionIds`), which
-      // is exactly the precondition the rule's `exists()` check enforces for
-      // every doc in the query, not only the reader's own.
+      // Ordered by points server-side (same technique as the Android
+      // leaderboard's `observeCompetitionPlayers`) — legal here specifically
+      // because the reader has already proven membership of THIS
+      // competition (it's in their own `activeCompetitionIds`), which is
+      // exactly the precondition the rule's `exists()` check enforces for
+      // every doc in the query, not only the reader's own. The server-side
+      // `orderBy` is just a reasonable base fetch order, though — the
+      // DISPLAYED position is computed by `findLeaderboardRank`
+      // (`src/lib/leaderboardRank.ts`), the one shared sort/rank utility
+      // (W5-LEADERBOARD), so this "playing in" position is never wrong in
+      // the two ways a raw `index + 1` would be: an eliminated player who
+      // banked more points before going out must not outrank an active
+      // survivor with fewer points (D-18), and two players tied on points
+      // must show the SAME position, not an arbitrary tie-broken one.
       const standingsUnsub = onSnapshot(
         query(collection(db, "competitions", competitionId, "players"), orderBy("points", "desc")),
         (snapshot) => {
-          const index = snapshot.docs.findIndex((d) => d.id === uid);
-          const ownDoc = index >= 0 ? snapshot.docs[index] : null;
+          const rankable = snapshot.docs.map((d) => {
+            const data = d.data();
+            return {
+              id: d.id,
+              displayName: typeof data.displayName === "string" ? data.displayName : null,
+              points: typeof data.points === "number" ? data.points : 0,
+              eliminated: data.eliminated === true,
+            };
+          });
+          const ownSnapshotDoc = snapshot.docs.find((d) => d.id === currentUid) ?? null;
           const points =
-            ownDoc && typeof ownDoc.data().points === "number"
-              ? (ownDoc.data().points as number)
+            ownSnapshotDoc && typeof ownSnapshotDoc.data().points === "number"
+              ? (ownSnapshotDoc.data().points as number)
               : null;
           standingData.set(competitionId, {
             points,
-            position: index >= 0 ? index + 1 : null,
+            position: ownSnapshotDoc ? findLeaderboardRank(rankable, currentUid) : null,
           });
           emit();
         },
