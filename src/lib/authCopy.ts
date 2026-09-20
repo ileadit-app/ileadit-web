@@ -58,3 +58,22 @@ export function authFailureMessage(failure: AuthFailure): string {
 export function engineFailureMessage(failure: EngineFailure): string {
   return `We signed you in, but couldn't finish setting up your account (${failure.reason}). Please refresh and try again, or email hello@ileadit.app if it keeps happening.`;
 }
+
+/**
+ * Copy for `EngineBootstrap`'s background account-setup banner (W2-SURFACE).
+ * Deliberately DIFFERENT wording from `engineFailureMessage` above, even
+ * though both describe the same underlying `ensureAccount` failure: that one
+ * fires seconds after an interactive sign-in ("we signed you in, but..."),
+ * this one fires on `wireEnsureAccountOnSignIn`'s background listener, which
+ * runs on every page load for any RETURNING signed-in visitor - "we signed
+ * you in" would be actively wrong there. `failure` is `EngineFailure | null`
+ * (never coerced to a fallback failure) because a `null` mapping is still a
+ * real, unmapped error - see `EnsureAccountOutcome` in `ensureAccount.ts`.
+ */
+export function ensureAccountRetryMessage(failure: EngineFailure | null): string {
+  const detail = failure ? ` (${failure.reason})` : "";
+  return (
+    `We couldn't finish setting up your account${detail}. Some features may not work until ` +
+    "this succeeds — try again, or email hello@ileadit.app if it keeps happening."
+  );
+}
