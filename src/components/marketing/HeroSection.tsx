@@ -16,7 +16,12 @@ import { ArrowRight, Lock, PlayCircle } from "lucide-react";
  * - "The most average person in the office could win this."
  * - "Beat your own average. Not everyone else's steps."
  */
-const PRIMARY_HEADLINE = "Are you an average winner?";
+// "average" is deliberately NOT part of this string: the headline puns on the
+// word, so it is rendered separately in the display face (see the h1 below).
+// Changing this constant alone will not change the headline.
+const HEADLINE_BEFORE = "Are you an";
+const HEADLINE_PIVOT = "average";
+const HEADLINE_AFTER = "winner?";
 
 export function HeroSection() {
   return (
@@ -36,11 +41,20 @@ export function HeroSection() {
       <div className="relative mx-auto flex max-w-6xl flex-col gap-10 px-5 pb-16 pt-14 sm:px-6 sm:pb-24 sm:pt-20 lg:flex-row lg:items-center lg:gap-16 lg:pb-28 lg:pt-24">
         <div className="max-w-2xl">
           <span className="inline-flex items-center rounded-full border border-on-navy-border bg-white/5 px-3 py-1 text-xs font-bold uppercase tracking-wide text-brand-gold">
-            A step-count game, not a fitness plan
+            Beat yourself to beat the rest
           </span>
 
+          {/* "average" carries the pun and is set in the display serif italic,
+              in gold, so it reads as the game's mechanic ("your own average")
+              rather than as a slight ("a mediocre winner"). It stays inside the
+              same h1 and is not aria-hidden, so the accessible name is still
+              the plain sentence "Are you an average winner?". */}
           <h1 className="mt-4 text-balance text-4xl font-extrabold leading-[1.08] tracking-tight sm:text-5xl lg:text-[3.4rem]">
-            {PRIMARY_HEADLINE}
+            {HEADLINE_BEFORE}{" "}
+            <em className="font-display font-semibold italic text-brand-gold">
+              {HEADLINE_PIVOT}
+            </em>{" "}
+            {HEADLINE_AFTER}
           </h1>
 
           <p className="mt-5 max-w-xl text-lg leading-relaxed text-on-navy-muted sm:text-xl">

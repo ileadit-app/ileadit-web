@@ -11,6 +11,9 @@
  * see the landing page design spec and this file's history for why.
  */
 @theme inline {
+  /* display face — the hero's "average" only (see layout.tsx) */
+  --font-display: var(--font-fraunces);
+
   /* neutrals */
   --color-background: #fafbfb;
   --color-foreground: #12172a;

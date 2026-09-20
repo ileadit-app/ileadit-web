@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Plus_Jakarta_Sans } from "next/font/google";
+import { Plus_Jakarta_Sans, Fraunces } from "next/font/google";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import EngineBootstrap from "@/components/EngineBootstrap";
@@ -10,10 +10,22 @@ const plusJakartaSans = Plus_Jakarta_Sans({
   subsets: ["latin"],
 });
 
+// Used for exactly one word — "average" in the hero headline. The headline
+// puns on it ("an average winner" reads as mediocre; the game means "your own
+// average"), so the word is set in a different voice to mark that it is doing
+// double duty. Kept to a single weight and italic only, so the extra font
+// costs one small file.
+const fraunces = Fraunces({
+  variable: "--font-fraunces",
+  subsets: ["latin"],
+  weight: ["600"],
+  style: ["italic"],
+});
+
 export const metadata: Metadata = {
   title: "ileadit — Are you an average winner?",
   description:
-    "ileadit is a step-count game where you compete against your own rolling average, not everyone else's step count. Anyone can win — that's the whole point.",
+    "Beat yourself to beat the rest. ileadit is a game you play by walking — you compete against your own rolling average, not everyone else's step count. Anyone can win, and that's the whole point.",
 };
 
 export const viewport: Viewport = {
@@ -37,7 +49,7 @@ export default function RootLayout({
   // mismatch in any child. Do not spread it onto app components to quieten a
   // warning; there the warning is real.
   return (
-    <html lang="en" className={`${plusJakartaSans.variable} h-full`} suppressHydrationWarning>
+    <html lang="en" className={`${plusJakartaSans.variable} ${fraunces.variable} h-full`} suppressHydrationWarning>
       <body
         className="flex min-h-full flex-col bg-background text-foreground antialiased"
         suppressHydrationWarning
