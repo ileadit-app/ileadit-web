@@ -16,6 +16,7 @@ import { joinCompetition } from "@/lib/joinCompetition";
 import { leaveCompetition } from "@/lib/leaveCompetition";
 import { competitionMembershipFailureMessage } from "@/lib/competitionMembershipErrors";
 import { CompetitionLeaderboard } from "./CompetitionLeaderboard";
+import { TodayCard } from "./TodayCard";
 
 /**
  * `/competitions/[id]` — detail + leaderboard (P2.1). ONE route serves both
@@ -85,6 +86,15 @@ function CompetitionDetailContent({ competitionId, uid }: { competitionId: strin
       <Hero competition={competition} />
 
       <div className="mx-auto max-w-5xl px-5 sm:px-6">
+        {/* The Today Card (W7-TODAY) only makes sense while there's a
+            "today" to report on — during scheduled, nothing has started
+            yet; once finished, there's a final result, not a today. */}
+        {isMember &&
+        membershipState.status === "member" &&
+        (status === "active" || status === "finalising") ? (
+          <TodayCard uid={uid} player={membershipState.player} />
+        ) : null}
+
         <div className="mt-6 grid gap-4 sm:grid-cols-2">
           <WhosInCard
             playerCount={competition.playerCount}
