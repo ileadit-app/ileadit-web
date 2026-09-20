@@ -1,0 +1,323 @@
+"use client";
+
+import { useState } from "react";
+import Link from "next/link";
+import { AlertCircle } from "lucide-react";
+import { useUser } from "@/context/AuthContext";
+import { LogoMark } from "@/components/brand/Logo";
+import {
+  useCompetitionDetail,
+  useOwnMembership,
+  type CompetitionDetailDoc,
+} from "@/lib/competitionDetail";
+import { joinCompetition } from "@/lib/joinCompetition";
+import { competitionMembershipFailureMessage } from "@/lib/competitionMembershipErrors";
+
+/**
+ * `/invite/[code]` (W6-INVITE) — the page someone lands on from a
+ * colleague's link, on a phone, knowing nothing about ileadit.
+ *
+ * `competitionId` here IS the route's `code` param. There is no separate
+ * `invites` collection, `inviteCode` field, or `resolveInvite`/`acceptInvite`
+ * callable anywhere in the engine — the full design for that richer model
+ * exists only as an unbuilt, unapproved analysis doc
+ * (`automation-hub/docs/ileadit-invite-system-20260920.md`, pending Paul's
+ * Q1-Q12 answers). The only things that are real today are `competitions/{id}`
+ * and the `joinCompetition` callable, so an invite link today is literally
+ * `ileadit.app/invite/<competitionId>`. Do not build against the richer
+ * model until an engine ticket ships it.
+ *
+ * Two facts this component is built against, both re-confirmed against the
+ * running code (not just the design doc) for this ticket:
+ *
+ * 1. **No late join.** `joinCompetition.ts`'s own header comment (verified
+ *    against `functions/src/services/competitions.ts:699`,
+ *    `joinCompetitionService`) says the callable throws
+ *    `CompetitionNotJoinableError` for any `status !== "scheduled"` — active,
+ *    finalising and finished all refuse a join, with no exception. This is
+ *    a hard stop, not a warning with a way through, and the "already
+ *    started" state below is designed that way (single CTA elsewhere, no
+ *    "join anyway").
+ * 2. **No capacity limit.** Nothing in `joinCompetition.ts`, `competitions.ts`
+ *    (`useCreatedCompetitions`/`CompetitionDetailDoc`), or `CLAUDE.md`'s
+ *    schema doc mentions a player cap — `playerCount` only ever goes up,
+ *    there is no `maxPlayers` field anywhere real, and no failure reason in
+ *    `competitionMembershipErrors.ts` corresponds to "full". There is
+ *    deliberately no "competition full" state in this file: it would be
+ *    designing for an error the engine cannot produce.
+ */
+export function InviteLanding({ competitionId }: { competitionId: string }) {
+  const { status: authStatus } = useUser();
+
+  if (authStatus === "loading") {
+    return <InviteSkeleton />;
+  }
+
+  if (authStatus === "signed-out") {
+    return <SignedOutInvite competitionId={competitionId} />;
+  }
+
+  return <SignedInInvite competitionId={competitionId} />;
+}
+
+function SignedInInvite({ competitionId }: { competitionId: string }) {
+  const { user } = useUser();
+  if (!user) return null; // Unreachable: authStatus is "signed-in" here.
+  return <SignedInInviteContent competitionId={competitionId} uid={user.uid} />;
+}
+
+function SignedInInviteContent({
+  competitionId,
+  uid,
+}: {
+  competitionId: string;
+  uid: string;
+}) {
+  const competitionState = useCompetitionDetail(competitionId);
+  const membershipState = useOwnMembership(uid, competitionId);
+
+  if (competitionState.status === "loading") {
+    return <InviteSkeleton />;
+  }
+
+  if (competitionState.status === "not-found") {
+    return <NotFoundInvite />;
+  }
+
+  if (competitionState.status === "denied" || competitionState.status === "error") {
+    // `competitions/{id}`'s read rule (`admin-web/firestore.rules:232`) is
+    // an unconditional `allow read: if signedIn();` — no per-document
+    // condition — so "denied" cannot actually happen for a signed-in
+    // reader today. Kept as a safe, generic fallback (matching
+    // `CompetitionDetail.tsx`'s same defensive branch) rather than an
+    // assumption that today's rule is permanent.
+    return <GenericErrorInvite />;
+  }
+
+  const { competition } = competitionState;
+
+  // `status` is populated asynchronously by an engine trigger shortly
+  // after a competition is created (see `CreatedCompetitionSummary`'s own
+  // comment in `src/lib/competitions.ts`) — a freshly created doc can
+  // transiently have none of it yet. Treat that the same as still loading
+  // rather than guessing a state.
+  if (!competition.status) {
+    return <InviteSkeleton />;
+  }
+
+  if (membershipState.status === "checking") {
+    return <InviteSkeleton />;
+  }
+
+  if (membershipState.status === "error") {
+    return <GenericErrorInvite />;
+  }
+
+  if (membershipState.status === "member") {
+    return <AlreadyMemberInvite competitionId={competitionId} name={competition.name} />;
+  }
+
+  if (competition.status !== "scheduled") {
+    return (
+      <AlreadyStartedInvite status={competition.status} name={competition.name} />
+    );
+  }
+
+  return <JoinableInvite competitionId={competitionId} competition={competition} />;
+}
+
+/* ------------------------------------------------------------------ *
+ * Shared shell
+ * ------------------------------------------------------------------ */
+
+function InviteStatusCard({
+  title,
+  body,
+  children,
+  isError,
+}: {
+  title: string;
+  body: string;
+  children?: React.ReactNode;
+  isError?: boolean;
+}) {
+  return (
+    <div className="mx-auto max-w-lg px-5 py-20 text-center sm:px-6">
+      {isError ? (
+        <AlertCircle className="mx-auto size-8 text-destructive" aria-hidden="true" />
+      ) : (
+        <LogoMark className="mx-auto h-10 w-10" />
+      )}
+      <h1 className="mt-4 text-2xl font-extrabold text-foreground">{title}</h1>
+      <p className="mt-2 text-base text-muted-foreground">{body}</p>
+      {children ? <div className="mt-6 flex flex-col items-center gap-2">{children}</div> : null}
+    </div>
+  );
+}
+
+function InviteSkeleton() {
+  return (
+    <div className="mx-auto max-w-lg px-5 py-20 text-center sm:px-6" role="status" aria-live="polite">
+      <div className="mx-auto h-10 w-10 animate-pulse rounded-full bg-muted" />
+      <div className="mx-auto mt-4 h-7 w-56 animate-pulse rounded-full bg-muted" />
+      <div className="mx-auto mt-3 h-4 w-72 animate-pulse rounded-full bg-muted" />
+      <span className="sr-only">Loading this invite…</span>
+    </div>
+  );
+}
+
+const CTA_CLASSES =
+  "flex h-12 w-full max-w-xs items-center justify-center rounded-full bg-brand-gold px-6 text-base font-bold text-brand-navy transition-colors hover:bg-brand-gold/90 disabled:cursor-not-allowed disabled:opacity-60";
+
+/* ------------------------------------------------------------------ *
+ * States
+ * ------------------------------------------------------------------ */
+
+function SignedOutInvite({ competitionId }: { competitionId: string }) {
+  const redirect = `/invite/${competitionId}`;
+  return (
+    <InviteStatusCard
+      title="You've been invited to play ileadit"
+      body="Sign in (or create a free account) to see this competition and join in — it only takes a minute. Nobody but you ever sees your step count."
+    >
+      <Link href={`/login?redirect=${encodeURIComponent(redirect)}`} className={CTA_CLASSES}>
+        Sign in to see this invite
+      </Link>
+    </InviteStatusCard>
+  );
+}
+
+function NotFoundInvite() {
+  return (
+    <InviteStatusCard
+      title="This invite link isn't valid"
+      body="The competition it points to doesn't exist any more, or the link isn't quite right. Double-check it with whoever sent it."
+    >
+      <Link href="/" className={CTA_CLASSES}>
+        Back to ileadit
+      </Link>
+    </InviteStatusCard>
+  );
+}
+
+function GenericErrorInvite() {
+  return (
+    <InviteStatusCard
+      isError
+      title="We couldn't load this invite"
+      body="Something went wrong talking to ileadit. Try reloading the page."
+    >
+      <Link href="/" className={CTA_CLASSES}>
+        Back to ileadit
+      </Link>
+    </InviteStatusCard>
+  );
+}
+
+function AlreadyMemberInvite({
+  competitionId,
+  name,
+}: {
+  competitionId: string;
+  name: string | null;
+}) {
+  return (
+    <InviteStatusCard
+      title="You're already in"
+      body={`You're already a player in ${name ?? "this competition"} — head there to check the leaderboard.`}
+    >
+      <Link href={`/competitions/${competitionId}`} className={CTA_CLASSES}>
+        View competition
+      </Link>
+    </InviteStatusCard>
+  );
+}
+
+/**
+ * The hard stop. There is no "join anyway" path — `joinCompetition` refuses
+ * unconditionally once `status !== "scheduled"` (see this file's header
+ * comment). Only one CTA, and it points away from this competition, never
+ * back into it — a retry here can never succeed.
+ */
+function AlreadyStartedInvite({
+  status,
+  name,
+}: {
+  status: Exclude<CompetitionDetailDoc["status"], "scheduled" | null>;
+  name: string | null;
+}) {
+  const isFinished = status === "finished";
+  const competitionName = name ?? "This competition";
+  return (
+    <InviteStatusCard
+      title={isFinished ? "This one's already finished" : "This one's already under way"}
+      body={
+        isFinished
+          ? `${competitionName} has already finished — new joins close once a competition begins, so everyone's target is fair from day one.`
+          : `${competitionName} has already started — new joins close once a competition begins, so everyone's target is fair from day one.`
+      }
+    >
+      <Link href="/dashboard" className={CTA_CLASSES}>
+        Find one you can join
+      </Link>
+    </InviteStatusCard>
+  );
+}
+
+function JoinableInvite({
+  competitionId,
+  competition,
+}: {
+  competitionId: string;
+  competition: CompetitionDetailDoc;
+}) {
+  const [pending, setPending] = useState(false);
+  const [joined, setJoined] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  if (joined) {
+    return (
+      <InviteStatusCard
+        title="You're in!"
+        body={`Welcome to ${competition.name ?? "the competition"} — good luck out there.`}
+      >
+        <Link href={`/competitions/${competitionId}`} className={CTA_CLASSES}>
+          View competition
+        </Link>
+      </InviteStatusCard>
+    );
+  }
+
+  async function handleJoin() {
+    setPending(true);
+    setError(null);
+    const outcome = await joinCompetition(competitionId);
+    setPending(false);
+    if (outcome.status === "success") {
+      setJoined(true);
+    } else {
+      setError(competitionMembershipFailureMessage(outcome.failure, "join"));
+    }
+  }
+
+  return (
+    <InviteStatusCard
+      title="You've been invited to play"
+      body={`Join ${competition.name ?? "this competition"} and compete on points — never on step counts.`}
+    >
+      <button
+        type="button"
+        onClick={() => void handleJoin()}
+        disabled={pending}
+        className={CTA_CLASSES}
+      >
+        {pending ? "Joining…" : "Join competition"}
+      </button>
+      {error ? (
+        <p className="text-sm text-destructive" role="alert">
+          {error}
+        </p>
+      ) : null}
+    </InviteStatusCard>
+  );
+}
