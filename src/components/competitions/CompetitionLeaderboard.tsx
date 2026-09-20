@@ -8,6 +8,7 @@ import type {
   LeaderboardState,
   OwnPlayerData,
 } from "@/lib/competitionDetail";
+import { rankLeaderboard, type RankedLeaderboardPlayer } from "@/lib/leaderboardRank";
 
 /**
  * The member-only lower half of `/competitions/[id]` (design doc §5). Only
@@ -21,32 +22,7 @@ import type {
  * included (RULES.md:34, :102, :161).
  */
 
-interface RankedPlayer extends LeaderboardPlayer {
-  rank: number;
-}
-
-/**
- * D-18: "an eliminated player can never rank above a survivor." The
- * `players` query is already ordered `points desc` server-side
- * (`competitionDetail.ts`'s `useCompetitionPlayers`), so filtering into two
- * arrays preserves each group's relative points order — survivors keep
- * ranks 1..k, eliminated players continue the SAME numbering from k+1..n,
- * rather than restarting at 1. That continuation is the divider's whole
- * job: it expresses the rule structurally instead of hiding eliminated
- * players or re-numbering them from zero.
- */
-function rankPlayers(players: LeaderboardPlayer[]): {
-  survivors: RankedPlayer[];
-  eliminated: RankedPlayer[];
-} {
-  const survivors = players.filter((p) => !p.eliminated);
-  const eliminated = players.filter((p) => p.eliminated);
-  const ranked = [...survivors, ...eliminated].map((p, i) => ({ ...p, rank: i + 1 }));
-  return {
-    survivors: ranked.slice(0, survivors.length),
-    eliminated: ranked.slice(survivors.length),
-  };
-}
+type RankedPlayer = RankedLeaderboardPlayer<LeaderboardPlayer>;
 
 function LivesHearts({ livesRemaining, size = 12 }: { livesRemaining: number; size?: number }) {
   const label = `${livesRemaining} of 3 lives remaining`;
@@ -113,16 +89,9 @@ function PlayerRow({
       : "border-l-4 border-transparent";
 
   return (
-    <li
-      className={`flex min-h-[64px] items-center gap-3 px-4 py-3 ${rowHighlight} ${player.eliminated ? "opacity-60" : ""}`}
-    >
+    <li className={`flex min-h-[64px] items-center gap-3 px-4 py-3 ${rowHighlight}`}>
       <RankBadge rank={player.rank} shimmer={shimmerRank} />
-      <PlayerAvatar
-        displayName={player.displayName}
-        avatarIndex={player.avatarIndex}
-        size={40}
-        grayscale={player.eliminated}
-      />
+      <PlayerAvatar displayName={player.displayName} avatarIndex={player.avatarIndex} size={40} />
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-1.5">
           <span className="truncate font-semibold text-foreground">
@@ -134,9 +103,15 @@ function PlayerRow({
             </span>
           ) : null}
           {isWinner ? <PartyPopper className="size-4 text-brand-gold" aria-hidden="true" /> : null}
+          {/* Design doc §2: eliminated players get one status word/badge at
+              the SAME typographic weight as everyone else — no red X, no
+              strikethrough, no "penalty box" separator (that's also why
+              `LeaderboardBody` below renders one continuous list instead of
+              a divided "No longer in it" section). "Locked in," not
+              "failed" — their points total stays visible and proud. */}
           {player.eliminated ? (
-            <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-bold uppercase text-muted-foreground">
-              Out
+            <span className="rounded-full bg-brand-coral/15 px-2 py-0.5 text-[10px] font-bold uppercase text-brand-coral">
+              Out — final score locked in
             </span>
           ) : null}
         </div>
@@ -170,8 +145,12 @@ function YourPositionCard({
   if (ownPlayer.eliminated) {
     return (
       <div className="sticky top-16 z-30 rounded-3xl bg-brand-navy p-5 text-on-navy-foreground shadow-lg">
-        <p className="text-sm font-semibold text-on-navy-muted">
-          Eliminated{ownRank !== null ? ` — final rank #${ownRank}` : ""}
+        {/* Coral used as a small status accent (the dot), not a wash over
+            the card — the copy itself stays on the same verified on-navy
+            text colour as every other state (design doc §2, §6). */}
+        <p className="flex items-center gap-1.5 text-sm font-semibold text-on-navy-muted">
+          <span className="size-1.5 shrink-0 rounded-full bg-brand-coral" aria-hidden="true" />
+          Out — final score locked in{ownRank !== null ? ` (rank #${ownRank})` : ""}
         </p>
         <p className="mt-1 text-2xl font-extrabold">{ownPlayer.points} points</p>
       </div>
@@ -180,6 +159,11 @@ function YourPositionCard({
 
   return (
     <div className="sticky top-16 z-30 rounded-3xl bg-brand-navy p-5 text-on-navy-foreground shadow-lg">
+      {status === "finalising" ? (
+        <p className="mb-2 text-xs font-bold uppercase tracking-wide text-on-navy-muted">
+          Provisional
+        </p>
+      ) : null}
       <div className="flex items-center gap-3">
         <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-white/15 text-sm font-extrabold tabular-nums">
           {ownRank !== null ? `#${ownRank}` : "—"}
@@ -269,8 +253,14 @@ export function CompetitionLeaderboard({
       {status === "active" || status === "finalising" || status === "finished" ? (
         <>
           {status === "finalising" ? (
+            // Design doc §5: a named, calm waiting state — not "finished"
+            // (would be a lie) and not a spinner/blank screen. Honest about
+            // duration: the engine's own 30-hour cutoff
+            // (`services/finalise.ts`, engine repo) means this is routinely
+            // an hours-long wait, not "a few minutes."
             <div className="mb-4 rounded-2xl bg-brand-coral/10 p-3 text-center text-sm font-semibold text-brand-coral">
-              Final results are locking in — this can take a few minutes.
+              Wrapping up — a few last days are still closing. Final standings can take up to a
+              day to lock in.
             </div>
           ) : null}
           {status === "finished" ? (
@@ -322,9 +312,14 @@ function LeaderboardBody({
   players: LeaderboardPlayer[];
   winnerIds: string[];
 }) {
-  const { survivors, eliminated } = rankPlayers(players);
-  const own = [...survivors, ...eliminated].find((p) => p.id === uid) ?? null;
-  const ownRank = own?.rank ?? null;
+  // ONE shared sort/rank utility (`src/lib/leaderboardRank.ts`) — nobody
+  // re-sorts inline. Design doc §2 explicitly warns against "a separator
+  // line labeled 'eliminated players' that reads like a penalty box";
+  // eliminated players sort last (D-18) but stay in the SAME continuous
+  // list as everyone else, distinguished only by their own row's badge
+  // (see `PlayerRow` above), not by a section they're segregated into.
+  const ranked = rankLeaderboard(players);
+  const ownRank = ranked.find((p) => p.id === uid)?.rank ?? null;
 
   return (
     <>
@@ -334,10 +329,15 @@ function LeaderboardBody({
           Updated after today&apos;s close
         </p>
       ) : null}
+      {status === "finalising" ? (
+        <p className="mt-2 text-center text-xs text-muted-foreground">
+          Provisional final standings — order can still change while last days close
+        </p>
+      ) : null}
 
       <div className="mt-4 overflow-hidden rounded-3xl border border-border bg-card">
         <ul className="divide-y divide-border">
-          {survivors.map((p) => (
+          {ranked.map((p) => (
             <PlayerRow
               key={p.id}
               player={p}
@@ -348,26 +348,6 @@ function LeaderboardBody({
             />
           ))}
         </ul>
-
-        {eliminated.length > 0 ? (
-          <>
-            <p className="border-t border-border bg-muted/50 px-4 py-2 text-xs font-bold uppercase tracking-wide text-muted-foreground">
-              No longer in it
-            </p>
-            <ul className="divide-y divide-border">
-              {eliminated.map((p) => (
-                <PlayerRow
-                  key={p.id}
-                  player={p}
-                  isSelf={p.id === uid}
-                  isWinner={status === "finished" && winnerIds.includes(p.id)}
-                  status={status}
-                  shimmerRank={status === "finalising"}
-                />
-              ))}
-            </ul>
-          </>
-        ) : null}
       </div>
     </>
   );
