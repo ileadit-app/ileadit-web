@@ -42,7 +42,7 @@ export function TextField({
 }: BaseFieldProps & {
   value: string;
   onChange: (value: string) => void;
-  type?: "text" | "url" | "datetime-local";
+  type?: "text" | "url" | "datetime-local" | "date";
   placeholder?: string;
   maxLength?: number;
   inputRef?: React.Ref<HTMLInputElement>;
@@ -214,5 +214,46 @@ export function TextAreaField({
         <p className="mt-1 text-xs text-muted-foreground">{helperText}</p>
       ) : null}
     </div>
+  );
+}
+
+/** A single boolean setting with its own label/description — added for
+ * /account's `notificationsEnabled` toggle (P1.6). Kept generic (no
+ * `notifications`-specific naming) since any future boolean profile field
+ * would want the same shape. */
+export function ToggleField({
+  label,
+  description,
+  checked,
+  onChange,
+  disabled,
+}: {
+  label: string;
+  description?: string;
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+  disabled?: boolean;
+}) {
+  const id = useId();
+  return (
+    <label
+      htmlFor={id}
+      className="flex items-start gap-3 rounded-xl border border-input bg-background px-4 py-3 has-[:checked]:border-primary"
+    >
+      <input
+        id={id}
+        type="checkbox"
+        checked={checked}
+        onChange={(e) => onChange(e.target.checked)}
+        disabled={disabled}
+        className="mt-0.5 size-4 shrink-0 accent-primary"
+      />
+      <span>
+        <span className="block text-sm font-semibold text-foreground">{label}</span>
+        {description ? (
+          <span className="mt-0.5 block text-xs text-muted-foreground">{description}</span>
+        ) : null}
+      </span>
+    </label>
   );
 }
