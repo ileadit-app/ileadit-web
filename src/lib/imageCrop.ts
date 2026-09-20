@@ -48,6 +48,19 @@ function loadImage(src: string): Promise<HTMLImageElement> {
 }
 
 /**
+ * Decodes just enough of the picked file to read its pixel dimensions, for
+ * the soft "this is smaller than recommended" warning
+ * (`isBelowMinimumResolution`/`lowResolutionWarning` in
+ * `competitionArtwork.ts`). Not unit tested, for the same reason as
+ * `renderCroppedImage` above — jsdom does not implement image decoding, so
+ * a test here would only pin a mock of `Image`, not real behaviour.
+ */
+export async function getImageDimensions(imageSrc: string): Promise<{ width: number; height: number }> {
+  const image = await loadImage(imageSrc);
+  return { width: image.naturalWidth, height: image.naturalHeight };
+}
+
+/**
  * Draws `area` (source pixels) of `imageSrc` into a canvas at the output
  * size for `kind`, and returns it as an encoded blob.
  *

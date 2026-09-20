@@ -211,7 +211,7 @@ export function CreateCompetitionForm() {
         <ArtworkUploadField
           kind="tile"
           label="Competition image (optional)"
-          helperText="The round badge next to the competition's name. Shown as a circle on the web and in the Android app."
+          helperText="Square image, at least 512×512px. Shown as a circle on the web and in the Android app."
           draftId={draftId}
           value={imageUrl}
           onChange={setImageUrl}
@@ -221,7 +221,7 @@ export function CreateCompetitionForm() {
         <ArtworkUploadField
           kind="banner"
           label="Background image (optional)"
-          helperText="The wide band behind the competition's name. A darkening gradient sits over it so the name stays readable."
+          helperText="Wide image, at least 1920×1080px. Keep logos and faces centered — edges get cropped on some screens. A darkening gradient sits over it so the name stays readable."
           draftId={draftId}
           value={backgroundImageUrl}
           onChange={setBackgroundImageUrl}
@@ -287,12 +287,13 @@ function previewDates(
  * page the first time either changes, and then it is confidently wrong
  * about the one thing an admin is using it to decide.
  *
- * Two frames, because the banner has no fixed aspect ratio on either
- * platform — it is a full-bleed band of fixed height, so how much of the
- * image survives depends entirely on how wide the window is. A single
- * preview would have to pick one width and silently imply it was THE
- * answer. See `BANNER_ASPECT` in `src/lib/competitionArtwork.ts` for the
- * measurements and the open question.
+ * Two frames, because the banner has no fixed DISPLAY aspect ratio on
+ * either platform — it is a full-bleed band of fixed height, so how much
+ * of the (16:9-cropped) source survives depends entirely on how wide the
+ * window is. A single preview would have to pick one width and silently
+ * imply it was THE answer. See `BANNER_ASPECT` in
+ * `src/lib/competitionArtwork.ts` for the measurements and the spec's
+ * settled 16:9 source contract.
  *
  * `aria-hidden` on the frames, deliberately and narrowly: they are a
  * purely visual rendering of an image, they contain a duplicate `<h1>`

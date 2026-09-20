@@ -45,12 +45,22 @@ export const TILE_ASPECT = 1;
 
 /**
  * `backgroundImageUrl` — the hero banner. **There is no single correct
- * ratio, and web and Android do not agree.** This is a flagged, open
- * question, not a settled number; `BANNER_ASPECT` below is provisional.
+ * DISPLAY ratio, and web and Android do not agree** — that part is still
+ * true and unchanged. What changed (per
+ * `automation-hub/docs/ileadit-branding-spec-20260920.md` §3, Paul-approved
+ * design spec, superseding the provisional `BANNER_ASPECT = 3` this file
+ * shipped with) is the STRATEGY: instead of guessing a single crop ratio
+ * that compromises between the two platforms' display ratios, the crop
+ * asks for a generous **16:9 (1920×1080) SOURCE** — wider than the
+ * tightest Android target, narrower than the widest web target — and
+ * accepts that each platform's `object-cover` render will trim a
+ * DIFFERENT amount off the top and bottom of that same source. The safe
+ * area (see `bannerSafeAreaFractions`) is what tells the uploader how much
+ * survives everywhere.
  *
- * Neither platform renders this at a fixed ratio. Both render it as a
- * full-bleed band of FIXED HEIGHT and VARIABLE (viewport) WIDTH, filled
- * with `centerCrop`/`object-cover` — so the effective aspect ratio is
+ * Neither platform renders the banner at a fixed ratio. Both render it as
+ * a full-bleed band of FIXED HEIGHT and VARIABLE (viewport) WIDTH, filled
+ * with `centerCrop`/`object-cover` — so the effective DISPLAY ratio is
  * whatever `viewportWidth / bandHeight` happens to be on the device.
  *
  * Android — ONE render site only (grep of `competition.backgroundImageUrl`
@@ -76,36 +86,44 @@ export const TILE_ASPECT = 1;
  * |---|---|
  * | 390px phone | 1.95 : 1 |
  * | 640px (`sm` boundary) | 2.29 : 1 |
- * | 1280px laptop | 4.57 : 1 |
+ * | 1280px laptop | 4.57 : 1 (the spec rounds this to "≈4.6:1") |
  * | 1920px desktop | 6.86 : 1 |
  *
  * So: Android sits in a narrow 2.4–2.8 band; web sweeps 1.95 → 6.86 and
- * spends most of its life far WIDER than Android ever gets. They
- * disagree, and neither is a fixed target a cropper can be "correct"
- * against.
+ * spends most of its life far WIDER than Android ever gets. Both bands sit
+ * ABOVE 16:9 (1.78:1) — a 16:9 source is narrower than every real display
+ * target on either platform, which is exactly why it works as a source
+ * contract: `object-cover` always keeps the FULL WIDTH of a 16:9 source
+ * and trims only the top and bottom, never the sides, on every surface
+ * this app actually renders.
  *
- * `BANNER_ASPECT = 3` is a provisional choice, not a measurement: it is
- * approximately the geometric mean of the web extremes actually worth
- * designing for (√(1.95 × 4.57) ≈ 2.99), which minimises the worst-case
- * proportion lost in EITHER direction, and it happens to sit just outside
- * Android's own 2.45–2.80 band. **Paul has not signed this off.** Until
- * he does, the crop UI does not present it as authoritative: it draws the
- * always-visible safe area (see `bannerSafeAreaFractions`) over the crop
- * frame, and the form previews the result at both a phone and a desktop
- * width using the real hero component, so the trimming is visible rather
- * than asserted.
+ * `BANNER_ASPECT = 16 / 9` is the spec's settled answer, not a provisional
+ * placeholder — Paul has signed off on the 16:9/1920×1080 source
+ * recommendation (spec §3). What is still asserted rather than guaranteed
+ * is the sponsor's own choice of what to put in the source photo, which is
+ * why the crop UI still draws the always-visible safe area (see
+ * `bannerSafeAreaFractions`) over the crop frame, and the form still
+ * previews the result at both a phone and a desktop width using the real
+ * hero component — so the trimming stays visible rather than asserted.
  */
-export const BANNER_ASPECT = 3;
+export const BANNER_ASPECT = 16 / 9;
 
 /**
  * The real display ratios measured above, kept as data so
  * `bannerSafeAreaFractions` derives the safe area from the SAME numbers
  * the comment cites instead of a second hand-copied pair.
+ *
+ * These are DISPLAY ratios (unaffected by the `BANNER_ASPECT` source
+ * contract change above) — they describe `CompetitionHero.tsx`'s own
+ * rendered band shape, not anything about the uploaded source. The spec
+ * (§3) quotes the widest of these as "≈4.6:1"; `1280 / 280` below is the
+ * precise figure that rounds to it.
  */
 export const MEASURED_BANNER_DISPLAY_RATIOS = {
   /** Web at a 390px phone viewport: 390 / 200. */
   narrowest: 390 / 200,
-  /** Web at a 1280px laptop viewport: 1280 / 280. Wider desktops exist
+  /** Web at a 1280px laptop viewport: 1280 / 280 ≈ 4.6:1 — the spec's
+   * own "desktop web reaches about 4.6:1" figure. Wider desktops exist
    * (1920px → 6.86) but a banner designed for those loses so much height
    * everywhere else that it stops being a useful target; 1280 is the
    * widest ratio this crop is asked to survive. */
@@ -121,6 +139,18 @@ export const MEASURED_BANNER_DISPLAY_RATIOS = {
  * than the crop keeps the full height and trims left and right
  * (horizontal fraction `narrowest / cropAspect`). Both are clamped at 1 —
  * nothing is ever more than fully visible.
+ *
+ * With the spec's 16:9 `BANNER_ASPECT`, EVERY real display ratio measured
+ * above (1.95 through 4.6+) is wider than the crop, so in practice
+ * `horizontal` always clamps to 1 (nothing is ever trimmed off the sides)
+ * and the whole safe area question is really a `vertical` question, always
+ * decided by the WIDEST target — that is what actually determines what
+ * survives, per the spec's own arithmetic: cover-cropping a 1920×1080
+ * (16:9) source into the 4.6:1 desktop band keeps only
+ * `(16/9) / 4.6 ≈ 0.386` — about 39% — of the source's height
+ * (1080 × 0.386 ≈ 417px of the original 1080px), matching spec §3's own
+ * "~39% of the source's height" figure. The Android target (2.45:1) is
+ * far gentler by comparison: `(16/9) / 2.45 ≈ 0.726`, about 73%.
  *
  * Used to draw the "always visible" guide inside the banner crop frame.
  */
@@ -141,15 +171,19 @@ export function bannerSafeAreaFractions(
 /**
  * Pixel dimensions the cropped image is re-encoded at before upload.
  *
- * Sized from the largest real render times a 3x device pixel ratio, then
- * rounded to a round number — not arbitrary:
- *  - tile: Android's largest is 118dp → 354px at 3x → 512.
- *  - banner: Android's band is 147dp tall → 441px at 3x; web's is 280 CSS
- *    px → 560px at 2x. 512 tall at `BANNER_ASPECT` = 1536 × 512.
+ *  - tile: Android's largest render is 118dp → 354px at 3x device pixel
+ *    ratio → rounded to 512.
+ *  - banner: the spec's own recommended/minimum SOURCE resolution,
+ *    1920×1080 (16:9) — not a value derived from any one render site's
+ *    pixel density, because the banner's whole point is to be one generous
+ *    source that every display ratio then crops independently (see
+ *    `BANNER_ASPECT`). 1920×1080 comfortably exceeds even the sharpest
+ *    real render (the 1280px-wide desktop band, 1280×280) at 1x, so it is
+ *    never the limiting factor.
  */
 export const ARTWORK_OUTPUT_SIZE = {
   tile: { width: 512, height: 512 },
-  banner: { width: 512 * BANNER_ASPECT, height: 512 },
+  banner: { width: 1920, height: 1080 },
 } as const;
 
 export type ArtworkKind = keyof typeof ARTWORK_OUTPUT_SIZE;
@@ -186,19 +220,29 @@ export const ACCEPTED_IMAGE_MIME_TYPES = ["image/png", "image/jpeg", "image/webp
 export const ARTWORK_FILE_ACCEPT = ACCEPTED_IMAGE_MIME_TYPES.join(",");
 
 /**
- * Max size of the file a user may SELECT. Not the size of what gets
- * uploaded: the crop step re-encodes to `ARTWORK_OUTPUT_SIZE` first, so
- * the object that actually reaches the bucket is typically a few hundred
- * KB regardless. 10 MB is roughly a 12-megapixel phone photo, which is
- * the realistic worst case someone drags in; above that the browser-side
- * decode-and-canvas step starts to be the thing that hurts, not the
- * network.
+ * Max size of the file a user may SELECT, per artwork kind. Not the size of
+ * what gets uploaded: the crop step re-encodes to `ARTWORK_OUTPUT_SIZE`
+ * first, so the object that actually reaches the bucket is typically a few
+ * hundred KB regardless of how large the original photo was.
  *
- * Deliberately NOT the profiles rule's 2 MB: that limit is enforced
- * server-side on the uploaded object, and applies to a much smaller
- * avatar. The competitions rule has no size predicate at all.
+ * These numbers are the spec's own figures
+ * (`ileadit-branding-spec-20260920.md` §2 "Max 2MB, matching the
+ * `profiles/` cap" for the badge, §3 "max 4MB — higher than the badge's
+ * 2MB — banners are photographic" for the banner), and — unlike the flat
+ * 10 MB this file shipped with before — they are deliberately the SAME
+ * numbers spec §5's prerequisite #2 asks the `competitions/{competitionId}`
+ * storage rule to enforce server-side. That rule hardening has not
+ * shipped yet (the rule still has no size predicate at all — see
+ * `ACCEPTED_IMAGE_MIME_TYPES`'s comment on the same gap for content type),
+ * so today this client-side check is a courtesy that can be bypassed by
+ * anyone not using this form; it stops being only a courtesy the moment
+ * the storage rule catches up, which is exactly why the numbers already
+ * match.
  */
-export const MAX_SOURCE_FILE_BYTES = 10 * 1024 * 1024;
+export const MAX_SOURCE_FILE_BYTES_BY_KIND: Record<ArtworkKind, number> = {
+  tile: 2 * 1024 * 1024,
+  banner: 4 * 1024 * 1024,
+};
 
 export type ArtworkRejectionReason = "empty" | "vector-image" | "unsupported-type" | "too-large";
 
@@ -225,12 +269,16 @@ function formatMegabytes(bytes: number): string {
  * Returns `null` when the file is acceptable, or a rejection with copy
  * the field can show as-is.
  *
+ * `kind` selects which of `MAX_SOURCE_FILE_BYTES_BY_KIND`'s two caps
+ * applies — the badge and the banner are no longer held to the same size
+ * limit (spec §2/§3, see `MAX_SOURCE_FILE_BYTES_BY_KIND`'s own comment).
+ *
  * SVG gets its OWN reason and message rather than falling into the
  * generic unsupported-type bucket: "SVG isn't supported" with no reason
  * reads like an oversight to fix, and someone would reasonably try to
  * widen the allowlist. The message says why it is excluded.
  */
-export function validateArtworkFile(file: ArtworkFileLike): ArtworkFileRejection | null {
+export function validateArtworkFile(file: ArtworkFileLike, kind: ArtworkKind): ArtworkFileRejection | null {
   if (file.size === 0) {
     return { reason: "empty", message: "That file is empty. Try picking it again." };
   }
@@ -252,10 +300,16 @@ export function validateArtworkFile(file: ArtworkFileLike): ArtworkFileRejection
     };
   }
 
-  if (file.size > MAX_SOURCE_FILE_BYTES) {
+  const maxBytes = MAX_SOURCE_FILE_BYTES_BY_KIND[kind];
+  if (file.size > maxBytes) {
+    // Spec §4's own phrasing ("That file is over 2MB — try a smaller
+    // image." / "…over 4MB…") names the threshold, not the file's actual
+    // size — kept that way here too rather than reintroducing the file's
+    // exact size, so the two kinds read as the same sentence with one
+    // number swapped, matching the spec's copy exactly.
     return {
       reason: "too-large",
-      message: `That image is ${formatMegabytes(file.size)}. Keep it under ${formatMegabytes(MAX_SOURCE_FILE_BYTES)}.`,
+      message: `That file is over ${formatMegabytes(maxBytes)} — try a smaller image.`,
     };
   }
 
@@ -266,6 +320,46 @@ export function validateArtworkFile(file: ArtworkFileLike): ArtworkFileRejection
  * Worth saying out loud before the upload, not after. */
 export function losesAnimationOnCrop(file: ArtworkFileLike): boolean {
   return file.type.toLowerCase() === "image/gif";
+}
+
+/* ------------------------------------------------------------------ *
+ * Minimum source resolution — a SOFT, non-blocking warning
+ * ------------------------------------------------------------------ *
+ * Spec §2 (badge) and §3 (banner) both frame "the source is smaller than
+ * recommended" as a WARNING, not a rejection ("Warning, low resolution
+ * (soft, non-blocking) ... with a secondary 'Use anyway' text button —
+ * genuinely a warning, not an error, since a slightly soft badge is a real
+ * ship-it-anyway call sponsors get to make", spec §4). These functions are
+ * pure and kind-generic so both the badge's 512×512 and the banner's
+ * 1920×1080 minimum go through one path; the actual pixel dimensions can
+ * only be read by decoding the file in a browser, which is why this is
+ * split from the deciding logic below — see `getImageDimensions` in
+ * `src/lib/imageCrop.ts` for the half that needs an `Image`.
+ */
+
+/** Minimum recommended source dimensions per kind. Badge: spec §2,
+ * "minimum 512×512px (1024×1024 recommended...)". Banner: spec §3,
+ * "min 1920×1080". Falling short of these is a warning, never a block —
+ * nothing here throws or rejects a file for being under this size. */
+export const MIN_SOURCE_DIMENSIONS: Record<ArtworkKind, { width: number; height: number }> = {
+  tile: { width: 512, height: 512 },
+  banner: { width: 1920, height: 1080 },
+};
+
+export function isBelowMinimumResolution(kind: ArtworkKind, width: number, height: number): boolean {
+  const min = MIN_SOURCE_DIMENSIONS[kind];
+  return width < min.width || height < min.height;
+}
+
+/** User-facing copy for the soft warning, worded per spec §4's badge
+ * example ("This image is smaller than 512×512px and may look blurry.
+ * Upload a larger version, or use it anyway.") and extended to the banner
+ * with the same shape and its own numbers — the spec does not spell out
+ * the banner's exact sentence, so this is a deliberate, documented
+ * extrapolation of the badge's wording, not a second verbatim quote. */
+export function lowResolutionWarning(kind: ArtworkKind): string {
+  const min = MIN_SOURCE_DIMENSIONS[kind];
+  return `This image is smaller than ${min.width}×${min.height}px and may look blurry. Upload a larger version, or use it anyway.`;
 }
 
 /* ------------------------------------------------------------------ *

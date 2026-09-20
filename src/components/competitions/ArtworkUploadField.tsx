@@ -5,17 +5,19 @@ import { ImagePlus, Loader2, Trash2, Upload } from "lucide-react";
 import { ImageCropDialog } from "./ImageCropDialog";
 import {
   ARTWORK_FILE_ACCEPT,
-  MAX_SOURCE_FILE_BYTES,
+  MAX_SOURCE_FILE_BYTES_BY_KIND,
   artworkAspect,
   artworkStoragePath,
   bannerSafeAreaFractions,
+  isBelowMinimumResolution,
   losesAnimationOnCrop,
+  lowResolutionWarning,
   validateArtworkFile,
   type ArtworkKind,
 } from "@/lib/competitionArtwork";
 import { deleteCompetitionArtwork, uploadCompetitionArtwork } from "@/lib/artworkUpload";
 import { artworkUploadFailureMessage } from "@/lib/artworkUploadErrors";
-import { readFileAsDataUrl, renderCroppedImage, type CropArea } from "@/lib/imageCrop";
+import { getImageDimensions, readFileAsDataUrl, renderCroppedImage, type CropArea } from "@/lib/imageCrop";
 
 /**
  * Drag-and-drop (or click-to-browse) upload for one piece of competition
@@ -95,7 +97,7 @@ export function ArtworkUploadField({
     setError(null);
     setNotice(null);
 
-    const rejection = validateArtworkFile(file);
+    const rejection = validateArtworkFile(file, kind);
     if (rejection) {
       setError(rejection.message);
       return;
@@ -108,6 +110,21 @@ export function ArtworkUploadField({
     try {
       const imageSrc = await readFileAsDataUrl(file);
       setPhase({ name: "cropping", imageSrc, sourceType: file.type, sourceName: file.name });
+
+      // Soft, non-blocking check (spec §4's "Warning, low resolution" —
+      // never blocks the crop, and a decode failure here is silently
+      // ignored rather than surfaced, since the crop step immediately
+      // after this will hit the same failure and report it properly if
+      // the file is genuinely unreadable.
+      if (mountedRef.current) {
+        void getImageDimensions(imageSrc)
+          .then(({ width, height }) => {
+            if (mountedRef.current && isBelowMinimumResolution(kind, width, height)) {
+              setNotice(lowResolutionWarning(kind));
+            }
+          })
+          .catch(() => {});
+      }
     } catch (readError) {
       setError(readError instanceof Error ? readError.message : "Could not read that file.");
     }
@@ -258,7 +275,7 @@ export function ArtworkUploadField({
             {value ? `Replace ${label.toLowerCase()}` : `Drag an image here, or browse`}
           </span>
           <span className="text-xs text-muted-foreground">
-            PNG, JPEG, WebP or GIF, up to {Math.round(MAX_SOURCE_FILE_BYTES / (1024 * 1024))} MB
+            PNG, JPEG, WebP or GIF, up to {Math.round(MAX_SOURCE_FILE_BYTES_BY_KIND[kind] / (1024 * 1024))} MB
           </span>
         </label>
       </div>

@@ -1,7 +1,7 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { ArtworkUploadField } from "./ArtworkUploadField";
-import { MAX_SOURCE_FILE_BYTES } from "@/lib/competitionArtwork";
+import { MAX_SOURCE_FILE_BYTES_BY_KIND } from "@/lib/competitionArtwork";
 
 /**
  * What a person actually sees when they pick a file — asserted on the
@@ -53,6 +53,10 @@ vi.mock("@/lib/imageCrop", () => ({
     blob: { size: 4096 } as Blob,
     mimeType: "image/png" as const,
   })),
+  // Comfortably above every kind's minimum (banner's is the largest, at
+  // 1920x1080) so the soft low-resolution notice stays off by default —
+  // tests that want it exercise it explicitly by overriding this mock.
+  getImageDimensions: vi.fn(async () => ({ width: 4000, height: 4000 })),
 }));
 
 const uploadCompetitionArtwork = vi.fn();
@@ -129,11 +133,11 @@ describe("ArtworkUploadField — client-side rejection, before anything is uploa
     expect(uploadCompetitionArtwork).not.toHaveBeenCalled();
   });
 
-  it("rejects a file over the size cap, and uploads nothing", async () => {
+  it("rejects a file over the size cap for its kind, and uploads nothing", async () => {
     const { input } = renderField();
-    pick(input, makeFile({ size: MAX_SOURCE_FILE_BYTES + 1 }));
+    pick(input, makeFile({ size: MAX_SOURCE_FILE_BYTES_BY_KIND.tile + 1 }));
 
-    expect(await screen.findByRole("alert")).toHaveTextContent(/Keep it under 10 MB/i);
+    expect(await screen.findByRole("alert")).toHaveTextContent(/over 2 MB/i);
     expect(uploadCompetitionArtwork).not.toHaveBeenCalled();
   });
 
@@ -143,6 +147,30 @@ describe("ArtworkUploadField — client-side rejection, before anything is uploa
     fireEvent.drop(zone, { dataTransfer: { files: [makeFile({ name: "x.svg", type: "image/svg+xml" })] } });
 
     expect(await screen.findByRole("alert")).toHaveTextContent(/scripts that run/i);
+  });
+});
+
+describe("ArtworkUploadField — low-resolution source, a soft warning that never blocks", () => {
+  it("warns when the picked image is smaller than the recommended minimum, without blocking the crop", async () => {
+    const { getImageDimensions } = await import("@/lib/imageCrop");
+    vi.mocked(getImageDimensions).mockResolvedValueOnce({ width: 300, height: 300 });
+    const { input } = renderField();
+
+    pick(input, makeFile());
+
+    // The crop dialog still opens — a low-resolution source is a warning,
+    // never a rejection.
+    expect(await screen.findByTestId("cropper")).toBeInTheDocument();
+    expect(await screen.findByText(/smaller than 512×512px/i)).toBeInTheDocument();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
+  it("says nothing when the picked image already meets the minimum", async () => {
+    const { input } = renderField();
+    pick(input, makeFile());
+
+    await screen.findByTestId("cropper");
+    expect(screen.queryByText(/smaller than/i)).not.toBeInTheDocument();
   });
 });
 
