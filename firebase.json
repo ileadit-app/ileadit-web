@@ -1,0 +1,16 @@
+{
+  "hosting": {
+    "source": ".",
+    "frameworksBackend": {
+      "region": "europe-west2"
+    },
+    "ignore": [
+      "firebase.json",
+      "**/.git/**",
+      "**/node_modules/**",
+      "**/.next/**",
+      "**/*.test.ts",
+      "**/*.test.tsx"
+    ]
+  }
+}
