@@ -8,7 +8,12 @@ import type {
   LeaderboardState,
   OwnPlayerData,
 } from "@/lib/competitionDetail";
-import { rankLeaderboard, type RankedLeaderboardPlayer } from "@/lib/leaderboardRank";
+import {
+  isCompetitionWinner,
+  rankFinishedLeaderboard,
+  rankLeaderboard,
+  type RankedLeaderboardPlayer,
+} from "@/lib/leaderboardRank";
 
 /**
  * The member-only lower half of `/competitions/[id]` (design doc §5). Only
@@ -137,10 +142,15 @@ function YourPositionCard({
   status,
   ownPlayer,
   ownRank,
+  stillSettling,
 }: {
   status: CompetitionStatus;
   ownPlayer: OwnPlayerData;
   ownRank: number | null;
+  /** See `CompetitionLeaderboard`'s `stillSettling` — a `finished`
+   * competition whose rows haven't all delivered a frozen `rank` to this
+   * client yet gets the same "Provisional" framing as `finalising`. */
+  stillSettling: boolean;
 }) {
   if (ownPlayer.eliminated) {
     return (
@@ -159,7 +169,7 @@ function YourPositionCard({
 
   return (
     <div className="sticky top-16 z-30 rounded-3xl bg-brand-navy p-5 text-on-navy-foreground shadow-lg">
-      {status === "finalising" ? (
+      {status === "finalising" || stillSettling ? (
         <p className="mb-2 text-xs font-bold uppercase tracking-wide text-on-navy-muted">
           Provisional
         </p>
@@ -227,6 +237,24 @@ export function CompetitionLeaderboard({
   leaderboardState: LeaderboardState;
   winnerIds: string[];
 }) {
+  // `finished`-only: rank the SAME rows via the frozen-rank rule
+  // (`rankFinishedLeaderboard`, `src/lib/leaderboardRank.ts`) instead of the
+  // live D-18 sort every other status uses. Computed once, here, so the
+  // "still settling" banner below and `LeaderboardBody`'s actual row order
+  // can never disagree about which mode they're in — both read the SAME
+  // result rather than each re-deriving it.
+  const finishedRanking =
+    status === "finished" && leaderboardState.status === "success"
+      ? rankFinishedLeaderboard(leaderboardState.players)
+      : null;
+  // "Settling": status is already `finished` at the competition-doc level,
+  // but this client hasn't yet observed every player row's own `rank` field
+  // (see `rankFinishedLeaderboard`'s module doc — a transient cross-listener
+  // gap, not an error). Treated the same as `finalising` visually: honest
+  // "still locking in" framing, never the "Final results" copy, until every
+  // row has caught up.
+  const stillSettling = finishedRanking?.status === "unsettled";
+
   return (
     <section id="leaderboard" className="mt-8 scroll-mt-20">
       {status === "scheduled" ? (
@@ -252,18 +280,22 @@ export function CompetitionLeaderboard({
 
       {status === "active" || status === "finalising" || status === "finished" ? (
         <>
-          {status === "finalising" ? (
+          {status === "finalising" || stillSettling ? (
             // Design doc §5: a named, calm waiting state — not "finished"
             // (would be a lie) and not a spinner/blank screen. Honest about
             // duration: the engine's own 30-hour cutoff
             // (`services/finalise.ts`, engine repo) means this is routinely
-            // an hours-long wait, not "a few minutes."
+            // an hours-long wait, not "a few minutes." `stillSettling` (a
+            // competition that IS `finished` at the top level, but whose
+            // player rows haven't all delivered their frozen `rank` to
+            // THIS client yet) gets the exact same honest copy rather than
+            // a premature "Final results" banner.
             <div className="mb-4 rounded-2xl bg-brand-coral/10 p-3 text-center text-sm font-semibold text-brand-coral">
               Wrapping up — a few last days are still closing. Final standings can take up to a
               day to lock in.
             </div>
           ) : null}
-          {status === "finished" ? (
+          {status === "finished" && !stillSettling ? (
             <p className="mb-3 text-sm font-bold uppercase tracking-wide text-brand-gold">
               🏅 Final results
             </p>
@@ -291,6 +323,7 @@ export function CompetitionLeaderboard({
               ownPlayer={ownPlayer}
               players={leaderboardState.players}
               winnerIds={winnerIds}
+              finishedRanking={finishedRanking}
             />
           )}
         </>
@@ -305,12 +338,17 @@ function LeaderboardBody({
   ownPlayer,
   players,
   winnerIds,
+  finishedRanking,
 }: {
   status: CompetitionStatus;
   uid: string;
   ownPlayer: OwnPlayerData;
   players: LeaderboardPlayer[];
   winnerIds: string[];
+  /** Non-null only when `status === "finished"` — see `CompetitionLeaderboard`,
+   * which computes this once and passes it down so the banner above and the
+   * rows below can never disagree about settled-vs-settling. */
+  finishedRanking: ReturnType<typeof rankFinishedLeaderboard<LeaderboardPlayer>> | null;
 }) {
   // ONE shared sort/rank utility (`src/lib/leaderboardRank.ts`) — nobody
   // re-sorts inline. Design doc §2 explicitly warns against "a separator
@@ -318,18 +356,28 @@ function LeaderboardBody({
   // eliminated players sort last (D-18) but stay in the SAME continuous
   // list as everyone else, distinguished only by their own row's badge
   // (see `PlayerRow` above), not by a section they're segregated into.
-  const ranked = rankLeaderboard(players);
+  //
+  // `finished`: the frozen-rank rule (`rankFinishedLeaderboard`) — passed in
+  // already computed, never re-derived here. Every other status: the live
+  // D-18 sort, same as always.
+  const ranked = finishedRanking ? finishedRanking.players : rankLeaderboard(players);
+  const stillSettling = finishedRanking?.status === "unsettled";
   const ownRank = ranked.find((p) => p.id === uid)?.rank ?? null;
 
   return (
     <>
-      <YourPositionCard status={status} ownPlayer={ownPlayer} ownRank={ownRank} />
+      <YourPositionCard
+        status={status}
+        ownPlayer={ownPlayer}
+        ownRank={ownRank}
+        stillSettling={stillSettling === true}
+      />
       {status === "active" ? (
         <p className="mt-2 text-center text-xs text-muted-foreground">
           Updated after today&apos;s close
         </p>
       ) : null}
-      {status === "finalising" ? (
+      {status === "finalising" || stillSettling ? (
         <p className="mt-2 text-center text-xs text-muted-foreground">
           Provisional final standings — order can still change while last days close
         </p>
@@ -342,9 +390,9 @@ function LeaderboardBody({
               key={p.id}
               player={p}
               isSelf={p.id === uid}
-              isWinner={status === "finished" && winnerIds.includes(p.id)}
+              isWinner={isCompetitionWinner(p.id, status === "finished", winnerIds)}
               status={status}
-              shimmerRank={status === "finalising"}
+              shimmerRank={status === "finalising" || stillSettling === true}
             />
           ))}
         </ul>

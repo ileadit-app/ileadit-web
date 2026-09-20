@@ -137,6 +137,13 @@ export interface OwnPlayerData {
   todayPoints: number;
   livesRemaining: number;
   eliminated: boolean;
+  /** `rank`, engine-written ONLY at settlement (`finalise.ts`'s
+   * `settleMemberOnce`, engine commit `d8d8e79`) — `null` for every status
+   * before `finished`, and `null` even at `finished` for the brief window
+   * before this specific player's own settlement transaction has committed.
+   * See `src/lib/leaderboardRank.ts`'s `rankFinishedLeaderboard` for why
+   * this field, once present, must be shown as-is and never recomputed. */
+  frozenRank: number | null;
 }
 
 export type OwnMembershipState =
@@ -176,6 +183,7 @@ export function useOwnMembership(
             todayPoints: typeof data.todayPoints === "number" ? data.todayPoints : 0,
             livesRemaining: typeof data.livesRemaining === "number" ? data.livesRemaining : 0,
             eliminated: data.eliminated === true,
+            frozenRank: typeof data.rank === "number" ? data.rank : null,
           },
         });
       },
@@ -210,6 +218,8 @@ export interface LeaderboardPlayer {
   todayPoints: number;
   livesRemaining: number;
   eliminated: boolean;
+  /** See `OwnPlayerData.frozenRank` — same field, same doc, same rules. */
+  frozenRank: number | null;
 }
 
 export type LeaderboardState =
@@ -255,6 +265,7 @@ export function useCompetitionPlayers(
             todayPoints: typeof data.todayPoints === "number" ? data.todayPoints : 0,
             livesRemaining: typeof data.livesRemaining === "number" ? data.livesRemaining : 0,
             eliminated: data.eliminated === true,
+            frozenRank: typeof data.rank === "number" ? data.rank : null,
           };
         });
         setState({ status: "success", players });

@@ -127,3 +127,107 @@ export function findLeaderboardRank<T extends RankableLeaderboardPlayer & { id: 
   const ranked = rankLeaderboard(players);
   return ranked.find((p) => p.id === id)?.rank ?? null;
 }
+
+/**
+ * ---------------------------------------------------------------------
+ * FINISHED-only ranking (ticket W8-FINISHED, 2026-09-20).
+ *
+ * Once a competition reaches `finished`, the engine's own settlement pass
+ * (`functions/src/services/finalise.ts`'s `settleMemberOnce`, sibling
+ * `ileadit` engine repo commit `d8d8e79`) writes a `rank` field onto EACH
+ * player's own row — the same D-18 combined ordering this module already
+ * computes client-side, but FROZEN at the instant of settlement rather than
+ * recomputed from whatever `points` happens to read right now. Once that
+ * field exists it is authoritative, and `finaliseCompetitionOnce` only
+ * flips the competition doc's `status` to `"finished"` after EVERY member
+ * in that run has been settled (the settlement loop throws, rather than
+ * lets `status` move, if any member's settlement transaction errors) — so
+ * structurally, every player row SHOULD already carry `rank` by the time a
+ * client observes `status === "finished"`.
+ *
+ * Two independent Firestore listeners are in play, though: the competition
+ * document and the `players` subcollection. Nothing guarantees they settle
+ * on the same snapshot tick client-side, so a client can legitimately
+ * observe `status === "finished"` for a moment before every player row's
+ * `rank` has arrived on ITS OWN listener. `rankFinishedLeaderboard` makes
+ * that transient window an explicit, distinct return value (`"unsettled"`)
+ * instead of a silent gap — see `CompetitionLeaderboard.tsx` for how it's
+ * surfaced (the same honest "still locking in" framing already used for
+ * `finalising`, not the "Final results" copy, until every row has caught
+ * up).
+ *
+ * THE RULE THIS ENFORCES: once a competition is genuinely settled, the UI
+ * shows the FROZEN rank and NOTHING else — never a client-recomputed rank
+ * alongside or instead of it. `finalise.ts`'s own module comment documents
+ * a real edge case (the 30-hour cutoff) where a straggler's `points` can
+ * drift upward AFTER settlement while `rank` stays frozen; if this module
+ * also recomputed a live rank once settled, that edge case would show two
+ * DIFFERENT numbers that visibly disagree. Showing only the frozen value
+ * once every row has one makes that disagreement structurally unable to
+ * reach the screen — not by reconciling two answers, but by only ever
+ * computing one.
+ * ---------------------------------------------------------------------
+ */
+
+export interface FrozenRankablePlayer extends RankableLeaderboardPlayer {
+  /** `competitions/{cid}/players/{uid}.rank` — `null` until THIS player's
+   * own settlement transaction has committed (see module doc above). */
+  frozenRank: number | null;
+}
+
+export type FinishedRanking<T extends FrozenRankablePlayer> =
+  | { status: "settled"; players: Array<RankedLeaderboardPlayer<T>> }
+  | { status: "unsettled"; players: Array<RankedLeaderboardPlayer<T>> };
+
+/**
+ * The one place a `finished` competition's rows get ordered/ranked. Every
+ * consumer showing a `finished` leaderboard must call this — never
+ * `rankLeaderboard` directly — so "settled" vs "still catching up" is
+ * always a real, checked state rather than an assumption.
+ */
+export function rankFinishedLeaderboard<T extends FrozenRankablePlayer>(
+  players: readonly T[],
+): FinishedRanking<T> {
+  if (players.some((p) => p.frozenRank === null)) {
+    // Not every row has settled yet from THIS client's read (see module
+    // doc) — fall back to the SAME live D-18 ordering shown before the
+    // competition finished, so the board stays legible without inventing a
+    // frozen number nobody has actually written yet.
+    return { status: "unsettled", players: rankLeaderboard(players) };
+  }
+  const sorted = [...players].sort((a, b) => {
+    const byRank = (a.frozenRank as number) - (b.frozenRank as number);
+    if (byRank !== 0) return byRank;
+    // Deterministic tiebreak for two rows sharing a frozen rank (a real,
+    // expected case — D-18 ties share a rank number) — same rule as
+    // `compareLeaderboardPlayers`'s own tiebreak, applied here instead of
+    // re-deriving order from points (which is exactly the thing this
+    // function exists to avoid doing once a competition is settled).
+    return (a.displayName ?? "").localeCompare(b.displayName ?? "");
+  });
+  return {
+    status: "settled",
+    players: sorted.map((p) => ({ ...p, rank: p.frozenRank as number })),
+  };
+}
+
+/**
+ * Whether `playerId` should render as a winner. `winnerIds` (the
+ * competition document's own field, written by `finalise.ts`'s settlement
+ * transaction in the SAME write as `status: "finished"`) is already the
+ * engine's complete, authoritative answer — including the D-18 edge case
+ * where every member of a competition was eliminated: nobody survived, so
+ * `winnerIds` is EMPTY, even though the standard-ranking arithmetic still
+ * hands the top ELIMINATED player rank 1 on the table (a leaderboard needs
+ * a rank 1). This function exists so no caller is tempted to shortcut the
+ * lookup with `rank === 1` — which would silently crown that top eliminated
+ * player the "winner" of a competition nobody actually won. Always compute
+ * a winner from `winnerIds` via this function, never from rank.
+ */
+export function isCompetitionWinner(
+  playerId: string,
+  isFinished: boolean,
+  winnerIds: readonly string[],
+): boolean {
+  return isFinished && winnerIds.includes(playerId);
+}

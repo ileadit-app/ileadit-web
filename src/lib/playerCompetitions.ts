@@ -113,14 +113,33 @@ interface PlayerStanding {
  * rule to lean on (`competitions/{id}`'s own `allow read: if signedIn()`)
  * and so doesn't need this two-level subscription at all.
  *
- * Caveat this hook does NOT attempt to solve: `activeCompetitionIds` only
- * contains competitions that are scheduled, active, or not yet settled —
- * `close.ts` DROPS a competition from this array once it ends. A finished
- * competition moves instead into `private/game.competitionHistory`, capped
- * at the last 10, and that record's own shape includes `averageSteps` — a
- * raw step-derived field that must NEVER be read or rendered by this portal
- * (CLAUDE.md's Privacy Rules). Past/finished competitions are therefore
- * deliberately out of scope for this "playing in" view, not an oversight.
+ * Caveat this hook does NOT attempt to solve, and DECIDED (ticket
+ * W8-FINISHED, 2026-09-20): `activeCompetitionIds` only contains
+ * competitions that are scheduled, active, or not yet settled for THIS
+ * member — verified against `functions/src/services/close.ts` (engine
+ * commit `d8d8e79`)'s `refreshedIds` computation, which drops a competition
+ * id the moment `endDate < nextDate`, i.e. the SAME close that processes
+ * this member's own last competition day. Cross-checked against
+ * `finalise.ts`'s `finaliseCompetitionOnce`: a competition only reaches
+ * `status: "finished"` after EVERY member has been settled, which itself
+ * requires every member's last day to have already closed. So by
+ * construction, a `finished` competition has ALREADY been dropped from
+ * `activeCompetitionIds` for every member, for every one of them, before
+ * the competition doc's own status can ever read `finished` — there is no
+ * observable state where a `finished` (or, for an on-time closer, even a
+ * `finalising`) competition still shows up here. This is not a gap to
+ * patch; a finished competition has nowhere legitimate to appear in a
+ * per-member "currently active id" list, structurally, not by omission.
+ *
+ * A finished competition moves instead into `private/game.competitionHistory`
+ * (capped at the last 10), and that record's own shape includes
+ * `averageSteps` — a raw step-derived field that must NEVER be read or
+ * rendered by this portal (CLAUDE.md's Privacy Rules). A future "your past
+ * competitions" dashboard section reading that array would need to project
+ * out every field except `averageSteps` explicitly — not built here; this
+ * hook's `PlayingCompetitionSummary`/`STATUS_LABEL` union still includes
+ * `"finished"` only for type-completeness against `CompetitionStatus`, not
+ * because this hook is expected to ever actually emit one.
  */
 export function usePlayingCompetitions(uid: string | null): PlayingCompetitionsState {
   const [state, setState] = useState<PlayingCompetitionsState>({ status: "loading" });
