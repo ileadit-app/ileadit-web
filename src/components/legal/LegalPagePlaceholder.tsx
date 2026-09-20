@@ -62,7 +62,7 @@ export function LegalSection({
           <ListChecks className="size-4 text-primary" aria-hidden="true" />
           What this section needs to cover
         </p>
-        <ul className="mt-3 space-y-2">
+        <ul className="mt-3 space-y-2" role="list">
           {mustCover.map((item) => (
             <li
               key={item}

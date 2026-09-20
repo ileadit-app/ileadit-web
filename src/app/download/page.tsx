@@ -56,7 +56,7 @@ export default function Download() {
               {PLAY_STORE_URL ? (
                 <a
                   href={PLAY_STORE_URL}
-                  className="mt-6 inline-flex h-12 items-center gap-2 rounded-full bg-brand-gold px-6 text-sm font-bold text-brand-navy transition-colors hover:bg-brand-gold/90"
+                  className="mt-6 inline-flex h-12 items-center gap-2 rounded-full bg-brand-gold px-6 text-sm font-bold text-brand-navy transition-colors hover:bg-brand-gold/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-navy"
                 >
                   <PlayCircle className="size-5" aria-hidden="true" />
                   Get it on Google Play

@@ -113,4 +113,27 @@ describe("/account-deletion — W3-DELETION-AUDIT fixes", () => {
 
     expect(screen.getByText(/across email, Google and Microsoft/i)).toBeInTheDocument();
   });
+
+  /**
+   * W9-A11Y. Tailwind preflight's `list-style: none` strips native list
+   * semantics from `<ul>`s in REAL browsers unless `role="list"` is
+   * explicitly restored — see the equivalent fix/test on
+   * `CompetitionLeaderboard.tsx`. jsdom does NOT model this CSS-driven
+   * demotion, so `getByRole("list")` would pass whether or not the
+   * attribute is present; this asserts the attribute directly instead, the
+   * only way to actually pin the fix. `/account-deletion` renders this
+   * page's bullet lists via the single `BulletList` component, so one
+   * assertion covers every bulleted section on the page. Mutation-proven:
+   * removed `role="list"` from `BulletList`'s `<ul>`, confirmed RED,
+   * reverted, confirmed GREEN.
+   */
+  it("MUT-A11Y-BULLET-LIST-ROLE: bullet lists carry an explicit role=\"list\" attribute", () => {
+    const { container } = render(<AccountDeletion />);
+
+    const lists = container.querySelectorAll("ul");
+    expect(lists.length).toBeGreaterThan(0);
+    lists.forEach((list) => {
+      expect(list).toHaveAttribute("role", "list");
+    });
+  });
 });

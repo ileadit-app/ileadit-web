@@ -38,7 +38,7 @@ export function PlayingCompetitions({ uid }: { uid: string }) {
   }
 
   return (
-    <ul className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+    <ul className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3" role="list">
       {state.competitions.map((competition) => (
         <li key={competition.id}>
           <PlayingCompetitionCard competition={competition} />
@@ -126,7 +126,7 @@ function EmptyState() {
       </p>
       <Link
         href="/download"
-        className="mt-6 inline-flex h-12 items-center justify-center gap-2 rounded-full bg-brand-gold px-6 text-base font-bold text-brand-navy transition-colors hover:bg-brand-gold/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-gold"
+        className="mt-6 inline-flex h-12 items-center justify-center gap-2 rounded-full bg-brand-gold px-6 text-base font-bold text-brand-navy transition-colors hover:bg-brand-gold/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-navy"
       >
         <Smartphone className="size-4" aria-hidden="true" />
         Get the app

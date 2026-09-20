@@ -135,14 +135,27 @@ function InviteStatusCard({
   body,
   children,
   isError,
+  live,
 }: {
   title: string;
   body: string;
   children?: React.ReactNode;
   isError?: boolean;
+  /** Announce this card's content to screen readers on mount — for a state
+   * reached by a user ACTION on this same page (e.g. "You're in!" right
+   * after clicking Join), where nothing else (a route change, a focus
+   * move) would otherwise tell an AT user the click did anything. Every
+   * other `InviteStatusCard` use is reached by a page LOAD/render, where
+   * AT already announces the new page/heading naturally — don't add this
+   * to those. */
+  live?: boolean;
 }) {
   return (
-    <div className="mx-auto max-w-lg px-5 py-20 text-center sm:px-6">
+    <div
+      className="mx-auto max-w-lg px-5 py-20 text-center sm:px-6"
+      role={live ? "status" : undefined}
+      aria-live={live ? "polite" : undefined}
+    >
       {isError ? (
         <AlertCircle className="mx-auto size-8 text-destructive" aria-hidden="true" />
       ) : (
@@ -167,7 +180,7 @@ function InviteSkeleton() {
 }
 
 const CTA_CLASSES =
-  "flex h-12 w-full max-w-xs items-center justify-center rounded-full bg-brand-gold px-6 text-base font-bold text-brand-navy transition-colors hover:bg-brand-gold/90 disabled:cursor-not-allowed disabled:opacity-60";
+  "flex h-12 w-full max-w-xs items-center justify-center rounded-full bg-brand-gold px-6 text-base font-bold text-brand-navy transition-colors hover:bg-brand-gold/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-navy disabled:cursor-not-allowed disabled:opacity-60";
 
 /* ------------------------------------------------------------------ *
  * States
@@ -278,6 +291,7 @@ function JoinableInvite({
   if (joined) {
     return (
       <InviteStatusCard
+        live
         title="You're in!"
         body={`Welcome to ${competition.name ?? "the competition"} — good luck out there.`}
       >

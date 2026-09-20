@@ -126,4 +126,28 @@ describe("TodayCard", () => {
 
     expect(screen.queryByText("999")).not.toBeInTheDocument();
   });
+
+  /**
+   * W9-A11Y. `aria-label` on a plain `<div>` (implicit `role="generic"`) is
+   * not reliably exposed as an accessible name by screen readers — it needs
+   * an explicit `role="img"` alongside it (same bug/fix pattern as
+   * `CompetitionLeaderboard.tsx`'s `RankBadge`). `getByLabelText` above
+   * (MUT-LIVES-PIPS) only checks the `aria-label` attribute directly and
+   * would pass whether or not `role="img"` is present, so it does NOT pin
+   * this fix — this test uses `getByRole("img", { name })` instead, which
+   * does require the role. Mutation-proven: removed `role="img"` from the
+   * lives-indicator div in `TodayCard.tsx`, confirmed RED, reverted,
+   * confirmed GREEN.
+   */
+  it("MUT-A11Y-LIVES-IMG-ROLE: the lives indicator exposes an img role, not just a bare aria-label on a generic div", () => {
+    useAccountGameStateMock.mockReturnValue({
+      status: "success",
+      state: { averageEstablished: true, timeZone: "Europe/London", firstDay: null, warmupEndsOn: null },
+    });
+    useWarmupDaysConfigMock.mockReturnValue({ status: "success", warmupDays: 7 });
+
+    render(<TodayCard uid="u1" player={player({ livesRemaining: 2 })} />);
+
+    expect(screen.getByRole("img", { name: /2 of 3 lives remaining/i })).toBeInTheDocument();
+  });
 });

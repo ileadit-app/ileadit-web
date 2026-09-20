@@ -236,7 +236,7 @@ function Section({
 
 function BulletList({ items }: { items: string[] }) {
   return (
-    <ul className="space-y-2">
+    <ul className="space-y-2" role="list">
       {items.map((item) => (
         <li
           key={item}

@@ -25,7 +25,7 @@ export function PricingSection() {
                 No tiers to puzzle over on this page — just tell us the size
                 of your team and we&apos;ll get you a straight quote.
               </p>
-              <ul className="mt-6 space-y-3">
+              <ul className="mt-6 space-y-3" role="list">
                 {INCLUDED.map((item) => (
                   <li key={item} className="flex items-start gap-3">
                     <Check

@@ -125,7 +125,7 @@ export function AccountLinkingPanel({
           <button
             type="submit"
             disabled={linking}
-            className="h-12 w-full rounded-full bg-brand-gold text-base font-bold text-brand-navy transition-colors hover:bg-brand-gold/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-gold disabled:opacity-60"
+            className="h-12 w-full rounded-full bg-brand-gold text-base font-bold text-brand-navy transition-colors hover:bg-brand-gold/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-navy disabled:opacity-60"
           >
             {linking ? "Signing in…" : "Sign in & link"}
           </button>
@@ -176,7 +176,7 @@ export function LinkSuccessPanel({
       <button
         type="button"
         onClick={onContinue}
-        className="mt-6 h-12 w-full rounded-full bg-brand-gold text-base font-bold text-brand-navy transition-colors hover:bg-brand-gold/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-gold"
+        className="mt-6 h-12 w-full rounded-full bg-brand-gold text-base font-bold text-brand-navy transition-colors hover:bg-brand-gold/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-navy"
       >
         Continue
       </button>
