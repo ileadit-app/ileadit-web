@@ -1,12 +1,26 @@
-export default function Invite({ params }: { params: { code: string } }) {
-  return (
-    <div className="mx-auto max-w-7xl px-4 py-16">
-      <h1 className="text-4xl font-bold text-primary">
-        Competition Invite
-      </h1>
-      <p className="mt-4 text-lg text-text-primary">
-        You&apos;ve been invited to join a competition.
-      </p>
-    </div>
-  );
+"use client";
+
+import { use } from "react";
+import { InviteLanding } from "@/components/invite/InviteLanding";
+
+/**
+ * `/invite/[code]` — the invite landing page (W6-INVITE). See
+ * `InviteLanding.tsx`'s header comment for why `code` is treated as a raw
+ * `competitions/{id}` document ID rather than a real invite-code lookup —
+ * there is no `invites` collection or invite-code callable anywhere in the
+ * engine today.
+ *
+ * Deliberately NOT wrapped in `<ProtectedRoute>` (contrast
+ * `/competitions/[id]/page.tsx`) — most people who land here have never
+ * signed in, and the point of this page is to greet them with an
+ * explanation and a way in, not bounce them straight to `/login` with no
+ * context. `InviteLanding` renders its own signed-out state instead.
+ */
+export default function InvitePage({
+  params,
+}: {
+  params: Promise<{ code: string }>;
+}) {
+  const { code } = use(params);
+  return <InviteLanding competitionId={code} />;
 }
