@@ -26,6 +26,34 @@ let appInstance: FirebaseApp | null = null;
 let authInstance: Auth | null = null;
 let dbInstance: Firestore | null = null;
 
+/**
+ * The config keys without which `getAuth()` throws `auth/invalid-api-key`
+ * and every callable fails. `storageBucket` and `messagingSenderId` are
+ * deliberately NOT in this list: nothing in this repo uses Storage or FCM
+ * yet, and an absent value there does not break auth.
+ */
+const REQUIRED_CONFIG_KEYS = ["apiKey", "authDomain", "projectId", "appId"] as const;
+
+/**
+ * Names the missing `NEXT_PUBLIC_FIREBASE_*` variables, or returns an empty
+ * array when the config is complete.
+ *
+ * Exists because the failure mode without it is genuinely misleading: with
+ * no `.env.local`, `apiKey` is `undefined`, and the Firebase SDK reports
+ * that as `auth/invalid-api-key` - which reads like a wrong or revoked key
+ * rather than an absent file. Callers use this to say which variable is
+ * actually missing instead of letting the SDK's error stand.
+ */
+export function missingFirebaseConfigKeys(): string[] {
+  return REQUIRED_CONFIG_KEYS.filter((key) => !firebaseConfig[key]).map(
+    (key) => `NEXT_PUBLIC_FIREBASE_${key.replace(/[A-Z]/g, (c) => `_${c}`).toUpperCase()}`,
+  );
+}
+
+export function isFirebaseConfigured(): boolean {
+  return missingFirebaseConfigKeys().length === 0;
+}
+
 export function getFirebaseApp(): FirebaseApp {
   if (!appInstance) {
     appInstance = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];

@@ -27,9 +27,21 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // `suppressHydrationWarning` on these two elements ONLY, and deliberately:
+  // browser extensions inject attributes into <html> and <body> before React
+  // hydrates, which React then reports as a mismatch the app cannot fix.
+  // Observed locally: `data-scribe-recorder-ready` (Scribe) on <html> and
+  // `data-testim-main-word-scripts-loaded` (Testim) on <body> - neither string
+  // appears anywhere in this repo. React only suppresses one level deep, so
+  // this hides the extension noise on these two tags WITHOUT hiding a genuine
+  // mismatch in any child. Do not spread it onto app components to quieten a
+  // warning; there the warning is real.
   return (
-    <html lang="en" className={`${plusJakartaSans.variable} h-full`}>
-      <body className="flex min-h-full flex-col bg-background text-foreground antialiased">
+    <html lang="en" className={`${plusJakartaSans.variable} h-full`} suppressHydrationWarning>
+      <body
+        className="flex min-h-full flex-col bg-background text-foreground antialiased"
+        suppressHydrationWarning
+      >
         <EngineBootstrap />
         <Header />
         <main className="flex-1">{children}</main>
