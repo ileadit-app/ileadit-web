@@ -1,14 +1,20 @@
-import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
+"use client";
 
-export default function NewCompetition() {
+import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
+import { CreateCompetitionGate } from "@/components/competitions/CreateCompetitionGate";
+
+/**
+ * `/competitions/new` (P1.4). Two gates stack here, deliberately kept
+ * separate: `ProtectedRoute` (must be signed in at all — any player) and
+ * `CreateCompetitionGate` (must additionally be able to create — org/
+ * ileadit admins only, see that component's header comment). Do not merge
+ * them; "signed in" and "can create" are different questions with
+ * different refusal UX, per the P1.4 ticket.
+ */
+export default function NewCompetitionPage() {
   return (
     <ProtectedRoute>
-      <div className="mx-auto max-w-7xl px-4 py-16">
-        <h1 className="text-4xl font-bold text-primary">Create Competition</h1>
-        <p className="mt-4 text-lg text-text-primary">
-          Set up a new competition for your group.
-        </p>
-      </div>
+      <CreateCompetitionGate />
     </ProtectedRoute>
   );
 }

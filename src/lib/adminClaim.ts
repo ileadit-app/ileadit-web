@@ -23,10 +23,46 @@ import { getFirebaseAuth } from "./firebase";
  * to expire on its own (up to an hour) - forcing the refresh here trades one
  * extra network round trip for correctness every time this is called.
  */
-export async function isCurrentUserAdmin(): Promise<boolean> {
+async function getForcedRefreshClaims(): Promise<Record<string, unknown> | null> {
   const user = getFirebaseAuth().currentUser;
-  if (!user) return false;
+  if (!user) return null;
 
   const tokenResult = await user.getIdTokenResult(/* forceRefresh */ true);
-  return tokenResult.claims.admin === true;
+  return tokenResult.claims;
+}
+
+export async function isCurrentUserAdmin(): Promise<boolean> {
+  const claims = await getForcedRefreshClaims();
+  return claims?.admin === true;
+}
+
+/**
+ * The capability claim key for "can this user create a competition",
+ * per Paul's 2026-09-20 decision (automation-hub/docs/ileadit-web-accounts-
+ * BA-20260920.md, "WHO THE WEBSITE IS FOR" → "only org admins and ileadit
+ * admins may create competitions" → "Proposed bridge... a capability claim,
+ * not an org", since no organisation entity exists yet). That doc records
+ * the DECISION but never names the actual claim key, and Ivor's server-side
+ * gate on the `createCompetition` callable (P1.3) is being built in
+ * parallel with this file, not read from first. **`competitionCreator` is
+ * this agent's choice, not a confirmed contract** — if Ivor's callable ends
+ * up checking a differently-named claim, this is the one constant to
+ * update; nothing else in this module or its callers needs to change.
+ */
+const COMPETITION_CREATOR_CLAIM_KEY = "competitionCreator";
+
+/**
+ * "Can this signed-in user create a competition?" — true for the ileadit
+ * admin claim OR the capability claim above. UI GATING ONLY, same caveat as
+ * `isCurrentUserAdmin()` above: this decides whether `/competitions/new`
+ * renders a form or a refusal, never whether the create actually succeeds.
+ * The `createCompetition` callable re-checks this server-side (or will,
+ * once Ivor's authorisation follow-up lands — see the P1.4 ticket) and a
+ * user who reaches the form without either claim will still be refused
+ * there.
+ */
+export async function canCreateCompetitions(): Promise<boolean> {
+  const claims = await getForcedRefreshClaims();
+  if (!claims) return false;
+  return claims.admin === true || claims[COMPETITION_CREATOR_CLAIM_KEY] === true;
 }

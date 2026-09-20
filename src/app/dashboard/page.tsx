@@ -3,6 +3,7 @@
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { useUser } from "@/context/AuthContext";
 import { CreatedCompetitions } from "@/components/dashboard/CreatedCompetitions";
+import { useCanCreateCompetitions } from "@/lib/useCanCreateCompetitions";
 
 export default function Dashboard() {
   return (
@@ -23,6 +24,9 @@ export default function Dashboard() {
  */
 function DashboardContent() {
   const { user } = useUser();
+  // Only mounted once `status === "signed-in"` (ProtectedRoute above) —
+  // the precondition `useCanCreateCompetitions` documents for itself.
+  const capability = useCanCreateCompetitions();
   if (!user) return null;
 
   return (
@@ -37,7 +41,13 @@ function DashboardContent() {
         Everything you&apos;ve set up, with where each one stands right now.
       </p>
 
-      <CreatedCompetitions uid={user.uid} />
+      {/* `canCreate` gates the empty-state CTA below (P1.4 ticket:
+          "must only render for users who can actually create"). While
+          `capability === "checking"` this is `false`, so the button is
+          briefly absent rather than shown-then-yanked for a user who turns
+          out not to have the claim — a late appearance for an admin reads
+          better than a working-looking button vanishing under a player. */}
+      <CreatedCompetitions uid={user.uid} canCreate={capability === "allowed"} />
     </div>
   );
 }
