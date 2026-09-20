@@ -34,12 +34,14 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
     // already-signed-in visitor to the sign-in page for one frame on every
     // page load, which is the same flicker bug in a different guise.
     //
-    // `/sign-in` does not exist in this repo yet — Lacey is building it in
-    // parallel (P1.1). This is the agreed routing contract for where it
-    // will live, with `?next=` so it can send the user back here once
-    // P1.1 lands; it is not this ticket building that screen.
+    // `/login` does not exist in this repo yet — Lacey is building it in
+    // parallel (P1.1). Route and param name (`/login`, `?redirect=`) match
+    // her approved spec (automation-hub/docs/ileadit-web-signin-design-
+    // 20260920.md §2), which superseded the earlier `/sign-in?next=`
+    // placeholder this file shipped with under P1.2 — update this comment
+    // again if that spec's routes ever change.
     if (status === "signed-out") {
-      router.replace(`/sign-in?next=${encodeURIComponent(pathname)}`);
+      router.replace(`/login?redirect=${encodeURIComponent(pathname)}`);
     }
   }, [status, router, pathname]);
 
