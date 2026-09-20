@@ -2,11 +2,8 @@
 
 import Link from "next/link";
 import { AlertCircle, PlusCircle, Trophy, Users } from "lucide-react";
-import {
-  useCreatedCompetitions,
-  type CompetitionStatus,
-  type CreatedCompetitionSummary,
-} from "@/lib/competitions";
+import { useCreatedCompetitions, type CreatedCompetitionSummary } from "@/lib/competitions";
+import { CompetitionStatusChip } from "@/components/status/CompetitionStatusChip";
 
 /**
  * "The competitions you created" (P1.5). Takes `uid` rather than calling
@@ -137,42 +134,6 @@ function EmptyState() {
   );
 }
 
-const STATUS_LABEL: Record<CompetitionStatus, string> = {
-  scheduled: "Starts soon",
-  active: "Live now",
-  finalising: "Wrapping up",
-  finished: "Finished",
-};
-
-const STATUS_BADGE_CLASSNAME: Record<CompetitionStatus, string> = {
-  scheduled: "bg-secondary text-secondary-foreground",
-  active: "bg-brand-gold/15 text-brand-navy",
-  finalising: "bg-brand-coral/10 text-brand-coral",
-  finished: "bg-muted text-muted-foreground",
-};
-
-function StatusBadge({ status }: { status: CompetitionStatus | null }) {
-  // A brand-new competition can have no `status` yet for the first moment
-  // between the `create` write and the engine's onCompetitionWritten trigger
-  // deriving it (src/lib/competitions.ts) — show that honestly rather than
-  // guessing a status that isn't written yet.
-  if (status === null) {
-    return (
-      <span className="inline-flex items-center rounded-full bg-muted px-3 py-1 text-xs font-bold uppercase tracking-wide text-muted-foreground">
-        Setting up…
-      </span>
-    );
-  }
-
-  return (
-    <span
-      className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wide ${STATUS_BADGE_CLASSNAME[status]}`}
-    >
-      {STATUS_LABEL[status]}
-    </span>
-  );
-}
-
 /** `startDate`/`endDate` are `YYYY-MM-DD` in the competition's own calendar
  * zone (never UTC) — parsed as local calendar components, not through
  * `new Date(string)`, so this never drifts a day depending on the browser's
@@ -198,7 +159,7 @@ function CompetitionCard({ competition }: { competition: CreatedCompetitionSumma
         <h3 className="text-base font-bold text-foreground">
           {competition.name ?? "Untitled competition"}
         </h3>
-        <StatusBadge status={competition.status} />
+        <CompetitionStatusChip status={competition.status} />
       </div>
       <p className="mt-2 text-sm text-muted-foreground">
         {formatDateRange(competition.startDate, competition.endDate)}

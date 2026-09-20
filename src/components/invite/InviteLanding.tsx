@@ -5,6 +5,7 @@ import Link from "next/link";
 import { AlertCircle } from "lucide-react";
 import { useUser } from "@/context/AuthContext";
 import { LogoMark } from "@/components/brand/Logo";
+import { CompetitionStatusChip } from "@/components/status/CompetitionStatusChip";
 import {
   useCompetitionDetail,
   useOwnMembership,
@@ -114,7 +115,13 @@ function SignedInInviteContent({
   }
 
   if (membershipState.status === "member") {
-    return <AlreadyMemberInvite competitionId={competitionId} name={competition.name} />;
+    return (
+      <AlreadyMemberInvite
+        competitionId={competitionId}
+        name={competition.name}
+        status={competition.status}
+      />
+    );
   }
 
   if (competition.status !== "scheduled") {
@@ -136,6 +143,7 @@ function InviteStatusCard({
   children,
   isError,
   live,
+  status,
 }: {
   title: string;
   body: string;
@@ -149,6 +157,13 @@ function InviteStatusCard({
    * AT already announces the new page/heading naturally — don't add this
    * to those. */
   live?: boolean;
+  /** Only passed by call sites that actually know the competition's status
+   * (`JoinableInvite`, `AlreadyStartedInvite`, `AlreadyMemberInvite`) — the
+   * spec (`ileadit-state-chip-spec-20260920.md`) names this page as one of
+   * the places `CompetitionStatusChip` belongs, alongside the detail hero
+   * and the dashboard cards. Omitted for states that have no competition to
+   * describe yet (signed-out, not-found, generic error). */
+  status?: CompetitionDetailDoc["status"];
 }) {
   return (
     <div
@@ -161,6 +176,11 @@ function InviteStatusCard({
       ) : (
         <LogoMark className="mx-auto h-10 w-10" />
       )}
+      {status !== undefined ? (
+        <div className="mt-4 flex justify-center">
+          <CompetitionStatusChip status={status} />
+        </div>
+      ) : null}
       <h1 className="mt-4 text-2xl font-extrabold text-foreground">{title}</h1>
       <p className="mt-2 text-base text-muted-foreground">{body}</p>
       {children ? <div className="mt-6 flex flex-col items-center gap-2">{children}</div> : null}
@@ -230,12 +250,15 @@ function GenericErrorInvite() {
 function AlreadyMemberInvite({
   competitionId,
   name,
+  status,
 }: {
   competitionId: string;
   name: string | null;
+  status: CompetitionDetailDoc["status"];
 }) {
   return (
     <InviteStatusCard
+      status={status}
       title="You're already in"
       body={`You're already a player in ${name ?? "this competition"} — head there to check the leaderboard.`}
     >
@@ -263,6 +286,7 @@ function AlreadyStartedInvite({
   const competitionName = name ?? "This competition";
   return (
     <InviteStatusCard
+      status={status}
       title={isFinished ? "This one's already finished" : "This one's already under way"}
       body={
         isFinished
@@ -292,6 +316,7 @@ function JoinableInvite({
     return (
       <InviteStatusCard
         live
+        status={competition.status}
         title="You're in!"
         body={`Welcome to ${competition.name ?? "the competition"} — good luck out there.`}
       >
@@ -316,6 +341,7 @@ function JoinableInvite({
 
   return (
     <InviteStatusCard
+      status={competition.status}
       title="You've been invited to play"
       body={`Join ${competition.name ?? "this competition"} and compete on points — never on step counts.`}
     >

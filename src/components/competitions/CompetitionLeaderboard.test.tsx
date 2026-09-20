@@ -220,3 +220,63 @@ describe("CompetitionLeaderboard — accessibility (W9-A11Y)", () => {
     expect(screen.getByRole("img", { name: "Winner" })).toBeInTheDocument();
   });
 });
+
+/**
+ * W10-STATECHIP integration coverage. `PlayerRowBadge`'s own unit tests
+ * (`src/components/status/PlayerRowBadge.test.tsx`) pin the badge's own
+ * markup in isolation, but the "points stay visible next to it" half of
+ * acceptance criterion 2 is a fact about THIS component (points are rendered
+ * by `PlayerRow`/`YourPositionCard`, not by `PlayerRowBadge` itself) — a
+ * regression here (e.g. a future edit that hides the points block behind
+ * `!player.eliminated`) would leave every `PlayerRowBadge` unit test green
+ * while the real leaderboard silently stopped showing an eliminated
+ * player's score. Mutation-proven: wrapped the points `<p>` in `CompetitionLeaderboard.tsx`
+ * in `{!player.eliminated ? (...) : null}`, confirmed RED, reverted, confirmed
+ * GREEN.
+ */
+describe("CompetitionLeaderboard — eliminated player row (W10-STATECHIP)", () => {
+  it("MUT-ELIMINATED-ROW-POINTS-VISIBLE: an eliminated player's row shows both the shared badge and their points, never hiding the score", () => {
+    const players = [
+      makePlayer({ id: "a", displayName: "Amy", points: 500, eliminated: false }),
+      makePlayer({ id: "b", displayName: "Bo", points: 240, eliminated: true }),
+    ];
+
+    render(
+      <CompetitionLeaderboard
+        status="active"
+        uid="a"
+        ownPlayer={makeOwnPlayer({ points: 500 })}
+        leaderboardState={{ status: "success", players }}
+        winnerIds={[]}
+      />,
+    );
+
+    const eliminatedRow = screen.getByText("Bo").closest("li");
+    expect(eliminatedRow).not.toBeNull();
+    expect(eliminatedRow!.textContent).toContain("Out — final score locked in");
+    expect(eliminatedRow!.textContent).toContain("240");
+  });
+
+  it("MUT-ELIMINATED-OWN-ROW-POINTS-VISIBLE: the viewer's own sticky card still shows their points after elimination", () => {
+    const players = [
+      makePlayer({ id: "me", displayName: "Me", points: 175, eliminated: true }),
+      makePlayer({ id: "other", displayName: "Other", points: 300, eliminated: false }),
+    ];
+
+    render(
+      <CompetitionLeaderboard
+        status="active"
+        uid="me"
+        ownPlayer={makeOwnPlayer({ points: 175, eliminated: true })}
+        leaderboardState={{ status: "success", players }}
+        winnerIds={[]}
+      />,
+    );
+
+    // Appears twice by design: once on the sticky "your position" card, once
+    // on this player's own row further down the same continuous list (W10
+    // doesn't change that duplication — it predates this ticket).
+    expect(screen.getAllByText("Out — final score locked in").length).toBeGreaterThan(0);
+    expect(screen.getByText(/175 points/)).toBeInTheDocument();
+  });
+});
