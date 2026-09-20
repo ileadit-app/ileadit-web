@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { AlertTriangle, Mail, ShieldCheck, Users } from "lucide-react";
+import { AlertTriangle, Ban, Mail, ShieldCheck, Users } from "lucide-react";
 import { useUser } from "@/context/AuthContext";
+import { isMicrosoftSignInEnabled } from "@/lib/auth";
 
 /**
  * /account-deletion (P1.6). Public — deliberately NOT behind
@@ -39,6 +40,16 @@ import { useUser } from "@/context/AuthContext";
  * write of any kind, nothing added to Firestore). See the P1.6 findings
  * report for the full list of collections a real `deleteAccount` callable
  * would need to touch, as input to an engine ticket.
+ *
+ * W3-DELETION-AUDIT (against
+ * `automation-hub/docs/ileadit-account-deletion-spec-20260920.md`): the copy
+ * below is worded to match that spec's §B1/§E3 "other-party problem"
+ * recommendation — a competition row is only ever fully REMOVED if the
+ * competition hasn't finished yet; a row in a competition that had already
+ * finished is retained, anonymised to "Deleted Player", because other real
+ * players' leaderboard history depends on it. Don't collapse this back down
+ * to a single unconditional "removed from every leaderboard" bullet — that
+ * was this page's previous wording and it overclaimed relative to the spec.
  */
 export default function AccountDeletion() {
   const { status, user } = useUser();
@@ -65,14 +76,14 @@ export default function AccountDeletion() {
       >
         <BulletList
           items={[
-            "Your profile: display name, avatar, city",
+            "Your profile: display name, avatar, profile photo, city",
             "Your personal details: first name, surname, date of birth, gender, country",
             "Your coin and points balance, and your lifetime points total",
             "Your day-by-day step and points history",
-            "Your place in any competitions you're currently playing (your row is removed from every leaderboard)",
+            "Your place in any competition that hasn't finished yet (your row is removed entirely, not just hidden)",
             "Any active challenges you're part of",
-            "Your notification settings and registered devices",
-            "Your ileadit sign-in itself, across email, Google and Microsoft",
+            "Your notification history, notification settings, and registered devices",
+            signInDeletionBullet(),
           ]}
         />
       </Section>
@@ -95,6 +106,8 @@ export default function AccountDeletion() {
       >
         <BulletList
           items={[
+            "Your position in any competition that had already finished before we process your request — shown to other players as \"Deleted Player\" instead of your name, with the same points and ranking kept so their leaderboard history stays intact. Only your identity is removed, not the game outcome",
+            "A one-way record tied to your email address (not the address itself) that stops the same email from claiming a second welcome bonus after re-registering — it can't be reversed to find your email, and it isn't linked to anything about you once your account is gone",
             "Payment and invoice records from Stripe, if you've ever paid for anything — accounting and tax law generally requires this regardless of account deletion",
             "Competition statistics with your identity removed — the same aggregated, anonymised numbers described in our privacy policy (never your individual step counts)",
             "A minimal fraud/anti-abuse record where we're legally required to keep one for a short period",
@@ -111,6 +124,14 @@ export default function AccountDeletion() {
         <p className="text-sm leading-relaxed text-muted-foreground">
           We aim to complete a verified deletion request within 30 days. (Also provisional — not yet
           confirmed as an official SLA.)
+        </p>
+      </Section>
+
+      <Section icon={<Ban className="size-5" aria-hidden="true" />} heading="What can't be undone">
+        <p className="text-sm leading-relaxed text-muted-foreground">
+          Once we&apos;ve completed your deletion request, your game progress, coins, and competition
+          history can&apos;t be recovered — there is no way for us to restore a deleted account, so
+          only ask for this if you&apos;re sure.
         </p>
       </Section>
 
@@ -162,6 +183,20 @@ export default function AccountDeletion() {
       ) : null}
     </div>
   );
+}
+
+/**
+ * W3-DELETION-AUDIT: Microsoft sign-in exists in the codebase but is
+ * gated behind `isMicrosoftSignInEnabled()` (no Azure AD app registration
+ * yet — see `src/lib/auth.ts`) and the sign-in UI itself tells users
+ * "Microsoft sign-in is coming soon". Naming it unconditionally here, as
+ * this bullet used to, told every visitor deletion covers a sign-in method
+ * nobody can actually use yet. Hedge it instead of promising it.
+ */
+function signInDeletionBullet(): string {
+  return isMicrosoftSignInEnabled()
+    ? "Your ileadit sign-in itself, across email, Google and Microsoft"
+    : "Your ileadit sign-in itself — email/password, plus Google if you've linked it";
 }
 
 function buildDeletionMailto(email: string, uid: string | undefined | null): string {
