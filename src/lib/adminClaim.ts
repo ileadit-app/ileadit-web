@@ -44,12 +44,13 @@ export async function isCurrentUserAdmin(): Promise<boolean> {
  * not an org", since no organisation entity exists yet). That doc records
  * the DECISION but never names the actual claim key, and Ivor's server-side
  * gate on the `createCompetition` callable (P1.3) is being built in
- * parallel with this file, not read from first. **`competitionCreator` is
- * this agent's choice, not a confirmed contract** — if Ivor's callable ends
+ * parallel with this file, not read from first. **RECONCILED 20 Sep 2026: Ivor's server-side gate
+ * (engine acaae991) checks `canCreateCompetitions`, so that name wins — the
+ * callable is the security boundary and this only mirrors it** — if Ivor's callable ends
  * up checking a differently-named claim, this is the one constant to
  * update; nothing else in this module or its callers needs to change.
  */
-const COMPETITION_CREATOR_CLAIM_KEY = "competitionCreator";
+const COMPETITION_CREATOR_CLAIM_KEY = "canCreateCompetitions";
 
 /**
  * "Can this signed-in user create a competition?" — true for the ileadit
