@@ -15,15 +15,17 @@ import {
  * `src/app/dashboard/page.tsx` is the one place that reads `useUser()` and
  * only mounts this component once `status === "signed-in"`.
  *
- * `canCreate` (P1.4): whether the "Create your first competition" CTA in
- * `EmptyState` should render at all — Paul's 2026-09-20 decision restricts
- * competition creation to org admins and ileadit admins, so most signed-in
- * users must NOT see a button that leads to a refusal screen. Passed in
- * rather than computed here so this component stays a pure "given this uid
- * and this capability, render the list" view, matching its existing
- * `uid`-is-explicit-not-re-derived convention.
+ * P1.5b update: `src/app/dashboard/page.tsx` now only mounts this component
+ * once `useCanCreateCompetitions()` resolves to `"allowed"` — a dedicated
+ * `PlayingCompetitions` view (`src/components/dashboard/
+ * PlayingCompetitions.tsx`) is the real content for everyone else. That
+ * makes the `canCreate` prop this component used to take (and the refusal
+ * copy branch it fed into `EmptyState`, for a player who couldn't create
+ * anything) dead weight — removed. This component can now assume, simply by
+ * being mounted, that its caller has already confirmed the create
+ * capability.
  */
-export function CreatedCompetitions({ uid, canCreate }: { uid: string; canCreate: boolean }) {
+export function CreatedCompetitions({ uid }: { uid: string }) {
   const state = useCreatedCompetitions(uid);
 
   if (state.status === "loading") {
@@ -35,7 +37,7 @@ export function CreatedCompetitions({ uid, canCreate }: { uid: string; canCreate
   }
 
   if (state.competitions.length === 0) {
-    return <EmptyState canCreate={canCreate} />;
+    return <EmptyState />;
   }
 
   return (
@@ -106,20 +108,12 @@ function ErrorState() {
 /**
  * The first thing a new corporate admin sees (P1.5 brief: "it matters more
  * than the populated state"). Makes the next action obvious rather than just
- * stating a fact.
- *
- * `canCreate === false` covers two real audiences at once, both correctly
- * served by the same copy: (1) an ordinary player, for whom this list is
- * legitimately always empty (this dashboard only ever queries competitions
- * *they created* — see `useCreatedCompetitions`'s `creatorId` filter — and a
- * player who cannot create will never have one); (2) a corporate admin whose
- * capability claim hasn't been granted yet. Neither should see a CTA that
- * leads to a refusal screen (P1.4 ticket). A dedicated "competitions you're
- * PLAYING in" view for the first audience is real, named future work — see
- * automation-hub/docs/ileadit-web-accounts-BA-20260920.md, "Consequences
- * already identified" #2 — this is a stopgap, not that feature.
+ * stating a fact. Only ever rendered for a confirmed org/ileadit admin
+ * (P1.5b: the dashboard page only mounts `CreatedCompetitions` once
+ * `useCanCreateCompetitions()` is `"allowed"`), so this can unconditionally
+ * point at the creation flow — no refusal-copy branch needed any more.
  */
-function EmptyState({ canCreate }: { canCreate: boolean }) {
+function EmptyState() {
   return (
     <div className="mt-8 rounded-3xl border border-dashed border-border bg-card p-10 text-center sm:p-14">
       <div className="mx-auto flex size-12 items-center justify-center rounded-full bg-brand-gold/15 text-brand-navy">
@@ -128,31 +122,17 @@ function EmptyState({ canCreate }: { canCreate: boolean }) {
       <p className="mt-4 text-lg font-bold text-foreground">
         No competitions yet
       </p>
-      {canCreate ? (
-        <>
-          <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-muted-foreground">
-            Once you set one up, it&apos;ll show up here with its dates, status and
-            player count.
-          </p>
-          <Link
-            href="/competitions/new"
-            className="mt-6 inline-flex h-12 items-center justify-center gap-2 rounded-full bg-brand-gold px-6 text-base font-bold text-brand-navy transition-colors hover:bg-brand-gold/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-gold"
-          >
-            <PlusCircle className="size-4" aria-hidden="true" />
-            Create your first competition
-          </Link>
-        </>
-      ) : (
-        <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-muted-foreground">
-          You haven&apos;t created any competitions — this page only shows ones you set up
-          yourself. Been invited to one instead? Look for the invite link from whoever set it
-          up. Want to run competitions for your own team?{" "}
-          <a href="mailto:hello@ileadit.app" className="font-semibold text-foreground underline">
-            Email hello@ileadit.app
-          </a>
-          .
-        </p>
-      )}
+      <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-muted-foreground">
+        Once you set one up, it&apos;ll show up here with its dates, status and
+        player count.
+      </p>
+      <Link
+        href="/competitions/new"
+        className="mt-6 inline-flex h-12 items-center justify-center gap-2 rounded-full bg-brand-gold px-6 text-base font-bold text-brand-navy transition-colors hover:bg-brand-gold/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-gold"
+      >
+        <PlusCircle className="size-4" aria-hidden="true" />
+        Create your first competition
+      </Link>
     </div>
   );
 }
