@@ -5,6 +5,9 @@ import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { ErrorBanner } from "@/components/auth/formFields";
 import { NumberField, SelectField, TextAreaField, TextField } from "@/components/forms/fields";
+import { ArtworkUploadField } from "./ArtworkUploadField";
+import { CompetitionHero } from "./CompetitionHero";
+import { createDraftCompetitionId } from "@/lib/competitionArtwork";
 import { createCompetition } from "@/lib/createCompetition";
 import { createCompetitionFailureMessage } from "@/lib/createCompetitionErrors";
 import {
@@ -54,8 +57,18 @@ export function CreateCompetitionForm() {
   const [durationDaysValue, setDurationDaysValue] = useState("7");
   const [timeZone, setTimeZone] = useState(() => detectBrowserTimeZone());
   const [description, setDescription] = useState("");
-  const [imageUrl, setImageUrl] = useState("");
-  const [backgroundImageUrl, setBackgroundImageUrl] = useState("");
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [backgroundImageUrl, setBackgroundImageUrl] = useState<string | null>(null);
+
+  /**
+   * The folder competition artwork is uploaded into while this form is
+   * open. Client-minted, once per mounted form, because the engine mints
+   * the real competition id and does not hand it back until AFTER
+   * `createCompetition` has been called with the image URLs already in
+   * its payload — see `createDraftCompetitionId` for the full reasoning
+   * and what it costs when a form is abandoned.
+   */
+  const [draftId] = useState(() => createDraftCompetitionId());
 
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [pageError, setPageError] = useState<string | null>(null);
@@ -115,8 +128,11 @@ export function CreateCompetitionForm() {
       durationDays: Number(durationDaysValue),
       timeZone,
       description: description.trim() || undefined,
-      imageUrl: imageUrl.trim() || undefined,
-      backgroundImageUrl: backgroundImageUrl.trim() || undefined,
+      // Firebase Storage download URLs, produced by ArtworkUploadField —
+      // the callable's schema is unchanged and still takes any valid URL
+      // (`imageUrl: z.string().url().max(2048).optional()`).
+      imageUrl: imageUrl ?? undefined,
+      backgroundImageUrl: backgroundImageUrl ?? undefined,
     });
     setSubmitting(false);
 
@@ -192,22 +208,32 @@ export function CreateCompetitionForm() {
           placeholder="What's this competition for?"
         />
 
-        <TextField
-          label="Image URL (optional)"
-          type="url"
+        <ArtworkUploadField
+          kind="tile"
+          label="Competition image (optional)"
+          helperText="The round badge next to the competition's name. Shown as a circle on the web and in the Android app."
+          draftId={draftId}
           value={imageUrl}
           onChange={setImageUrl}
           disabled={submitting}
-          placeholder="https://…"
         />
 
-        <TextField
-          label="Background image URL (optional)"
-          type="url"
+        <ArtworkUploadField
+          kind="banner"
+          label="Background image (optional)"
+          helperText="The wide band behind the competition's name. A darkening gradient sits over it so the name stays readable."
+          draftId={draftId}
           value={backgroundImageUrl}
           onChange={setBackgroundImageUrl}
           disabled={submitting}
-          placeholder="https://…"
+        />
+
+        <ArtworkPreview
+          name={name}
+          imageUrl={imageUrl}
+          backgroundImageUrl={backgroundImageUrl}
+          startTimeValue={startTimeValue}
+          durationDays={Number(durationDaysValue)}
         />
 
         <button
@@ -225,6 +251,115 @@ export function CreateCompetitionForm() {
           )}
         </button>
       </form>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ *
+ * Live artwork preview
+ * ------------------------------------------------------------------ */
+
+/** `YYYY-MM-DD` from the `datetime-local` value, and that date plus
+ * `durationDays - 1` — the same inclusive-day convention the engine's own
+ * `startDate`/`endDate` pair uses. Preview-only framing; the engine
+ * derives the real values and this never sends them. */
+function previewDates(
+  startTimeValue: string,
+  durationDays: number,
+): { startDate: string | null; endDate: string | null } {
+  const startDate = /^\d{4}-\d{2}-\d{2}/.test(startTimeValue) ? startTimeValue.slice(0, 10) : null;
+  if (!startDate || !Number.isInteger(durationDays) || durationDays <= 0) {
+    return { startDate, endDate: null };
+  }
+  const [year, month, day] = startDate.split("-").map(Number);
+  const end = new Date(year, month - 1, day + durationDays - 1);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return {
+    startDate,
+    endDate: `${end.getFullYear()}-${pad(end.getMonth() + 1)}-${pad(end.getDate())}`,
+  };
+}
+
+/**
+ * Shows the uploaded artwork through `CompetitionHero` — the SAME
+ * component `/competitions/[id]` renders, not a lookalike. That is the
+ * whole point: a preview built from its own markup drifts from the real
+ * page the first time either changes, and then it is confidently wrong
+ * about the one thing an admin is using it to decide.
+ *
+ * Two frames, because the banner has no fixed aspect ratio on either
+ * platform — it is a full-bleed band of fixed height, so how much of the
+ * image survives depends entirely on how wide the window is. A single
+ * preview would have to pick one width and silently imply it was THE
+ * answer. See `BANNER_ASPECT` in `src/lib/competitionArtwork.ts` for the
+ * measurements and the open question.
+ *
+ * `aria-hidden` on the frames, deliberately and narrowly: they are a
+ * purely visual rendering of an image, they contain a duplicate `<h1>`
+ * and a duplicate copy of the form's own values, and a screen reader user
+ * gets nothing from either that the upload field's own status text does
+ * not already say. The heading below the preview stays in the
+ * accessibility tree.
+ */
+function ArtworkPreview({
+  name,
+  imageUrl,
+  backgroundImageUrl,
+  startTimeValue,
+  durationDays,
+}: {
+  name: string;
+  imageUrl: string | null;
+  backgroundImageUrl: string | null;
+  startTimeValue: string;
+  durationDays: number;
+}) {
+  if (!imageUrl && !backgroundImageUrl) return null;
+
+  const { startDate, endDate } = previewDates(startTimeValue, durationDays);
+  const competition = {
+    name: name.trim() || "Untitled competition",
+    imageUrl,
+    backgroundImageUrl,
+    // Anything created here starts in the future, so `scheduled` is what
+    // the engine's own onCompetitionWritten trigger will derive.
+    status: "scheduled" as const,
+    startDate,
+    endDate,
+    durationDays: Number.isInteger(durationDays) && durationDays > 0 ? durationDays : null,
+  };
+
+  return (
+    <div className="rounded-2xl border border-border bg-muted/40 p-4">
+      <p className="text-sm font-semibold text-foreground">Preview</p>
+      <p className="mt-1 text-xs text-muted-foreground">
+        How this looks on the competition page. The background is trimmed to fit the window, so it
+        shows less of the image on a wide screen than on a phone.
+      </p>
+
+      <div className="mt-3 space-y-4" aria-hidden="true">
+        <div>
+          <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            On a phone
+          </p>
+          <div className="max-w-full overflow-x-auto">
+            <div className="w-[390px] overflow-hidden rounded-xl border border-border">
+              <CompetitionHero competition={competition} size="phone" />
+              <div className="h-6 bg-background" />
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            On a wide screen
+          </p>
+          <div className="overflow-hidden rounded-xl border border-border">
+            <CompetitionHero competition={competition} size="desktop" />
+            <div className="h-6 bg-background" />
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
