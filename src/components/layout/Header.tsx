@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { Menu, X } from "lucide-react";
 import { Logo } from "@/components/brand/Logo";
+import { useUser } from "@/context/AuthContext";
 
 // Nav links point at "/#section" (not "#section") so they resolve correctly
 // from every route, not just from the home page itself.
@@ -16,6 +17,20 @@ const NAV_LINKS = [
 
 export default function Header() {
   const [menuOpen, setMenuOpen] = useState(false);
+  // `status`, not `user` — see src/context/AuthContext.tsx for why. Gating
+  // this on `user` alone would show "Log in" for one frame to every
+  // already-signed-in returning visitor before Firebase resolves the
+  // persisted session.
+  const { status, user, signOut } = useUser();
+
+  // No new visual design here — this repo's brand/layout work belongs to
+  // Lacey (see the P1.2 ticket's split of work). This reuses the exact
+  // className strings the pre-existing "Log in" link already had; the only
+  // change is what renders and what it does.
+  const authLinkClassName =
+    "inline-flex h-10 items-center px-3 text-sm font-semibold text-foreground/70 transition-colors hover:text-foreground";
+  const mobileAuthLinkClassName =
+    "block w-full py-3 text-left text-sm font-semibold text-foreground/70 transition-colors hover:text-foreground";
 
   return (
     <header className="sticky top-0 z-50 border-b border-border/80 bg-background/90 backdrop-blur-md">
@@ -39,12 +54,20 @@ export default function Header() {
         </nav>
 
         <div className="hidden items-center gap-2 sm:flex">
-          <Link
-            href="/dashboard"
-            className="inline-flex h-10 items-center px-3 text-sm font-semibold text-foreground/70 transition-colors hover:text-foreground"
-          >
-            Log in
-          </Link>
+          {status === "signed-in" ? (
+            <>
+              <span className="px-3 text-sm text-foreground/70">
+                {user?.email ?? "Signed in"}
+              </span>
+              <button type="button" onClick={() => void signOut()} className={authLinkClassName}>
+                Log out
+              </button>
+            </>
+          ) : (
+            <Link href="/sign-in" className={authLinkClassName}>
+              Log in
+            </Link>
+          )}
           <Link
             href="/#employer"
             className="inline-flex h-10 items-center rounded-full bg-brand-gold px-4 text-sm font-bold text-brand-navy transition-colors hover:bg-brand-gold/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-gold"
@@ -81,13 +104,26 @@ export default function Header() {
               {link.label}
             </Link>
           ))}
-          <Link
-            href="/dashboard"
-            className="block py-3 text-sm font-semibold text-foreground/70 transition-colors hover:text-foreground"
-            onClick={() => setMenuOpen(false)}
-          >
-            Log in
-          </Link>
+          {status === "signed-in" ? (
+            <button
+              type="button"
+              className={mobileAuthLinkClassName}
+              onClick={() => {
+                setMenuOpen(false);
+                void signOut();
+              }}
+            >
+              Log out{user?.email ? ` (${user.email})` : ""}
+            </button>
+          ) : (
+            <Link
+              href="/sign-in"
+              className="block py-3 text-sm font-semibold text-foreground/70 transition-colors hover:text-foreground"
+              onClick={() => setMenuOpen(false)}
+            >
+              Log in
+            </Link>
+          )}
           <Link
             href="/#employer"
             className="mt-2 block rounded-full bg-brand-gold px-4 py-3 text-center text-sm font-bold text-brand-navy transition-colors hover:bg-brand-gold/90"
