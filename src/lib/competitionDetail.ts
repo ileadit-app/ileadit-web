@@ -58,6 +58,18 @@ export interface CompetitionDetailDoc {
    * see `CreatedCompetitionSummary.timeZone` in `competitions.ts` for the
    * same field on the admin-list read path. */
   timeZone: string | null;
+  /** The uid that created this competition (CLAUDE.md's Firestore
+   * Collections section — set only at `create`, immutable afterwards).
+   * Added for WEB-INV-1's organiser gate (`useIsCompetitionOrganiser`) —
+   * readable by any signed-in user under the same unconditional
+   * `allow read: if signedIn();` rule as every other field on this
+   * document (see this file's header comment), so adding it here needed
+   * no rules change. Parsed defensively (`null` if absent/wrong type)
+   * the same as every other field below, even though CLAUDE.md documents
+   * it as set at create time and immutable — same defensive-read
+   * discipline this hook already applies uniformly, not a claim that this
+   * field specifically has a known transient-null window. */
+  creatorId: string | null;
 }
 
 export type CompetitionDetailState =
@@ -101,6 +113,7 @@ export function useCompetitionDetail(competitionId: string): CompetitionDetailSt
             playerCount: typeof data.playerCount === "number" ? data.playerCount : null,
             winnerIds: asStringArray(data.winnerIds),
             timeZone: typeof data.timeZone === "string" ? data.timeZone : null,
+            creatorId: typeof data.creatorId === "string" ? data.creatorId : null,
           },
         });
       },

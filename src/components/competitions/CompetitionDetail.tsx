@@ -19,6 +19,8 @@ import { competitionMembershipFailureMessage } from "@/lib/competitionMembership
 import { formatShortDate, isDayOneOfActiveCompetition } from "@/lib/competitionDates";
 import { CompetitionLeaderboard } from "./CompetitionLeaderboard";
 import { TodayCard } from "./TodayCard";
+import { useIsCompetitionOrganiser } from "@/lib/useIsCompetitionOrganiser";
+import { InvitePanel } from "./InvitePanel";
 
 /**
  * `/competitions/[id]` — detail + leaderboard (P2.1). ONE route serves both
@@ -47,6 +49,20 @@ function CompetitionDetailContent({ competitionId, uid }: { competitionId: strin
   const membershipState = useOwnMembership(uid, competitionId);
   const isMember = membershipState.status === "member";
   const leaderboardState = useCompetitionPlayers(competitionId, isMember);
+  // WEB-INV-1: gates the organiser-only "Invite people" panel further below.
+  // Must be called unconditionally, before any early return, per
+  // react-hooks/rules-of-hooks — `competitionState.status` can be
+  // "loading"/"not-found"/"denied"/"error" at this point, so the creatorId
+  // is computed defensively rather than destructured. Pure, per-render (not
+  // effect-based) — `competition.creatorId` can transition from `null` to a
+  // real value across this component's lifetime (the engine writes it
+  // asynchronously after `create`), and this must reflect that the moment
+  // it changes, not lag a render behind. See `useIsCompetitionOrganiser.ts`
+  // for the admin-claim half of this check.
+  const organiserCapability = useIsCompetitionOrganiser(
+    competitionState.status === "success" ? competitionState.competition.creatorId : null,
+    uid,
+  );
 
   if (competitionState.status === "loading") {
     return <PageSkeleton />;
@@ -143,6 +159,17 @@ function CompetitionDetailContent({ competitionId, uid }: { competitionId: strin
             leaderboardState={leaderboardState}
             winnerIds={competition.winnerIds}
           />
+        ) : null}
+
+        {/* WEB-INV-1 BUILD item 2: organiser-only ("as the page decides
+            today" — creator or admin claim, see `useIsCompetitionOrganiser`).
+            Deliberately rendered regardless of the organiser's own
+            membership/leaderboard state above — an organiser managing
+            invites may not be a player in their own competition at all. */}
+        {organiserCapability === "organiser" ? (
+          <div className="mt-4">
+            <InvitePanel competitionId={competitionId} />
+          </div>
         ) : null}
       </div>
     </div>
