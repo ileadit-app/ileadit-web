@@ -27,6 +27,13 @@ import {
  * `competitionDates.ts`, the one place that day-one check is implemented.
  * Do not render a "Join" button for any other status/day combination.
  *
+ * **A second, separate refusal case, from engine ticket LEAVE-1** (Paul's
+ * decision, 2026-09-21, in progress — see `leaveCompetition.ts`'s header
+ * comment): once shipped, a player who left this SAME competition while it
+ * was active will have their re-join refused too, indistinguishably (at
+ * the error-message level) from the day-one-already-passed case above. See
+ * the LEAVE-1 TODOs in `competitionMembershipErrors.ts`.
+ *
  * Idempotent: joining a competition you're already in returns
  * `{ joined: false, alreadyMember: true, playerCount }` rather than an
  * error — this wrapper does not need its own "already a member" guard

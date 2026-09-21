@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { AlertCircle, ArrowLeft, Calendar, Coins, Heart, Percent } from "lucide-react";
 import { useUser } from "@/context/AuthContext";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { CompetitionHero } from "./CompetitionHero";
 import { PlayerAvatar } from "./PlayerAvatar";
 import {
@@ -126,6 +127,7 @@ function CompetitionDetailContent({ competitionId, uid }: { competitionId: strin
         {status ? (
           <MembershipCta
             competitionId={competitionId}
+            competitionName={competition.name}
             status={status}
             startDate={competition.startDate}
             timeZone={competition.timeZone}
@@ -293,31 +295,37 @@ function HowItWorksCard() {
 /* ------------------------------------------------------------------ *
  * The CTA state machine (design doc §4's table). Every cell verified
  * against the engine's status gate — updated for WEB-3 item 3 / engine
- * ticket JOIN-1 (commit `7629e40`):
- *   - `joinCompetitionService` now accepts a join when `status ===
- *     "scheduled"` OR (`status === "active"` AND the competition's own
- *     calendar today, per its `timeZone`, equals its `startDate` — i.e.
- *     only on the competition's first active day). See
- *     `isDayOneOfActiveCompetition` in `competitionDates.ts`, which mirrors
- *     this check exactly.
- *   - `leaveCompetitionService` (`functions/src/services/competitions.ts:764`)
- *     is UNCHANGED — still throws `CompetitionNotJoinableError` for any
- *     `status !== "scheduled"`. So a member can only ever "Leave" while
- *     `scheduled`; the "day one of active" join window has no matching
- *     leave window, deliberately (an already-a-member's CTA on an active
- *     competition is "View leaderboard", never "Leave", regardless of which
- *     day it is — see the `status === "active" || status === "finalising"`
- *     branch below).
+ * ticket JOIN-1 (commit `7629e40`), then again for WEB-4 item 3 / engine
+ * ticket LEAVE-1 (Paul's decision, 2026-09-21, IN PROGRESS — not yet
+ * merged; see `leaveCompetition.ts`'s header comment for the full caveat):
+ *   - `joinCompetitionService` accepts a join when `status === "scheduled"`
+ *     OR (`status === "active"` AND the competition's own calendar today,
+ *     per its `timeZone`, equals its `startDate` — i.e. only on the
+ *     competition's first active day). See `isDayOneOfActiveCompetition` in
+ *     `competitionDates.ts`, which mirrors this check exactly.
+ *   - `leaveCompetitionService` will accept a leave whenever `status ===
+ *     "scheduled"` OR `status === "active"` (never `finalising`/`finished`)
+ *     once LEAVE-1 ships. A SCHEDULED leave stays free and immediately
+ *     re-joinable — unchanged, still confirmed with a plain
+ *     `window.confirm`. An ACTIVE leave forfeits the player's points in
+ *     this competition AND blocks re-joining it afterwards, so it is
+ *     confirmed with the styled, destructive `ConfirmDialog` instead (a
+ *     browser-native `window.confirm` cannot carry the required coral
+ *     colour). Both `scheduled` and `active` members therefore see a
+ *     "Leave competition" option below their primary CTA; `finalising` and
+ *     `finished` members never do.
  * ------------------------------------------------------------------ */
 
 function MembershipCta({
   competitionId,
+  competitionName,
   status,
   startDate,
   timeZone,
   membershipState,
 }: {
   competitionId: string;
+  competitionName: string | null;
   status: CompetitionStatus;
   startDate: string | null;
   timeZone: string | null;
@@ -325,6 +333,11 @@ function MembershipCta({
 }) {
   const [pending, setPending] = useState<"join" | "leave" | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+  // WEB-4 item 3: gates the styled destructive confirmation for leaving an
+  // ACTIVE competition. Leaving a SCHEDULED one keeps the plain
+  // `window.confirm` below — nothing is lost by leaving a competition that
+  // hasn't started, so it doesn't need the same weight.
+  const [confirmingActiveLeave, setConfirmingActiveLeave] = useState(false);
   // Optimistic override so a successful join/leave reflects instantly
   // rather than waiting on the next `onSnapshot` tick (design doc §4: "on
   // success, becomes the Member cell instantly"). Cleared implicitly the
@@ -361,10 +374,10 @@ function MembershipCta({
     }
   }
 
-  async function handleLeave() {
-    if (!window.confirm("Leave this competition? You can rejoin any time before it starts.")) {
-      return;
-    }
+  // Does the actual callable call + state update — shared by both
+  // confirmation paths below (plain `window.confirm` for a scheduled leave,
+  // the styled `ConfirmDialog` for an active one).
+  async function performLeave() {
     setPending("leave");
     setActionError(null);
     const outcome = await leaveCompetition(competitionId);
@@ -374,6 +387,27 @@ function MembershipCta({
     } else {
       setActionError(competitionMembershipFailureMessage(outcome.failure, "leave"));
     }
+  }
+
+  // WEB-4 item 3: a SCHEDULED leave is free and instantly re-joinable, so it
+  // keeps the plain browser `window.confirm`. An ACTIVE leave forfeits the
+  // player's points in this competition and blocks re-joining it (LEAVE-1)
+  // — that needs the styled, destructive `ConfirmDialog` instead, which a
+  // native `window.confirm` cannot carry (no way to colour its buttons).
+  function handleLeaveClick() {
+    if (status === "active") {
+      setConfirmingActiveLeave(true);
+      return;
+    }
+    if (!window.confirm("Leave this competition? You can rejoin any time before it starts.")) {
+      return;
+    }
+    void performLeave();
+  }
+
+  async function handleConfirmActiveLeave() {
+    await performLeave();
+    setConfirmingActiveLeave(false);
   }
 
   let body: React.ReactNode;
@@ -386,7 +420,7 @@ function MembershipCta({
         </span>
         <button
           type="button"
-          onClick={() => void handleLeave()}
+          onClick={handleLeaveClick}
           disabled={pending !== null}
           className="text-sm font-semibold text-muted-foreground underline-offset-2 hover:text-destructive hover:underline disabled:cursor-not-allowed disabled:text-muted-foreground disabled:hover:no-underline"
         >
@@ -406,17 +440,30 @@ function MembershipCta({
   } else if (status === "active" || status === "finalising") {
     // WEB-3 item 3 / JOIN-1: a non-member can still join on the
     // competition's own first active day — see the block comment above
-    // `MembershipCta`. `leaveCompetitionService` did NOT change, so this
-    // never affects the isMember branch (still "View leaderboard", never a
-    // "Leave" option, once active).
+    // `MembershipCta`. WEB-4 item 3 / LEAVE-1: an ACTIVE member now also
+    // gets a "Leave competition" option (styled, destructive confirmation —
+    // see `handleLeaveClick`/`ConfirmDialog` below); a FINALISING member
+    // never does, since results are already being settled.
     const canStillJoin = status === "active" && isDayOneOfActiveCompetition(startDate, timeZone);
     body = isMember ? (
-      <a
-        href="#leaderboard"
-        className="flex h-12 w-full items-center justify-center rounded-full border border-[rgba(25,47,95,0.15)] bg-brand-gold text-base font-bold text-brand-navy transition-colors hover:bg-brand-gold/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-navy"
-      >
-        View leaderboard
-      </a>
+      <div className="flex flex-col items-center gap-2">
+        <a
+          href="#leaderboard"
+          className="flex h-12 w-full items-center justify-center rounded-full border border-[rgba(25,47,95,0.15)] bg-brand-gold text-base font-bold text-brand-navy transition-colors hover:bg-brand-gold/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-navy"
+        >
+          View leaderboard
+        </a>
+        {status === "active" ? (
+          <button
+            type="button"
+            onClick={handleLeaveClick}
+            disabled={pending !== null}
+            className="text-sm font-semibold text-muted-foreground underline-offset-2 hover:text-destructive hover:underline disabled:cursor-not-allowed disabled:text-muted-foreground disabled:hover:no-underline"
+          >
+            {pending === "leave" ? "Leaving…" : "Leave competition"}
+          </button>
+        ) : null}
+      </div>
     ) : canStillJoin ? (
       <button
         type="button"
@@ -462,6 +509,17 @@ function MembershipCta({
           {actionError}
         </p>
       ) : null}
+      <ConfirmDialog
+        open={confirmingActiveLeave}
+        title={`Leave ${competitionName ?? "this competition"}?`}
+        description="You'll lose your points in this competition and you can't re-join it."
+        confirmLabel="Leave competition"
+        pendingLabel="Leaving…"
+        destructive
+        pending={pending === "leave"}
+        onCancel={() => setConfirmingActiveLeave(false)}
+        onConfirm={() => void handleConfirmActiveLeave()}
+      />
     </div>
   );
 }

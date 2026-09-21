@@ -1,6 +1,7 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import { CompetitionDetail } from "./CompetitionDetail";
+import { leaveCompetition } from "@/lib/leaveCompetition";
 
 /**
  * Pins WEB-3 item 6's "Back to dashboard" link on the happy path. Before
@@ -42,6 +43,12 @@ vi.mock("@/lib/competitionDetail", () => ({
 
 vi.mock("@/lib/joinCompetition", () => ({ joinCompetition: vi.fn() }));
 vi.mock("@/lib/leaveCompetition", () => ({ leaveCompetition: vi.fn() }));
+// TodayCard reads real Firestore hooks (`useAccountGameState`,
+// `useWarmupDaysConfig`) via a real `getFirebaseDb()` — irrelevant to this
+// file's WEB-4 item 3 leave-flow tests, which only need an ACTIVE member to
+// render *something* in that slot. Stub it out rather than also mocking two
+// more hooks this file has no other reason to touch.
+vi.mock("./TodayCard", () => ({ TodayCard: () => null }));
 
 const COMPETITION_ID = "comp-123";
 
@@ -152,5 +159,189 @@ describe("CompetitionDetail — WEB-3 item 3 / JOIN-1 day-one join", () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+});
+
+/**
+ * WEB-4 item 3 / engine ticket LEAVE-1 (in progress): an ACTIVE member now
+ * sees a "Leave competition" option (previously only a `scheduled` member
+ * did), and leaving an active one goes through the styled, destructive
+ * `ConfirmDialog` — never the plain browser `window.confirm` a scheduled
+ * leave still uses. A `finalising` member must still see no Leave option at
+ * all.
+ */
+function mockActiveMember() {
+  useCompetitionDetailMock.mockReturnValue({
+    status: "success",
+    competition: {
+      id: COMPETITION_ID,
+      name: "March Madness Steps",
+      description: null,
+      imageUrl: null,
+      backgroundImageUrl: null,
+      status: "active",
+      startDate: "2026-09-01",
+      endDate: "2026-09-28",
+      durationDays: 28,
+      playerCount: 12,
+      winnerIds: [],
+      timeZone: "Europe/London",
+    },
+  });
+  useOwnMembershipMock.mockReturnValue({
+    status: "member",
+    player: {
+      displayName: "Test Player",
+      avatarIndex: 0,
+      points: 120,
+      todayPoints: 5,
+      livesRemaining: 3,
+      eliminated: false,
+      frozenRank: null,
+    },
+  });
+}
+
+describe("CompetitionDetail — WEB-4 item 3 / LEAVE-1 active-leave UI", () => {
+  beforeEach(() => {
+    vi.mocked(leaveCompetition).mockReset();
+  });
+
+  it("MUT-LEAVE1-ACTIVE-OPTION: an active member sees a Leave competition option", () => {
+    mockActiveMember();
+    render(<CompetitionDetail competitionId={COMPETITION_ID} />);
+
+    expect(screen.getByRole("button", { name: /leave competition/i })).toBeInTheDocument();
+  });
+
+  it("MUT-LEAVE1-FINALISING-NO-OPTION: a finalising member sees no Leave option", () => {
+    mockActiveMember();
+    useCompetitionDetailMock.mockReturnValue({
+      status: "success",
+      competition: {
+        id: COMPETITION_ID,
+        name: "March Madness Steps",
+        description: null,
+        imageUrl: null,
+        backgroundImageUrl: null,
+        status: "finalising",
+        startDate: "2026-09-01",
+        endDate: "2026-09-28",
+        durationDays: 28,
+        playerCount: 12,
+        winnerIds: [],
+        timeZone: "Europe/London",
+      },
+    });
+
+    render(<CompetitionDetail competitionId={COMPETITION_ID} />);
+
+    expect(screen.queryByRole("button", { name: /leave competition/i })).not.toBeInTheDocument();
+  });
+
+  it("MUT-LEAVE1-STYLED-DIALOG: clicking Leave on an active competition opens the styled ConfirmDialog, not window.confirm", () => {
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(false);
+    mockActiveMember();
+    render(<CompetitionDetail competitionId={COMPETITION_ID} />);
+
+    fireEvent.click(screen.getByRole("button", { name: /leave competition/i }));
+
+    expect(confirmSpy).not.toHaveBeenCalled();
+    expect(
+      screen.getByRole("heading", { name: /leave march madness steps\?/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/you'll lose your points in this competition and you can't re-join it/i),
+    ).toBeInTheDocument();
+    confirmSpy.mockRestore();
+  });
+
+  it("MUT-LEAVE1-DESTRUCTIVE-CLASS: the dialog's confirm button uses the destructive coral styling", () => {
+    mockActiveMember();
+    render(<CompetitionDetail competitionId={COMPETITION_ID} />);
+
+    fireEvent.click(screen.getByRole("button", { name: /leave competition/i }));
+
+    // Two "Leave competition" controls now exist: the text-link that opened
+    // the dialog, and the dialog's own confirm button — the confirm button
+    // is the last one rendered.
+    const buttons = screen.getAllByRole("button", { name: /leave competition/i });
+    const confirmButton = buttons[buttons.length - 1];
+    expect(confirmButton.className).toContain("bg-destructive");
+    expect(confirmButton.className).toContain("text-destructive-foreground");
+  });
+
+  it("MUT-LEAVE1-CONFIRM-CALLS-LEAVE: confirming calls leaveCompetition and reflects success", async () => {
+    vi.mocked(leaveCompetition).mockResolvedValue({
+      status: "success",
+      result: { left: true, notMember: false, playerCount: 11 },
+    });
+    mockActiveMember();
+    render(<CompetitionDetail competitionId={COMPETITION_ID} />);
+
+    fireEvent.click(screen.getByRole("button", { name: /leave competition/i }));
+    const buttons = screen.getAllByRole("button", { name: /leave competition/i });
+    fireEvent.click(buttons[buttons.length - 1]);
+
+    expect(leaveCompetition).toHaveBeenCalledWith(COMPETITION_ID);
+    // The mocked competition's `startDate` (2026-09-01) is not "today," so
+    // once `isMember` flips to false the non-member/active branch correctly
+    // shows the refusal message rather than a Join button (JOIN-1's
+    // day-one-only re-join window) — asserting the dialog itself has closed
+    // is the part this test actually needs to pin.
+    await screen.findByText(/new joins closed after its first day/i);
+    expect(screen.queryByRole("heading", { name: /leave march madness steps\?/i })).not.toBeInTheDocument();
+  });
+
+  it("MUT-LEAVE1-CANCEL-NO-CALL: cancelling the dialog does not call leaveCompetition", () => {
+    mockActiveMember();
+    render(<CompetitionDetail competitionId={COMPETITION_ID} />);
+
+    fireEvent.click(screen.getByRole("button", { name: /leave competition/i }));
+    fireEvent.click(screen.getByRole("button", { name: /^cancel$/i }));
+
+    expect(leaveCompetition).not.toHaveBeenCalled();
+    expect(screen.queryByRole("heading", { name: /leave march madness steps\?/i })).not.toBeInTheDocument();
+  });
+
+  it("MUT-LEAVE1-SCHEDULED-STILL-WINDOWCONFIRM: leaving a SCHEDULED competition still uses window.confirm, not the styled dialog", () => {
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(false);
+    useCompetitionDetailMock.mockReturnValue({
+      status: "success",
+      competition: {
+        id: COMPETITION_ID,
+        name: "March Madness Steps",
+        description: null,
+        imageUrl: null,
+        backgroundImageUrl: null,
+        status: "scheduled",
+        startDate: "2026-10-01",
+        endDate: "2026-10-08",
+        durationDays: 7,
+        playerCount: 12,
+        winnerIds: [],
+      },
+    });
+    useOwnMembershipMock.mockReturnValue({
+      status: "member",
+      player: {
+        displayName: "Test Player",
+        avatarIndex: 0,
+        points: 0,
+        todayPoints: 0,
+        livesRemaining: 3,
+        eliminated: false,
+        frozenRank: null,
+      },
+    });
+
+    render(<CompetitionDetail competitionId={COMPETITION_ID} />);
+    fireEvent.click(screen.getByRole("button", { name: /leave competition/i }));
+
+    expect(confirmSpy).toHaveBeenCalledWith(
+      "Leave this competition? You can rejoin any time before it starts.",
+    );
+    expect(screen.queryByRole("heading", { name: /leave march madness steps\?/i })).not.toBeInTheDocument();
+    confirmSpy.mockRestore();
   });
 });
