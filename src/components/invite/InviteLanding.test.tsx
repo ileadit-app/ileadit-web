@@ -250,7 +250,7 @@ describe("InviteLanding", () => {
     expect(link).toHaveAttribute("href", `/competitions/${COMPETITION_ID}`);
   });
 
-  it("WEB-3 item 5: the disabled 'Joining…' button uses an explicit muted colour, not opacity", async () => {
+  it("WEB-4 item 1: the disabled 'Joining…' button uses the named cta-disabled tokens, not opacity", async () => {
     useUserMock.mockReturnValue({ status: "signed-in", user: { uid: "u1" } });
     useCompetitionDetailMock.mockReturnValue({
       status: "success",
@@ -272,8 +272,8 @@ describe("InviteLanding", () => {
 
     const joiningButton = await screen.findByRole("button", { name: /joining/i });
     expect(joiningButton).toBeDisabled();
-    expect(joiningButton.className).toContain("disabled:bg-muted");
-    expect(joiningButton.className).toContain("disabled:text-muted-foreground");
+    expect(joiningButton.className).toContain("disabled:bg-cta-disabled");
+    expect(joiningButton.className).toContain("disabled:text-cta-disabled-foreground");
     expect(joiningButton.className).not.toContain("opacity-60");
 
     resolveJoin({ status: "success", result: { joined: true, alreadyMember: false, playerCount: 13 } });

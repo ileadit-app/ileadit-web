@@ -125,7 +125,7 @@ export function AccountLinkingPanel({
           <button
             type="submit"
             disabled={linking}
-            className="h-12 w-full rounded-full bg-brand-gold text-base font-bold text-brand-navy transition-colors hover:bg-brand-gold/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-navy disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground"
+            className="h-12 w-full rounded-full border border-[rgba(25,47,95,0.15)] bg-brand-gold text-base font-bold text-brand-navy transition-colors hover:bg-brand-gold/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-navy disabled:cursor-not-allowed disabled:border-transparent disabled:bg-cta-disabled disabled:text-cta-disabled-foreground"
           >
             {linking ? "Signing in…" : "Sign in & link"}
           </button>
@@ -135,7 +135,7 @@ export function AccountLinkingPanel({
           type="button"
           onClick={() => linkViaProvider(existingOAuthMethod)}
           disabled={linking}
-          className="mt-6 flex h-12 w-full items-center justify-center gap-3 rounded-full border border-border bg-card px-4 text-sm font-semibold text-foreground transition-colors hover:bg-secondary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-navy disabled:cursor-not-allowed disabled:opacity-50"
+          className="mt-6 flex h-12 w-full items-center justify-center gap-3 rounded-full border border-border bg-card px-4 text-sm font-semibold text-foreground transition-colors hover:bg-secondary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-navy disabled:cursor-not-allowed disabled:border-cta-disabled disabled:bg-cta-disabled disabled:text-cta-disabled-foreground"
         >
           {linking ? "Connecting…" : `Continue with ${existingLabel}`}
         </button>
@@ -176,7 +176,7 @@ export function LinkSuccessPanel({
       <button
         type="button"
         onClick={onContinue}
-        className="mt-6 h-12 w-full rounded-full bg-brand-gold text-base font-bold text-brand-navy transition-colors hover:bg-brand-gold/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-navy"
+        className="mt-6 h-12 w-full rounded-full border border-[rgba(25,47,95,0.15)] bg-brand-gold text-base font-bold text-brand-navy transition-colors hover:bg-brand-gold/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-navy"
       >
         Continue
       </button>

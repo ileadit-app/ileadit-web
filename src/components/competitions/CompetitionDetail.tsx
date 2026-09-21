@@ -175,7 +175,7 @@ function StatusPage({ title, body, isError }: { title: string; body: string; isE
       <p className="mt-2 text-base text-muted-foreground">{body}</p>
       <Link
         href="/dashboard"
-        className="mt-6 inline-flex h-11 items-center justify-center rounded-full bg-brand-gold px-6 text-sm font-bold text-brand-navy transition-colors hover:bg-brand-gold/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-navy"
+        className="mt-6 inline-flex h-11 items-center justify-center rounded-full border border-[rgba(25,47,95,0.15)] bg-brand-gold px-6 text-sm font-bold text-brand-navy transition-colors hover:bg-brand-gold/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-navy"
       >
         Back to your dashboard
       </Link>
@@ -398,7 +398,7 @@ function MembershipCta({
         type="button"
         onClick={() => void handleJoin()}
         disabled={pending !== null}
-        className="flex h-12 w-full items-center justify-center rounded-full bg-brand-gold text-base font-bold text-brand-navy transition-colors hover:bg-brand-gold/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-navy disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground"
+        className="flex h-12 w-full items-center justify-center rounded-full border border-[rgba(25,47,95,0.15)] bg-brand-gold text-base font-bold text-brand-navy transition-colors hover:bg-brand-gold/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-navy disabled:cursor-not-allowed disabled:border-transparent disabled:bg-cta-disabled disabled:text-cta-disabled-foreground"
       >
         {pending === "join" ? "Joining…" : "Join competition"}
       </button>
@@ -413,7 +413,7 @@ function MembershipCta({
     body = isMember ? (
       <a
         href="#leaderboard"
-        className="flex h-12 w-full items-center justify-center rounded-full bg-brand-gold text-base font-bold text-brand-navy transition-colors hover:bg-brand-gold/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-navy"
+        className="flex h-12 w-full items-center justify-center rounded-full border border-[rgba(25,47,95,0.15)] bg-brand-gold text-base font-bold text-brand-navy transition-colors hover:bg-brand-gold/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-navy"
       >
         View leaderboard
       </a>
@@ -422,7 +422,7 @@ function MembershipCta({
         type="button"
         onClick={() => void handleJoin()}
         disabled={pending !== null}
-        className="flex h-12 w-full items-center justify-center rounded-full bg-brand-gold text-base font-bold text-brand-navy transition-colors hover:bg-brand-gold/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-navy disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground"
+        className="flex h-12 w-full items-center justify-center rounded-full border border-[rgba(25,47,95,0.15)] bg-brand-gold text-base font-bold text-brand-navy transition-colors hover:bg-brand-gold/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-navy disabled:cursor-not-allowed disabled:border-transparent disabled:bg-cta-disabled disabled:text-cta-disabled-foreground"
       >
         {pending === "join" ? "Joining…" : "Join competition"}
       </button>
@@ -443,7 +443,7 @@ function MembershipCta({
     body = isMember ? (
       <a
         href="#leaderboard"
-        className="flex h-12 w-full items-center justify-center rounded-full bg-brand-gold text-base font-bold text-brand-navy transition-colors hover:bg-brand-gold/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-navy"
+        className="flex h-12 w-full items-center justify-center rounded-full border border-[rgba(25,47,95,0.15)] bg-brand-gold text-base font-bold text-brand-navy transition-colors hover:bg-brand-gold/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-navy"
       >
         See final results
       </a>

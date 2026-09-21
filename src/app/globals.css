@@ -31,6 +31,21 @@
   --color-muted: #e9ebf3;
   --color-muted-foreground: #44566c;
 
+  /* CTA disabled state — Lacey's colour decision
+     (automation-hub/docs/ileadit-cta-colour-decision-20260921.md, 21 Sep
+     2026): "Disabled (both, all button variants): solid fill #E9EBF3 + text
+     #44566C — a real colour swap, never alpha/opacity on the enabled
+     colour." Same numeric values as --color-muted/--color-muted-foreground
+     today, but kept as its OWN semantic token pair on purpose: this is what
+     every button variant (primary/gold, secondary/outline, OAuth provider)
+     must fall back to when disabled, and it must not silently drift just
+     because `muted` is later retuned for an unrelated reason (skeleton
+     loaders, muted body text, etc). Use disabled:bg-cta-disabled
+     disabled:text-cta-disabled-foreground on every button — never
+     disabled:opacity-* on the enabled colour. */
+  --color-cta-disabled: #e9ebf3;
+  --color-cta-disabled-foreground: #44566c;
+
   /* brand: gold — the energetic accent */
   --color-accent: #f8a92f;
   --color-accent-foreground: #12172a;

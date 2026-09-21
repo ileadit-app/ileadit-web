@@ -105,7 +105,7 @@ describe("CreateCompetitionForm — createCompetition wrapper outcomes shown to 
     expect(pushMock).not.toHaveBeenCalled();
   });
 
-  it("WEB-3 item 5: the disabled 'Creating…' submit button uses an explicit muted colour, not opacity", async () => {
+  it("WEB-4 item 1: the disabled 'Creating…' submit button uses the named cta-disabled tokens, not opacity", async () => {
     let resolveSubmit: (v: { data: { competitionId: string } }) => void = () => {};
     mockCallable.mockReturnValueOnce(
       new Promise((resolve) => {
@@ -119,8 +119,8 @@ describe("CreateCompetitionForm — createCompetition wrapper outcomes shown to 
 
     const submittingButton = await screen.findByRole("button", { name: /creating/i });
     expect(submittingButton).toBeDisabled();
-    expect(submittingButton.className).toContain("disabled:bg-muted");
-    expect(submittingButton.className).toContain("disabled:text-muted-foreground");
+    expect(submittingButton.className).toContain("disabled:bg-cta-disabled");
+    expect(submittingButton.className).toContain("disabled:text-cta-disabled-foreground");
     expect(submittingButton.className).not.toContain("opacity-60");
 
     resolveSubmit({ data: { competitionId: "comp_123" } });

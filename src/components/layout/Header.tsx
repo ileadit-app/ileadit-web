@@ -77,7 +77,7 @@ export default function Header() {
               </Link>
               <Link
                 href="/#employer"
-                className="inline-flex h-10 items-center rounded-full bg-brand-gold px-4 text-sm font-bold text-brand-navy transition-colors hover:bg-brand-gold/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-navy"
+                className="inline-flex h-10 items-center rounded-full border border-[rgba(25,47,95,0.15)] bg-brand-gold px-4 text-sm font-bold text-brand-navy transition-colors hover:bg-brand-gold/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-navy"
               >
                 Bring it to your team
               </Link>
@@ -145,7 +145,7 @@ export default function Header() {
               </Link>
               <Link
                 href="/#employer"
-                className="mt-2 block rounded-full bg-brand-gold px-4 py-3 text-center text-sm font-bold text-brand-navy transition-colors hover:bg-brand-gold/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-navy"
+                className="mt-2 block rounded-full border border-[rgba(25,47,95,0.15)] bg-brand-gold px-4 py-3 text-center text-sm font-bold text-brand-navy transition-colors hover:bg-brand-gold/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-navy"
                 onClick={() => setMenuOpen(false)}
               >
                 Bring it to your team
