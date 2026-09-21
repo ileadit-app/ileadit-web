@@ -1,4 +1,4 @@
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { TodayCard } from "./TodayCard";
 import type { OwnPlayerData } from "@/lib/competitionDetail";
@@ -49,6 +49,10 @@ function player(overrides: Partial<OwnPlayerData> = {}): OwnPlayerData {
   };
 }
 
+afterEach(() => {
+  vi.useRealTimers();
+});
+
 beforeEach(() => {
   useAccountGameStateMock.mockReset();
   useWarmupDaysConfigMock.mockReset();
@@ -66,6 +70,11 @@ describe("TodayCard", () => {
   });
 
   it("MUT-WARMUP-PILL: an active warm-up shows the Day N of 7 pill, the warm-up copy, and the shield (not heart pips)", () => {
+    // resolveWarmupStatus reads the real clock, so "day 3" is only true on
+    // 20 Sep 2026. Pin Date alone (not timers — React and testing-library
+    // still need real ones) or this test fails every day after that.
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-09-20T12:00:00Z"));
     useAccountGameStateMock.mockReturnValue({
       status: "success",
       state: {
