@@ -1,5 +1,6 @@
 {
   "hosting": {
+    "site": "ileadit-portal",
     "source": ".",
     "frameworksBackend": {
       "region": "europe-west2"
