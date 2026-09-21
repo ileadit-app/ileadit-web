@@ -26,7 +26,7 @@ export default function Header() {
   const [menuOpen, setMenuOpen] = useState(false);
   const router = useRouter();
   // `status`, not `user` — see src/context/AuthContext.tsx for why. Gating
-  // this on `user` alone would show "Log in" for one frame to every
+  // this on `user` alone would show "Sign in" for one frame to every
   // already-signed-in returning visitor before Firebase resolves the
   // persisted session.
   const { status, user, signOut } = useUser();
@@ -60,7 +60,7 @@ export default function Header() {
 
         <div className="hidden items-center gap-2 sm:flex">
           {status === "loading" ? (
-            // Neutral skeleton, same slot — avoids flashing "Log in" then
+            // Neutral skeleton, same slot — avoids flashing "Sign in" then
             // swapping to the avatar a moment later (spec §6).
             <div className="h-10 w-24 animate-pulse rounded-full bg-muted" aria-hidden="true" />
           ) : status === "signed-in" && user ? (
@@ -73,7 +73,7 @@ export default function Header() {
           ) : (
             <>
               <Link href="/login" className={authLinkClassName}>
-                Log in
+                Sign in
               </Link>
               <Link
                 href="/#employer"
@@ -141,7 +141,7 @@ export default function Header() {
                 className="block py-3 text-sm font-semibold text-foreground/70 transition-colors hover:text-foreground"
                 onClick={() => setMenuOpen(false)}
               >
-                Log in
+                Sign in
               </Link>
               <Link
                 href="/#employer"
