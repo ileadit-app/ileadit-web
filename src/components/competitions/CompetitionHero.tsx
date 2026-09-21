@@ -1,9 +1,34 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { LogoMark } from "@/components/brand/Logo";
 import { CompetitionStatusChip } from "@/components/status/CompetitionStatusChip";
-import { dayNumberToday, formatShortDate } from "@/lib/competitionDates";
+import {
+  competitionActiveTimeLabel,
+  competitionScheduledTimeLabel,
+  formatShortDate,
+} from "@/lib/competitionDates";
 import type { CompetitionStatus } from "@/lib/competitionDetail";
+
+/**
+ * WEB-4 item 2 — a `now` that re-renders at least once a minute, so the
+ * last-day countdown in `dateLineFor` below counts down instead of freezing
+ * at whatever moment the component first mounted. 60s, not something finer
+ * (e.g. per-second) — the copy's own resolution is minutes ("5h 12m"), so a
+ * faster tick would only cause extra re-renders with no visible benefit.
+ * `setInterval`-driven re-render is already an established pattern in this
+ * codebase (`HeroSection.tsx`'s rotating-frame timer), just simpler here
+ * since there's no visibility/intersection gating need for a small text
+ * label the way there is for that hero's larger animation.
+ */
+function useTickingNow(intervalMs: number = 60_000): Date {
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), intervalMs);
+    return () => clearInterval(id);
+  }, [intervalMs]);
+  return now;
+}
 
 /**
  * The competition hero — the banner band, the status/date line, the name,
@@ -56,31 +81,30 @@ export interface CompetitionHeroCompetition {
   timeZone: string | null;
 }
 
-function dateLineFor(competition: {
-  status: CompetitionStatus | null;
-  startDate: string | null;
-  endDate: string | null;
-  durationDays: number | null;
-}): string {
+function dateLineFor(
+  competition: {
+    status: CompetitionStatus | null;
+    startDate: string | null;
+    endDate: string | null;
+    durationDays: number | null;
+  },
+  now: Date,
+): string {
   const { status, startDate, endDate, durationDays } = competition;
-  const startShort = formatShortDate(startDate);
-  const endShort = formatShortDate(endDate);
 
   if (status === "active") {
-    const day = dayNumberToday(startDate, durationDays);
-    return day && durationDays ? `Day ${day} of ${durationDays}` : "Live now";
+    return competitionActiveTimeLabel(startDate, endDate, durationDays, now);
   }
   if (status === "finalising") {
     return "Results locking in";
   }
   if (status === "finished") {
+    const endShort = formatShortDate(endDate);
     return endShort ? `Finished ${endShort}` : "Finished";
   }
-  // scheduled (or status still resolving)
-  if (startShort && endShort && durationDays) {
-    return `${startShort} – ${endShort} · ${durationDays} ${durationDays === 1 ? "day" : "days"}`;
-  }
-  return "Dates being finalised";
+  // scheduled (or status still resolving) — WEB-4 item 2: "Starts
+  // tomorrow"/"Starts Mon 22 Sep", replacing the old start–end range.
+  return competitionScheduledTimeLabel(startDate, now);
 }
 
 export function CompetitionHero({
@@ -90,6 +114,13 @@ export function CompetitionHero({
   competition: CompetitionHeroCompetition;
   size?: CompetitionHeroSize;
 }) {
+  // Only the "active" branch's last-day countdown actually changes between
+  // ticks; every other status renders a static string from this same
+  // `now`. Ticking unconditionally (rather than only for active
+  // competitions) keeps this one hook call unconditional per the rules of
+  // hooks, and the cost of an idle 60s timer on a static-copy hero is
+  // negligible.
+  const now = useTickingNow();
   return (
     <div className="relative">
       <div className={`relative overflow-hidden bg-brand-navy ${HERO_BAND_CLASS[size]}`}>
@@ -129,7 +160,12 @@ export function CompetitionHero({
               startDate={competition.startDate}
               timeZone={competition.timeZone}
             />
-            <span className="text-sm text-on-navy-muted">{dateLineFor(competition)}</span>
+            {/* `tabular-nums` — WEB-4 item 2's "no layout shift" requirement:
+                the last-day countdown's digits change every tick
+                (`5h 12m` -> `5h 11m`), and proportional digit widths in the
+                body font would otherwise cause the surrounding chip/heading
+                to visibly reflow by a pixel or two once a minute. */}
+            <span className="text-sm tabular-nums text-on-navy-muted">{dateLineFor(competition, now)}</span>
           </div>
           <h1 className="mt-2 text-2xl font-extrabold text-on-navy-foreground sm:text-3xl">
             {competition.name ?? "Untitled competition"}
