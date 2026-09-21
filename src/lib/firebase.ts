@@ -1,6 +1,7 @@
 import { initializeApp, getApps, type FirebaseApp } from "firebase/app";
 import { getAuth, type Auth } from "firebase/auth";
 import { getFirestore, type Firestore } from "firebase/firestore";
+import { getStorage, type FirebaseStorage } from "firebase/storage";
 
 // Firebase config for ileadit-app project.
 // Actual values must be added to .env.local — see .env.example.
@@ -25,12 +26,23 @@ const firebaseConfig = {
 let appInstance: FirebaseApp | null = null;
 let authInstance: Auth | null = null;
 let dbInstance: Firestore | null = null;
+let storageInstance: FirebaseStorage | null = null;
 
 /**
  * The config keys without which `getAuth()` throws `auth/invalid-api-key`
  * and every callable fails. `storageBucket` and `messagingSenderId` are
- * deliberately NOT in this list: nothing in this repo uses Storage or FCM
- * yet, and an absent value there does not break auth.
+ * deliberately NOT in this list, and the reasons now differ per key:
+ *
+ * - `messagingSenderId` — still genuinely unused; nothing here touches FCM.
+ * - `storageBucket` — IS now used, by `getFirebaseStorage()` below
+ *   (competition artwork upload, `src/lib/artworkUpload.ts`). It stays out
+ *   of this list on purpose: an absent bucket breaks ONE optional field on
+ *   ONE admin-only form, whereas this list drives
+ *   `isFirebaseConfigured()`, which `EngineBootstrap` uses to decide
+ *   whether the WHOLE app is unusable. Widening it here would turn a
+ *   missing-bucket config into a site-wide "not configured" screen. The
+ *   narrower failure is surfaced by `getFirebaseStorage()` throwing a
+ *   named error instead.
  */
 const REQUIRED_CONFIG_KEYS = ["apiKey", "authDomain", "projectId", "appId"] as const;
 
@@ -73,4 +85,24 @@ export function getFirebaseDb(): Firestore {
     dbInstance = getFirestore(getFirebaseApp());
   }
   return dbInstance;
+}
+
+/**
+ * Cloud Storage handle, lazily initialised for the same reason as the
+ * others above (module-eval safety during `next build` prerender).
+ *
+ * Throws by name when `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET` is absent
+ * rather than letting `getStorage()` construct a handle against
+ * `undefined` and fail later, mid-upload, as an opaque
+ * `storage/unknown`. See `missingFirebaseConfigKeys()`'s comment for why
+ * that variable is not part of the app-wide required set.
+ */
+export function getFirebaseStorage(): FirebaseStorage {
+  if (!firebaseConfig.storageBucket) {
+    throw new Error("NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET is not set");
+  }
+  if (!storageInstance) {
+    storageInstance = getStorage(getFirebaseApp());
+  }
+  return storageInstance;
 }

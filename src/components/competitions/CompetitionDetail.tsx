@@ -4,8 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { AlertCircle, Calendar, Coins, Heart, Percent } from "lucide-react";
 import { useUser } from "@/context/AuthContext";
-import { LogoMark } from "@/components/brand/Logo";
-import { CompetitionStatusChip } from "@/components/status/CompetitionStatusChip";
+import { CompetitionHero } from "./CompetitionHero";
 import { PlayerAvatar } from "./PlayerAvatar";
 import {
   useCompetitionDetail,
@@ -16,6 +15,7 @@ import {
 import { joinCompetition } from "@/lib/joinCompetition";
 import { leaveCompetition } from "@/lib/leaveCompetition";
 import { competitionMembershipFailureMessage } from "@/lib/competitionMembershipErrors";
+import { formatShortDate } from "@/lib/competitionDates";
 import { CompetitionLeaderboard } from "./CompetitionLeaderboard";
 import { TodayCard } from "./TodayCard";
 
@@ -84,7 +84,7 @@ function CompetitionDetailContent({ competitionId, uid }: { competitionId: strin
 
   return (
     <div className="pb-28 sm:pb-16">
-      <Hero competition={competition} />
+      <CompetitionHero competition={competition} />
 
       <div className="mx-auto max-w-5xl px-5 sm:px-6">
         {/* The Today Card (W7-TODAY) only makes sense while there's a
@@ -165,133 +165,6 @@ function StatusPage({ title, body, isError }: { title: string; body: string; isE
       >
         Back to your dashboard
       </Link>
-    </div>
-  );
-}
-
-/* ------------------------------------------------------------------ *
- * Hero
- * ------------------------------------------------------------------ */
-
-function parseLocalDate(value: string): Date | null {
-  const [year, month, day] = value.split("-").map(Number);
-  if (!year || !month || !day) return null;
-  return new Date(year, month - 1, day);
-}
-
-function formatShortDate(value: string | null): string | null {
-  const date = value ? parseLocalDate(value) : null;
-  if (!date) return null;
-  return new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short" }).format(date);
-}
-
-/** Approximate "day N of the competition" from the competition's own
- * `startDate` calendar and the VIEWER's local today — the engine's
- * `closeDays` job is the real authority on which day is scored; this is
- * display-only framing, not used for anything that gates an action. */
-function dayNumberToday(startDate: string | null, durationDays: number | null): number | null {
-  const start = startDate ? parseLocalDate(startDate) : null;
-  if (!start) return null;
-  const today = new Date();
-  const todayMid = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-  const diff = Math.round((todayMid.getTime() - start.getTime()) / 86_400_000) + 1;
-  const clampedLow = Math.max(diff, 1);
-  return durationDays ? Math.min(clampedLow, durationDays) : clampedLow;
-}
-
-function dateLineFor(competition: {
-  status: CompetitionStatus | null;
-  startDate: string | null;
-  endDate: string | null;
-  durationDays: number | null;
-}): string {
-  const { status, startDate, endDate, durationDays } = competition;
-  const startShort = formatShortDate(startDate);
-  const endShort = formatShortDate(endDate);
-
-  if (status === "active") {
-    const day = dayNumberToday(startDate, durationDays);
-    return day && durationDays ? `Day ${day} of ${durationDays}` : "Live now";
-  }
-  if (status === "finalising") {
-    return "Results locking in";
-  }
-  if (status === "finished") {
-    return endShort ? `Finished ${endShort}` : "Finished";
-  }
-  // scheduled (or status still resolving)
-  if (startShort && endShort && durationDays) {
-    return `${startShort} – ${endShort} · ${durationDays} ${durationDays === 1 ? "day" : "days"}`;
-  }
-  return "Dates being finalised";
-}
-
-function Hero({
-  competition,
-}: {
-  competition: {
-    name: string | null;
-    imageUrl: string | null;
-    backgroundImageUrl: string | null;
-    status: CompetitionStatus | null;
-    startDate: string | null;
-    endDate: string | null;
-    durationDays: number | null;
-  };
-}) {
-  return (
-    <div className="relative">
-      <div className="relative h-[200px] overflow-hidden bg-brand-navy sm:h-[280px] sm:rounded-b-3xl">
-        {competition.backgroundImageUrl ? (
-          <>
-            {/* eslint-disable-next-line @next/next/no-img-element -- remote,
-                admin-supplied URL; not a build-time-known asset. */}
-            <img
-              src={competition.backgroundImageUrl}
-              alt=""
-              className="absolute inset-0 h-full w-full object-cover"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-brand-navy/95 via-brand-navy/60 to-brand-navy/20" />
-          </>
-        ) : (
-          <>
-            <div
-              className="absolute -right-10 -top-10 size-56 rounded-full bg-brand-pink/20 blur-3xl"
-              aria-hidden="true"
-            />
-            <div
-              className="absolute -bottom-16 left-10 size-64 rounded-full bg-brand-gold/15 blur-3xl"
-              aria-hidden="true"
-            />
-          </>
-        )}
-        {/* No-prize-field note: the design doc specifies a speculative prize
-            pill here (§4), gated on a `prizeDescription`-shaped field that
-            does not exist anywhere in the engine schema (grep of
-            `functions/src` and `firestore.rules` for "prize" is zero
-            matches). Deliberately not rendered — an empty slot beats a
-            fabricated placeholder string. */}
-        <div className="relative z-10 mx-auto flex h-full max-w-5xl flex-col justify-end px-5 pb-8 sm:px-6">
-          <div className="flex flex-wrap items-center gap-2">
-            <CompetitionStatusChip status={competition.status} />
-            <span className="text-sm text-on-navy-muted">{dateLineFor(competition)}</span>
-          </div>
-          <h1 className="mt-2 text-2xl font-extrabold text-on-navy-foreground sm:text-3xl">
-            {competition.name ?? "Untitled competition"}
-          </h1>
-        </div>
-      </div>
-
-      <div className="mx-auto max-w-5xl px-5 sm:px-6">
-        <span className="relative -mt-7 flex size-14 items-center justify-center overflow-hidden rounded-full bg-card shadow-lg ring-4 ring-white">
-          {competition.imageUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={competition.imageUrl} alt="" className="h-full w-full object-cover" />
-          ) : (
-            <LogoMark className="h-8 w-8" />
-          )}
-        </span>
-      </div>
     </div>
   );
 }
