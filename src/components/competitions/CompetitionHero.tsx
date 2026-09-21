@@ -51,6 +51,9 @@ export interface CompetitionHeroCompetition {
   startDate: string | null;
   endDate: string | null;
   durationDays: number | null;
+  /** IANA zone the competition's own dates are computed in (WEB-3 item 3) —
+   * feeds `CompetitionStatusChip`'s "Starting today" copy override. */
+  timeZone: string | null;
 }
 
 function dateLineFor(competition: {
@@ -121,7 +124,11 @@ export function CompetitionHero({
             fabricated placeholder string. */}
         <div className="relative z-10 mx-auto flex h-full max-w-5xl flex-col justify-end px-5 pb-8 sm:px-6">
           <div className="flex flex-wrap items-center gap-2">
-            <CompetitionStatusChip status={competition.status} />
+            <CompetitionStatusChip
+              status={competition.status}
+              startDate={competition.startDate}
+              timeZone={competition.timeZone}
+            />
             <span className="text-sm text-on-navy-muted">{dateLineFor(competition)}</span>
           </div>
           <h1 className="mt-2 text-2xl font-extrabold text-on-navy-foreground sm:text-3xl">

@@ -80,3 +80,77 @@ describe("CompetitionDetail — WEB-3 item 6 back-to-dashboard link", () => {
     expect(backLink).toHaveAttribute("href", "/dashboard");
   });
 });
+
+/**
+ * WEB-3 item 3 / engine ticket JOIN-1: `MembershipCta`'s non-member branch
+ * for `status === "active"` now offers a real Join button on the exact day
+ * the competition started (`canStillJoin`, CompetitionDetail.tsx), instead
+ * of always showing the refusal message. Uses fake timers to pin "now" to a
+ * specific instant/zone the same way `InviteLanding.test.tsx`'s
+ * MUT-JOIN1-DAYONE/MUT-JOIN1-PASTDAY pair does, since neither
+ * `isDayOneOfActiveCompetition` nor this component accept a test-only `now`
+ * override.
+ */
+describe("CompetitionDetail — WEB-3 item 3 / JOIN-1 day-one join", () => {
+  it("MUT-JOIN1-DETAIL-DAYONE: active competition, startDate is today (competition zone) — shows Join, not the refusal", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-09-21T10:00:00Z"));
+    try {
+      useCompetitionDetailMock.mockReturnValue({
+        status: "success",
+        competition: {
+          id: COMPETITION_ID,
+          name: "March Madness Steps",
+          description: null,
+          imageUrl: null,
+          backgroundImageUrl: null,
+          status: "active",
+          startDate: "2026-09-21",
+          endDate: "2026-09-28",
+          durationDays: 7,
+          playerCount: 12,
+          winnerIds: [],
+          timeZone: "Europe/London",
+        },
+      });
+
+      render(<CompetitionDetail competitionId={COMPETITION_ID} />);
+
+      expect(screen.getByRole("button", { name: /join competition/i })).toBeInTheDocument();
+      expect(screen.queryByText(/new joins closed after its first day/i)).not.toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("MUT-JOIN1-DETAIL-PASTDAY: active competition, startDate was an earlier day — still the refusal, no Join button", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-09-21T10:00:00Z"));
+    try {
+      useCompetitionDetailMock.mockReturnValue({
+        status: "success",
+        competition: {
+          id: COMPETITION_ID,
+          name: "March Madness Steps",
+          description: null,
+          imageUrl: null,
+          backgroundImageUrl: null,
+          status: "active",
+          startDate: "2026-09-14",
+          endDate: "2026-09-21",
+          durationDays: 7,
+          playerCount: 12,
+          winnerIds: [],
+          timeZone: "Europe/London",
+        },
+      });
+
+      render(<CompetitionDetail competitionId={COMPETITION_ID} />);
+
+      expect(screen.queryByRole("button", { name: /join competition/i })).not.toBeInTheDocument();
+      expect(screen.getByText(/new joins closed after its first day/i)).toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});

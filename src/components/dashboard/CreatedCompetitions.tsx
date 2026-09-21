@@ -159,7 +159,11 @@ function CompetitionCard({ competition }: { competition: CreatedCompetitionSumma
         <h3 className="text-base font-bold text-foreground">
           {competition.name ?? "Untitled competition"}
         </h3>
-        <CompetitionStatusChip status={competition.status} />
+        <CompetitionStatusChip
+          status={competition.status}
+          startDate={competition.startDate}
+          timeZone={competition.timeZone}
+        />
       </div>
       <p className="mt-2 text-sm text-muted-foreground">
         {formatDateRange(competition.startDate, competition.endDate)}

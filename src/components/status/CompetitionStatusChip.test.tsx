@@ -59,6 +59,61 @@ describe("CompetitionStatusChip", () => {
     expect(chip?.className).toContain("border-dashed");
   });
 
+  it("MUT-STARTING-TODAY-OVERRIDE: a scheduled competition whose startDate has arrived shows 'Starting today', not 'Scheduled'", () => {
+    render(
+      <CompetitionStatusChip
+        status="scheduled"
+        startDate="2026-09-21"
+        timeZone="Europe/London"
+        now={new Date("2026-09-21T10:00:00Z")}
+      />,
+    );
+    expect(screen.getByText("Starting today")).toBeInTheDocument();
+    expect(screen.queryByText("Scheduled")).not.toBeInTheDocument();
+  });
+
+  it("MUT-STARTING-TODAY-STILL-FUTURE: a scheduled competition whose startDate is still in the future keeps the plain 'Scheduled' label", () => {
+    render(
+      <CompetitionStatusChip
+        status="scheduled"
+        startDate="2026-09-25"
+        timeZone="Europe/London"
+        now={new Date("2026-09-21T10:00:00Z")}
+      />,
+    );
+    expect(screen.getByText("Scheduled")).toBeInTheDocument();
+    expect(screen.queryByText("Starting today")).not.toBeInTheDocument();
+  });
+
+  it("MUT-STARTING-TODAY-NOT-SCHEDULED: the override never applies to a non-scheduled status, even with a matching startDate", () => {
+    render(
+      <CompetitionStatusChip
+        status="active"
+        startDate="2026-09-21"
+        timeZone="Europe/London"
+        now={new Date("2026-09-21T10:00:00Z")}
+      />,
+    );
+    expect(screen.getByText("Live")).toBeInTheDocument();
+    expect(screen.queryByText("Starting today")).not.toBeInTheDocument();
+  });
+
+  it("MUT-STARTING-TODAY-ZONE-BOUNDARY: uses the competition's own zone, not UTC/host zone, at a date boundary", () => {
+    // At this instant it's already 2026-09-21 in UTC, but still 2026-09-20
+    // in Pacific/Honolulu (UTC-10) — a competition starting 2026-09-21 has
+    // not started yet there, so the chip must still read "Scheduled".
+    render(
+      <CompetitionStatusChip
+        status="scheduled"
+        startDate="2026-09-21"
+        timeZone="Pacific/Honolulu"
+        now={new Date("2026-09-21T05:00:00Z")}
+      />,
+    );
+    expect(screen.getByText("Scheduled")).toBeInTheDocument();
+    expect(screen.queryByText("Starting today")).not.toBeInTheDocument();
+  });
+
   it("every state renders a non-colour marker (icon or pulsing dot) alongside its label, never text alone", () => {
     (["scheduled", "finalising", "finished", null] as const).forEach((status) => {
       const { container, unmount } = render(<CompetitionStatusChip status={status} />);

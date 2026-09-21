@@ -21,9 +21,17 @@ import type { FunctionsError } from "firebase/functions";
  *     (join) / "competition is not open for leaving" (leave) —
  *     `CompetitionNotJoinableError`, thrown by
  *     `joinCompetitionService`/`leaveCompetitionService`
- *     (`functions/src/services/competitions.ts:699,764`) whenever
- *     `status !== "scheduled"` — this is THE status gate: join/leave succeed
- *     only while a competition is `scheduled`, full stop.
+ *     (`functions/src/services/competitions.ts:699,764`). **The two gates
+ *     diverged under engine ticket JOIN-1 (commit `7629e40`, 21 Sep 2026)**:
+ *     `leaveCompetitionService` is unchanged (`status !== "scheduled"`
+ *     always refuses — leave only while scheduled, full stop), but
+ *     `joinCompetitionService` now also accepts `status === "active"` on
+ *     the competition's own first calendar day (its `startDate`, checked in
+ *     its own `timeZone`) — see `isDayOneOfActiveCompetition` in
+ *     `src/lib/competitionDates.ts`, the one client-side place that mirrors
+ *     this half of the gate. This error code/message pair is identical for
+ *     both callables; only the caller's own pre-check (before even
+ *     attempting the call) differs.
  *   - `failed-precondition`, message "account not created yet - call
  *     ensureAccount first" — `MissingGameStateError` (join only; leave never
  *     throws this because it doesn't require `gameSnap.exists`)

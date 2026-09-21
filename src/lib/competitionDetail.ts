@@ -54,6 +54,10 @@ export interface CompetitionDetailDoc {
   durationDays: number | null;
   playerCount: number | null;
   winnerIds: string[];
+  /** IANA zone the competition's own dates are computed in (WEB-3 item 3) —
+   * see `CreatedCompetitionSummary.timeZone` in `competitions.ts` for the
+   * same field on the admin-list read path. */
+  timeZone: string | null;
 }
 
 export type CompetitionDetailState =
@@ -96,6 +100,7 @@ export function useCompetitionDetail(competitionId: string): CompetitionDetailSt
             durationDays: typeof data.durationDays === "number" ? data.durationDays : null,
             playerCount: typeof data.playerCount === "number" ? data.playerCount : null,
             winnerIds: asStringArray(data.winnerIds),
+            timeZone: typeof data.timeZone === "string" ? data.timeZone : null,
           },
         });
       },

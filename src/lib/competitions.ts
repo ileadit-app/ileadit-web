@@ -48,6 +48,11 @@ export interface CreatedCompetitionSummary {
   startDate: string | null;
   endDate: string | null;
   playerCount: number | null;
+  /** IANA zone the competition's own dates are computed in (WEB-3 item 3) —
+   * needed to answer "is it this competition's startDate yet" correctly for
+   * a viewer in a different zone. `null` before the engine trigger has
+   * populated it; callers fall back to `DEFAULT_COMPETITION_ZONE`. */
+  timeZone: string | null;
 }
 
 export type CreatedCompetitionsState =
@@ -108,6 +113,7 @@ export function useCreatedCompetitions(uid: string | null): CreatedCompetitionsS
             startDate: typeof data.startDate === "string" ? data.startDate : null,
             endDate: typeof data.endDate === "string" ? data.endDate : null,
             playerCount: typeof data.playerCount === "number" ? data.playerCount : null,
+            timeZone: typeof data.timeZone === "string" ? data.timeZone : null,
           };
         });
         setState({ status: "success", competitions });

@@ -15,7 +15,7 @@ import {
 import { joinCompetition } from "@/lib/joinCompetition";
 import { leaveCompetition } from "@/lib/leaveCompetition";
 import { competitionMembershipFailureMessage } from "@/lib/competitionMembershipErrors";
-import { formatShortDate } from "@/lib/competitionDates";
+import { formatShortDate, isDayOneOfActiveCompetition } from "@/lib/competitionDates";
 import { CompetitionLeaderboard } from "./CompetitionLeaderboard";
 import { TodayCard } from "./TodayCard";
 
@@ -127,6 +127,8 @@ function CompetitionDetailContent({ competitionId, uid }: { competitionId: strin
           <MembershipCta
             competitionId={competitionId}
             status={status}
+            startDate={competition.startDate}
+            timeZone={competition.timeZone}
             membershipState={membershipState}
           />
         ) : null}
@@ -290,19 +292,35 @@ function HowItWorksCard() {
 
 /* ------------------------------------------------------------------ *
  * The CTA state machine (design doc §4's table). Every cell verified
- * against the engine's status gate: `joinCompetitionService` /
- * `leaveCompetitionService` (`functions/src/services/competitions.ts:699,
- * 764`) throw `CompetitionNotJoinableError` whenever `status !==
- * "scheduled"` — so "Join"/"Leave" are only ever rendered for `scheduled`.
+ * against the engine's status gate — updated for WEB-3 item 3 / engine
+ * ticket JOIN-1 (commit `7629e40`):
+ *   - `joinCompetitionService` now accepts a join when `status ===
+ *     "scheduled"` OR (`status === "active"` AND the competition's own
+ *     calendar today, per its `timeZone`, equals its `startDate` — i.e.
+ *     only on the competition's first active day). See
+ *     `isDayOneOfActiveCompetition` in `competitionDates.ts`, which mirrors
+ *     this check exactly.
+ *   - `leaveCompetitionService` (`functions/src/services/competitions.ts:764`)
+ *     is UNCHANGED — still throws `CompetitionNotJoinableError` for any
+ *     `status !== "scheduled"`. So a member can only ever "Leave" while
+ *     `scheduled`; the "day one of active" join window has no matching
+ *     leave window, deliberately (an already-a-member's CTA on an active
+ *     competition is "View leaderboard", never "Leave", regardless of which
+ *     day it is — see the `status === "active" || status === "finalising"`
+ *     branch below).
  * ------------------------------------------------------------------ */
 
 function MembershipCta({
   competitionId,
   status,
+  startDate,
+  timeZone,
   membershipState,
 }: {
   competitionId: string;
   status: CompetitionStatus;
+  startDate: string | null;
+  timeZone: string | null;
   membershipState: ReturnType<typeof useOwnMembership>;
 }) {
   const [pending, setPending] = useState<"join" | "leave" | null>(null);
@@ -386,6 +404,12 @@ function MembershipCta({
       </button>
     );
   } else if (status === "active" || status === "finalising") {
+    // WEB-3 item 3 / JOIN-1: a non-member can still join on the
+    // competition's own first active day — see the block comment above
+    // `MembershipCta`. `leaveCompetitionService` did NOT change, so this
+    // never affects the isMember branch (still "View leaderboard", never a
+    // "Leave" option, once active).
+    const canStillJoin = status === "active" && isDayOneOfActiveCompetition(startDate, timeZone);
     body = isMember ? (
       <a
         href="#leaderboard"
@@ -393,10 +417,19 @@ function MembershipCta({
       >
         View leaderboard
       </a>
+    ) : canStillJoin ? (
+      <button
+        type="button"
+        onClick={() => void handleJoin()}
+        disabled={pending !== null}
+        className="flex h-12 w-full items-center justify-center rounded-full bg-brand-gold text-base font-bold text-brand-navy transition-colors hover:bg-brand-gold/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-navy disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground"
+      >
+        {pending === "join" ? "Joining…" : "Join competition"}
+      </button>
     ) : (
       <div className="rounded-2xl bg-muted p-4 text-center text-sm text-muted-foreground">
         {status === "active"
-          ? "This one's already under way — you can't join active competitions."
+          ? "This one's already under way — new joins closed after its first day."
           : "Results are being finalised — check back shortly."}
         <div className="mt-2">
           <Link href="/dashboard" className="font-semibold text-brand-navy underline-offset-2 hover:underline">

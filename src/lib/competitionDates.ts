@@ -36,3 +36,76 @@ export function dayNumberToday(startDate: string | null, durationDays: number | 
   const clampedLow = Math.max(diff, 1);
   return durationDays ? Math.min(clampedLow, durationDays) : clampedLow;
 }
+
+/**
+ * WEB-3 item 3. Matches the engine's own fallback
+ * (`functions/src/config/constants.ts`'s `DEFAULT_COMPETITION_ZONE`, ileadit
+ * engine repo) — used whenever a competition document has no `timeZone` of
+ * its own (older documents, or a transient read before the engine's
+ * `onCompetitionWritten` trigger has populated it).
+ */
+export const DEFAULT_COMPETITION_ZONE = "Europe/London";
+
+/** `YYYY-MM-DD` for `date`, as read inside `timeZone`. `en-CA` formats in
+ * that exact digit order, matching the engine's own date-string format
+ * (`localDate`, `functions/src/domain/dates.ts`) so the two compare/sort
+ * correctly as plain strings. Same technique as `todayCard.ts`'s private
+ * `formatDateInZone` — duplicated rather than imported since that one is
+ * file-private and this module has no existing dependency on `todayCard.ts`. */
+function zonedDateString(date: Date, timeZone: string): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(date);
+}
+
+function resolveZone(timeZone: string | null): string {
+  return timeZone && timeZone !== "" ? timeZone : DEFAULT_COMPETITION_ZONE;
+}
+
+/**
+ * WEB-3 item 3 — "starting today" copy override. The engine's
+ * `competitionLifecycle` job derives `status: "scheduled" -> "active"`
+ * asynchronously and can lag up to ~15 minutes behind a competition's real
+ * start moment, so a competition can genuinely be under way while a client
+ * still reads `status: "scheduled"`. This is a COPY-ONLY signal for that
+ * window: true once the competition's own `startDate` (compared inside its
+ * own `timeZone`, defaulting to `DEFAULT_COMPETITION_ZONE`, never the
+ * viewer's browser zone — a UK company's competition should read "Starting
+ * today" the same way for an admin checking in from any timezone) is today
+ * or earlier. It must NEVER feed back into `competition-status.ts`'s
+ * canonical status derivation — only into what a `"scheduled"` chip's LABEL
+ * says. `CompetitionStatusChip` is the only caller.
+ */
+export function isCompetitionStartingToday(
+  startDate: string | null,
+  timeZone: string | null,
+  now: Date = new Date(),
+): boolean {
+  if (!startDate) return false;
+  return zonedDateString(now, resolveZone(timeZone)) >= startDate;
+}
+
+/**
+ * WEB-3 item 3 — the real join-gate check, mirroring the engine's JOIN-1
+ * change (`joinCompetitionService`, ileadit engine repo commit `7629e40`):
+ * `isDayOneOfActive = status === "active" && localDate(now, compZone) ===
+ * startDate`. Unlike `isCompetitionStartingToday` above (a "today or
+ * earlier" copy nicety), this is an EXACT match on the competition's own
+ * calendar day — the engine only accepts a join on the specific day a
+ * competition became active, never on any later active day. Callers must
+ * also check `status === "active"` themselves; this function only answers
+ * the date half of that condition (kept separate from `status` since some
+ * callers already have `status` narrowed by an outer branch and don't want
+ * to pass it twice).
+ */
+export function isDayOneOfActiveCompetition(
+  startDate: string | null,
+  timeZone: string | null,
+  now: Date = new Date(),
+): boolean {
+  if (!startDate) return false;
+  return zonedDateString(now, resolveZone(timeZone)) === startDate;
+}

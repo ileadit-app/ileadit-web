@@ -57,6 +57,9 @@ export interface PlayingCompetitionSummary {
   playerCount: number | null;
   points: number | null;
   position: number | null;
+  /** IANA zone the competition's own dates are computed in (WEB-3 item 3) —
+   * see `CreatedCompetitionSummary.timeZone` in `competitions.ts`. */
+  timeZone: string | null;
 }
 
 export type PlayingCompetitionsState =
@@ -70,6 +73,7 @@ interface CompetitionDocData {
   startDate: string | null;
   endDate: string | null;
   playerCount: number | null;
+  timeZone: string | null;
 }
 
 interface PlayerStanding {
@@ -173,6 +177,7 @@ export function usePlayingCompetitions(uid: string | null): PlayingCompetitionsS
             playerCount: comp.playerCount,
             points: standing?.points ?? null,
             position: standing?.position ?? null,
+            timeZone: comp.timeZone,
           };
         },
       );
@@ -201,6 +206,7 @@ export function usePlayingCompetitions(uid: string | null): PlayingCompetitionsS
             startDate: typeof data.startDate === "string" ? data.startDate : null,
             endDate: typeof data.endDate === "string" ? data.endDate : null,
             playerCount: typeof data.playerCount === "number" ? data.playerCount : null,
+            timeZone: typeof data.timeZone === "string" ? data.timeZone : null,
           });
           emit();
         },

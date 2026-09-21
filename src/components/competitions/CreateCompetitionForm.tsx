@@ -234,6 +234,7 @@ export function CreateCompetitionForm() {
           backgroundImageUrl={backgroundImageUrl}
           startTimeValue={startTimeValue}
           durationDays={Number(durationDaysValue)}
+          timeZone={timeZone}
         />
 
         <button
@@ -308,12 +309,14 @@ function ArtworkPreview({
   backgroundImageUrl,
   startTimeValue,
   durationDays,
+  timeZone,
 }: {
   name: string;
   imageUrl: string | null;
   backgroundImageUrl: string | null;
   startTimeValue: string;
   durationDays: number;
+  timeZone: string;
 }) {
   if (!imageUrl && !backgroundImageUrl) return null;
 
@@ -328,6 +331,7 @@ function ArtworkPreview({
     startDate,
     endDate,
     durationDays: Number.isInteger(durationDays) && durationDays > 0 ? durationDays : null,
+    timeZone,
   };
 
   return (
