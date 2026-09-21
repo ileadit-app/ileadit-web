@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { LogOut, Menu, X } from "lucide-react";
 import { Logo } from "@/components/brand/Logo";
 import { useUser } from "@/context/AuthContext";
+import { useCanCreateCompetitions } from "@/lib/useCanCreateCompetitions";
 import type { User } from "firebase/auth";
 
 // Nav links point at "/#section" (not "#section") so they resolve correctly
@@ -30,6 +31,16 @@ export default function Header() {
   // already-signed-in returning visitor before Firebase resolves the
   // persisted session.
   const { status, user, signOut } = useUser();
+  // WEB-5: gates the "Create competition" nav item below (evidence: once an
+  // admin has created their first competition, the empty-state CTA on
+  // `/dashboard` disappears and there was no other way back to
+  // `/competitions/new`). Safe to call unconditionally — while signed out,
+  // `useCanCreateCompetitions()` resolves "denied" with no network call
+  // (`adminClaim.ts`'s `getForcedRefreshClaims()` short-circuits on a null
+  // `currentUser`) — but the nav item itself is still only ever rendered
+  // inside the existing `status === "signed-in"` branches below, so a
+  // signed-out visitor never sees it flash in.
+  const capability = useCanCreateCompetitions();
 
   async function handleSignOut() {
     setMenuOpen(false);
@@ -68,6 +79,11 @@ export default function Header() {
               <Link href="/dashboard" className={authLinkClassName}>
                 Dashboard
               </Link>
+              {capability === "allowed" && (
+                <Link href="/competitions/new" className={authLinkClassName}>
+                  Create competition
+                </Link>
+              )}
               <AccountMenu user={user} onSignOut={() => void handleSignOut()} />
             </>
           ) : (
@@ -127,6 +143,15 @@ export default function Header() {
               <Link href="/dashboard" className={mobileAuthLinkClassName} onClick={() => setMenuOpen(false)}>
                 Dashboard
               </Link>
+              {capability === "allowed" && (
+                <Link
+                  href="/competitions/new"
+                  className={mobileAuthLinkClassName}
+                  onClick={() => setMenuOpen(false)}
+                >
+                  Create competition
+                </Link>
+              )}
               <Link href="/account" className={mobileAuthLinkClassName} onClick={() => setMenuOpen(false)}>
                 Account
               </Link>
