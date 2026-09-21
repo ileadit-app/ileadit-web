@@ -165,8 +165,8 @@ export default function AccountDeletion() {
         </a>
         <p className="mt-3 text-xs text-muted-foreground">
           Prefer not to use email? Write to us at{" "}
-          <a href="mailto:hello@ileadit.app" className="font-semibold underline">
-            hello@ileadit.app
+          <a href="mailto:hello@ileadit.co.uk" className="font-semibold underline">
+            hello@ileadit.co.uk
           </a>{" "}
           instead — the button above just saves you typing.
         </p>
@@ -207,9 +207,9 @@ function buildDeletionMailto(email: string, uid: string | undefined | null): str
     `Account email: ${email || "(please fill in)"}`,
   ];
   if (uid) lines.push(`Account ID: ${uid}`);
-  lines.push("", "(Sent from ileadit.app/account-deletion)");
+  lines.push("", "(Sent from the ileadit account-deletion page)");
   const body = lines.join("\n");
-  return `mailto:hello@ileadit.app?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  return `mailto:hello@ileadit.co.uk?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
 }
 
 function Section({

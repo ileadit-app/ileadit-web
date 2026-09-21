@@ -87,8 +87,8 @@ function ErrorState() {
         <p className="mt-1 text-sm leading-relaxed text-destructive/90">
           Something went wrong talking to ileadit while checking this. You haven&apos;t lost your
           spot in anything — try reloading the page. If this keeps happening,{" "}
-          <a href="mailto:hello@ileadit.app" className="font-semibold underline">
-            email hello@ileadit.app
+          <a href="mailto:hello@ileadit.co.uk" className="font-semibold underline">
+            email hello@ileadit.co.uk
           </a>{" "}
           and we&apos;ll take a look.
         </p>

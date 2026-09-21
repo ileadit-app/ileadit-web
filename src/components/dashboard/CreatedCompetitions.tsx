@@ -92,8 +92,8 @@ function ErrorState() {
           Something went wrong talking to ileadit while fetching this list. Your
           competitions are still there — try reloading the page. If this keeps
           happening,{" "}
-          <a href="mailto:hello@ileadit.app" className="font-semibold underline">
-            email hello@ileadit.app
+          <a href="mailto:hello@ileadit.co.uk" className="font-semibold underline">
+            email hello@ileadit.co.uk
           </a>{" "}
           and we&apos;ll take a look.
         </p>

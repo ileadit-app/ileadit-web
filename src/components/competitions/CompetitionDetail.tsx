@@ -81,7 +81,7 @@ function CompetitionDetailContent({ competitionId, uid }: { competitionId: strin
     return (
       <StatusPage
         title="You don't have access to this competition"
-        body="This one looks like it's invite-only. If you think that's wrong, email hello@ileadit.app."
+        body="This one looks like it's invite-only. If you think that's wrong, email hello@ileadit.co.uk."
       />
     );
   }

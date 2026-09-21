@@ -85,7 +85,7 @@ describe("CreateCompetitionForm — createCompetition wrapper outcomes shown to 
 
     const banner = await screen.findByRole("alert");
     expect(banner).toHaveTextContent(
-      "You don't have permission to create competitions. If you think this is wrong, email hello@ileadit.app.",
+      "You don't have permission to create competitions. If you think this is wrong, email hello@ileadit.co.uk.",
     );
     expect(pushMock).not.toHaveBeenCalled();
   });
@@ -99,7 +99,7 @@ describe("CreateCompetitionForm — createCompetition wrapper outcomes shown to 
 
     const banner = await screen.findByRole("alert");
     expect(banner).toHaveTextContent(
-      "We couldn't create that competition. Please try again, or email hello@ileadit.app if it keeps happening.",
+      "We couldn't create that competition. Please try again, or email hello@ileadit.co.uk if it keeps happening.",
     );
     expect(banner).not.toHaveTextContent("You don't have permission");
     expect(pushMock).not.toHaveBeenCalled();

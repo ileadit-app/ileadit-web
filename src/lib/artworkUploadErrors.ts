@@ -75,18 +75,18 @@ export function toArtworkUploadFailure(error: unknown): ArtworkUploadFailure {
 export function artworkUploadFailureMessage(failure: ArtworkUploadFailure): string {
   switch (failure.code) {
     case "unauthorized":
-      return "Your account isn't allowed to upload competition artwork. That needs the ileadit admin permission — email hello@ileadit.app if you think you should have it.";
+      return "Your account isn't allowed to upload competition artwork. That needs the ileadit admin permission — email hello@ileadit.co.uk if you think you should have it.";
     case "unauthenticated":
       return "You've been signed out. Sign in again and re-add the image.";
     case "canceled":
       return "Upload cancelled. Nothing was saved.";
     case "quota-exceeded":
-      return "ileadit's image storage is full, so this couldn't be saved. Email hello@ileadit.app — this one is on us, not you.";
+      return "ileadit's image storage is full, so this couldn't be saved. Email hello@ileadit.co.uk — this one is on us, not you.";
     case "retry-limit":
       return "The upload kept failing, most likely a slow or dropped connection. Check your connection and try again.";
     case "not-configured":
-      return "Image uploads aren't configured on this deployment (the Firebase storage bucket is missing). Email hello@ileadit.app.";
+      return "Image uploads aren't configured on this deployment (the Firebase storage bucket is missing). Email hello@ileadit.co.uk.";
     case "unknown":
-      return "We couldn't upload that image. Try again, or email hello@ileadit.app if it keeps happening.";
+      return "We couldn't upload that image. Try again, or email hello@ileadit.co.uk if it keeps happening.";
   }
 }
