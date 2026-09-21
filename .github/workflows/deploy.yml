@@ -1,0 +1,88 @@
+name: Deploy to Firebase Hosting
+
+# MANUAL TRIGGER ONLY. There is deliberately no `on: push` here — ileadit.app
+# is not live yet and no deploy should ever fire automatically just because
+# something was merged to main. Someone (Paul, or whoever has repo write
+# access) must go to Actions -> "Deploy to Firebase Hosting" -> "Run workflow"
+# and pick the branch/ref to ship, every time.
+#
+# Before this can actually succeed, a repo secret must exist:
+#   FIREBASE_SERVICE_ACCOUNT_ILEADIT_APP — JSON key for a service account on
+#   the `ileadit-app` Firebase project with Firebase Hosting Admin (and, for
+#   the web-frameworks backend, Cloud Functions/Cloud Run deploy) permissions.
+#   Create it in the Google Cloud Console for the `ileadit-app` project and
+#   add it via Settings -> Secrets and variables -> Actions. Nothing in this
+#   file or this repo contains that key.
+#
+# IMPORTANT — read before the first real run: this app is NOT a static
+# export (see firebase.json's "source" key and next.config.ts — there is no
+# `output: "export"`, and /competitions/[id] and /invite/[code] build as
+# dynamic, server-rendered routes). Deploying via plain Firebase Hosting
+# (a "public" directory of static files) cannot serve this app at all — the
+# dynamic routes would 404. firebase.json instead uses Firebase Hosting's
+# Next.js "web frameworks" integration (frameworks-aware `source` config),
+# which builds the app and provisions a Cloud Functions/Cloud Run backend
+# for the dynamic routes automatically as part of `firebase deploy`. That
+# integration requires a firebase-tools version with web-frameworks support
+# (pinned below) — if a future firebase-tools release changes or removes
+# this, that's a reason to instead migrate to Firebase App Hosting
+# (apphosting.yaml, Cloud Run, git-integrated CD), which is Google's newer,
+# purpose-built product for full-stack Next.js SSR. App Hosting was not used
+# here because its default deploy model is itself an automatic CD watching
+# pushes to a connected GitHub branch — that conflicts directly with the
+# "no automatic deploy" requirement this workflow exists to satisfy. If the
+# team later wants App Hosting anyway, it can still be driven manually via
+# `firebase apphosting:rollouts:create` from a workflow_dispatch job like
+# this one, but that is a follow-up decision for Paul, not made here.
+#
+# This workflow does not run tsc/eslint/vitest itself — it deploys a ref
+# that should already be green in ci.yml. It does still run `npm ci` and a
+# local `npm run build` first as a fast local sanity check before handing
+# off to `firebase deploy` (which performs its own build internally as part
+# of the frameworks integration).
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type "deploy" to confirm you want to ship this ref to ileadit.app'
+        required: true
+
+jobs:
+  deploy:
+    name: Build and deploy
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Require explicit confirmation
+        if: ${{ github.event.inputs.confirm != 'deploy' }}
+        run: |
+          echo "Confirmation input must be exactly 'deploy'. Got: '${{ github.event.inputs.confirm }}'"
+          exit 1
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Sanity build
+        run: npm run build
+
+      - name: Deploy to Firebase Hosting (ileadit-app)
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_ILEADIT_APP }}
+        run: |
+          if [ -z "$GOOGLE_APPLICATION_CREDENTIALS_JSON" ]; then
+            echo "Missing FIREBASE_SERVICE_ACCOUNT_ILEADIT_APP repo secret — see this workflow's header comment for how to create it."
+            exit 1
+          fi
+          echo "$GOOGLE_APPLICATION_CREDENTIALS_JSON" > /tmp/firebase-service-account.json
+          export GOOGLE_APPLICATION_CREDENTIALS=/tmp/firebase-service-account.json
+          npx firebase-tools@15 deploy --only hosting --project ileadit-app --non-interactive
