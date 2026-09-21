@@ -175,7 +175,7 @@ function StandingLine({ competition }: { competition: PlayingCompetitionSummary 
 
 function PlayingCompetitionCard({ competition }: { competition: PlayingCompetitionSummary }) {
   return (
-    <div className="flex h-full flex-col rounded-2xl border border-border bg-card p-5">
+    <div className="flex h-full flex-col rounded-3xl border border-border bg-card p-5">
       <div className="flex items-start justify-between gap-2">
         <h3 className="text-base font-bold text-foreground">
           {competition.name ?? "Untitled competition"}

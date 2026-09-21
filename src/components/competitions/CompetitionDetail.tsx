@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { AlertCircle, Calendar, Coins, Heart, Percent } from "lucide-react";
+import { AlertCircle, ArrowLeft, Calendar, Coins, Heart, Percent } from "lucide-react";
 import { useUser } from "@/context/AuthContext";
 import { CompetitionHero } from "./CompetitionHero";
 import { PlayerAvatar } from "./PlayerAvatar";
@@ -87,6 +87,18 @@ function CompetitionDetailContent({ competitionId, uid }: { competitionId: strin
       <CompetitionHero competition={competition} />
 
       <div className="mx-auto max-w-5xl px-5 sm:px-6">
+        {/* WEB-3 item 6: previously the ONLY "back to dashboard" link on
+            this page lived in StatusPage (the not-found/denied/error
+            branches) — the happy path had no way back except the browser's
+            own back button. */}
+        <Link
+          href="/dashboard"
+          className="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-muted-foreground hover:text-foreground"
+        >
+          <ArrowLeft className="size-4" aria-hidden="true" />
+          Back to dashboard
+        </Link>
+
         {/* The Today Card (W7-TODAY) only makes sense while there's a
             "today" to report on — during scheduled, nothing has started
             yet; once finished, there's a final result, not a today. */}
