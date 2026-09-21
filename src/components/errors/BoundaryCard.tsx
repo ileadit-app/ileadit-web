@@ -53,7 +53,7 @@ export function BoundaryCard({
 }
 
 export const BOUNDARY_PRIMARY_CTA_CLASSES =
-  "flex h-12 w-full max-w-xs items-center justify-center rounded-full bg-brand-gold px-6 text-base font-bold text-brand-navy transition-colors hover:bg-brand-gold/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-navy";
+  "flex h-12 w-full max-w-xs items-center justify-center rounded-full border border-[rgba(25,47,95,0.15)] bg-brand-gold px-6 text-base font-bold text-brand-navy transition-colors hover:bg-brand-gold/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-navy";
 
 export const BOUNDARY_SECONDARY_LINK_CLASSES =
   "text-sm font-semibold text-brand-navy underline-offset-2 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-navy";

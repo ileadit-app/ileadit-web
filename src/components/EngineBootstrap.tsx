@@ -106,7 +106,7 @@ export default function EngineBootstrap() {
         type="button"
         onClick={() => void handleRetry()}
         disabled={retrying}
-        className="shrink-0 font-semibold underline-offset-2 hover:underline disabled:opacity-60"
+        className="shrink-0 font-semibold underline-offset-2 hover:underline disabled:cursor-not-allowed disabled:text-muted-foreground disabled:hover:no-underline"
       >
         {retrying ? "Retrying…" : "Try again"}
       </button>

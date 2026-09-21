@@ -15,12 +15,24 @@ import {
  * inside one transaction with the player-doc create and the `playerCount`
  * bump (`joinCompetitionService`, `services/competitions.ts:674-731`).
  *
- * **The status gate, verified**: `joinCompetitionService`
- * (`services/competitions.ts:699`) throws `CompetitionNotJoinableError`
- * whenever the competition's `status !== "scheduled"` — active, finalising
- * and finished competitions all refuse a join with the same error. This is
- * the fact `CompetitionDetail`'s CTA state machine is built against; do not
- * render a "Join" button for any status other than `scheduled`.
+ * **The status gate, updated by engine ticket JOIN-1** (commit `7629e40`,
+ * 21 Sep 2026): `joinCompetitionService` (`services/competitions.ts:699`)
+ * now throws `CompetitionNotJoinableError` unless the competition is
+ * `status === "scheduled"`, OR `status === "active"` AND today (in the
+ * competition's own `timeZone`) is exactly its `startDate` — i.e. the
+ * competition's own first calendar day. Finalising and finished always
+ * refuse; an active competition past day one also still refuses. This is
+ * the fact `CompetitionDetail`'s and `InviteLanding`'s CTA state machines
+ * are built against — see `isDayOneOfActiveCompetition` in
+ * `competitionDates.ts`, the one place that day-one check is implemented.
+ * Do not render a "Join" button for any other status/day combination.
+ *
+ * **A second, separate refusal case, from engine ticket LEAVE-1** (Paul's
+ * decision, 2026-09-21, in progress — see `leaveCompetition.ts`'s header
+ * comment): once shipped, a player who left this SAME competition while it
+ * was active will have their re-join refused too, indistinguishably (at
+ * the error-message level) from the day-one-already-passed case above. See
+ * the LEAVE-1 TODOs in `competitionMembershipErrors.ts`.
  *
  * Idempotent: joining a competition you're already in returns
  * `{ joined: false, alreadyMember: true, playerCount }` rather than an

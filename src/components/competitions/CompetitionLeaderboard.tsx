@@ -135,7 +135,15 @@ function PlayerRow({
           {player.points} {player.points === 1 ? "pt" : "pts"}
         </p>
         {showTodayPoints ? (
-          <p className="text-xs text-brand-gold">+{player.todayPoints} today</p>
+          // WEB-3 item 1: gold (#F8A92F) on this row's white card background
+          // measures 1.96:1 — fails WCAG AA's 4.5:1 floor for text-xs (not
+          // "large text" even bold, which needs 14pt/~18.66px bold or
+          // 18pt/24px regular). Navy-on-white measures ~13:1. Gold stays
+          // reserved for icon-only accents and for text that sits on a navy
+          // background (see `YourPositionCard` below, and
+          // `player-row-state.ts`'s own icon-vs-label split) — never as
+          // small body/label text on a light card.
+          <p className="text-xs font-bold text-brand-navy">+{player.todayPoints} today</p>
         ) : null}
       </div>
     </li>
@@ -306,7 +314,11 @@ export function CompetitionLeaderboard({
             </div>
           ) : null}
           {status === "finished" && !stillSettling ? (
-            <p className="mb-3 text-sm font-bold uppercase tracking-wide text-brand-gold">
+            // WEB-3 item 1: this sits directly on the section's light page
+            // background (not inside the navy sticky card below) — same
+            // 1.96:1 gold-on-white failure as the row above. Navy passes at
+            // ~13:1.
+            <p className="mb-3 text-sm font-bold uppercase tracking-wide text-brand-navy">
               🏅 Final results
             </p>
           ) : null}

@@ -104,4 +104,26 @@ describe("CreateCompetitionForm — createCompetition wrapper outcomes shown to 
     expect(banner).not.toHaveTextContent("You don't have permission");
     expect(pushMock).not.toHaveBeenCalled();
   });
+
+  it("WEB-4 item 1: the disabled 'Creating…' submit button uses the named cta-disabled tokens, not opacity", async () => {
+    let resolveSubmit: (v: { data: { competitionId: string } }) => void = () => {};
+    mockCallable.mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolveSubmit = resolve;
+      }),
+    );
+    render(<CreateCompetitionForm />);
+
+    fillRequiredFields();
+    fireEvent.click(screen.getByRole("button", { name: /create competition/i }));
+
+    const submittingButton = await screen.findByRole("button", { name: /creating/i });
+    expect(submittingButton).toBeDisabled();
+    expect(submittingButton.className).toContain("disabled:bg-cta-disabled");
+    expect(submittingButton.className).toContain("disabled:text-cta-disabled-foreground");
+    expect(submittingButton.className).not.toContain("opacity-60");
+
+    resolveSubmit({ data: { competitionId: "comp_123" } });
+    await waitFor(() => expect(pushMock).toHaveBeenCalledWith("/dashboard"));
+  });
 });

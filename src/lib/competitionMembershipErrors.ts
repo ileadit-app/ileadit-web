@@ -21,9 +21,17 @@ import type { FunctionsError } from "firebase/functions";
  *     (join) / "competition is not open for leaving" (leave) —
  *     `CompetitionNotJoinableError`, thrown by
  *     `joinCompetitionService`/`leaveCompetitionService`
- *     (`functions/src/services/competitions.ts:699,764`) whenever
- *     `status !== "scheduled"` — this is THE status gate: join/leave succeed
- *     only while a competition is `scheduled`, full stop.
+ *     (`functions/src/services/competitions.ts:699,764`). **The two gates
+ *     diverged under engine ticket JOIN-1 (commit `7629e40`, 21 Sep 2026)**:
+ *     `leaveCompetitionService` is unchanged (`status !== "scheduled"`
+ *     always refuses — leave only while scheduled, full stop), but
+ *     `joinCompetitionService` now also accepts `status === "active"` on
+ *     the competition's own first calendar day (its `startDate`, checked in
+ *     its own `timeZone`) — see `isDayOneOfActiveCompetition` in
+ *     `src/lib/competitionDates.ts`, the one client-side place that mirrors
+ *     this half of the gate. This error code/message pair is identical for
+ *     both callables; only the caller's own pre-check (before even
+ *     attempting the call) differs.
  *   - `failed-precondition`, message "account not created yet - call
  *     ensureAccount first" — `MissingGameStateError` (join only; leave never
  *     throws this because it doesn't require `gameSnap.exists`)
@@ -80,6 +88,20 @@ export function toCompetitionMembershipFailure(error: unknown): CompetitionMembe
     return { reason: "invalid-argument", code: error.code, message: error.message, cause: error };
   }
   if (error.code === "functions/failed-precondition") {
+    // TODO(LEAVE-1): once the engine ships a distinguishable signal (a
+    // distinct `details.reason`, or a message that names this case
+    // specifically) for "this player left this competition while it was
+    // active and is blocked from re-joining," split that out into its own
+    // `CompetitionMembershipFailureReason` (e.g. "left-cannot-rejoin") with
+    // its own copy — Paul's decision names the exact wording:
+    // "You left this competition and can't re-join it." Until LEAVE-1
+    // lands, `leaveCompetitionService`/`joinCompetitionService` both throw
+    // the SAME generic "not open for joining"/"not open for leaving"
+    // message for every refusal reason (already-active-past-day-one,
+    // finalising, finished, AND — once LEAVE-1 ships — previously left),
+    // so there is no message-substring or code to key off yet. Re-read
+    // `functions/src/services/competitions.ts` at whatever engine commit
+    // is current before assuming this is still true.
     if (error.message.includes("is not open for joining") || error.message.includes("is not open for leaving")) {
       return { reason: "not-joinable", code: error.code, message: error.message, cause: error };
     }
@@ -105,9 +127,16 @@ export function competitionMembershipFailureMessage(
 ): string {
   switch (failure.reason) {
     case "not-joinable":
+      // TODO(LEAVE-1): once the engine can distinguish "you left this one
+      // while it was active" from the other refusal causes (see the
+      // matching TODO in `toCompetitionMembershipFailure` above), split
+      // that out to Paul's exact copy: "You left this competition and
+      // can't re-join it." Until then this generic wording has to cover
+      // that case too, since the callable's own error is indistinguishable
+      // from "already under way"/"finalising"/"finished" today.
       return operation === "join"
-        ? "You can't join this one any more — it's already under way, wrapping up, or finished."
-        : "You can't leave this one any more — once a competition starts, you're in for the duration.";
+        ? "You can't join this one any more — it's already under way, wrapping up, finished, or you've already left it."
+        : "You can't leave this one any more.";
     case "missing-game-state":
       return "Your account isn't fully set up yet. Sign out and back in, then try again.";
     case "config-not-seeded":

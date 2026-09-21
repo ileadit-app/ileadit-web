@@ -234,12 +234,13 @@ export function CreateCompetitionForm() {
           backgroundImageUrl={backgroundImageUrl}
           startTimeValue={startTimeValue}
           durationDays={Number(durationDaysValue)}
+          timeZone={timeZone}
         />
 
         <button
           type="submit"
           disabled={submitting}
-          className="mt-2 inline-flex h-12 w-full items-center justify-center gap-2 rounded-full bg-brand-gold text-base font-bold text-brand-navy transition-colors hover:bg-brand-gold/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-navy disabled:opacity-60"
+          className="mt-2 inline-flex h-12 w-full items-center justify-center gap-2 rounded-full border border-[rgba(25,47,95,0.15)] bg-brand-gold text-base font-bold text-brand-navy transition-colors hover:bg-brand-gold/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-navy disabled:cursor-not-allowed disabled:border-transparent disabled:bg-cta-disabled disabled:text-cta-disabled-foreground"
         >
           {submitting ? (
             <>
@@ -308,12 +309,14 @@ function ArtworkPreview({
   backgroundImageUrl,
   startTimeValue,
   durationDays,
+  timeZone,
 }: {
   name: string;
   imageUrl: string | null;
   backgroundImageUrl: string | null;
   startTimeValue: string;
   durationDays: number;
+  timeZone: string;
 }) {
   if (!imageUrl && !backgroundImageUrl) return null;
 
@@ -328,6 +331,7 @@ function ArtworkPreview({
     startDate,
     endDate,
     durationDays: Number.isInteger(durationDays) && durationDays > 0 ? durationDays : null,
+    timeZone,
   };
 
   return (

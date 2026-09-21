@@ -1,10 +1,13 @@
 "use client";
 
+import Link from "next/link";
+import { PlusCircle } from "lucide-react";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { useUser } from "@/context/AuthContext";
 import { CreatedCompetitions } from "@/components/dashboard/CreatedCompetitions";
 import { PlayingCompetitions } from "@/components/dashboard/PlayingCompetitions";
 import { useCanCreateCompetitions } from "@/lib/useCanCreateCompetitions";
+import { GOLD_BUTTON_LIGHT_BORDER_CLASSNAME } from "@/components/ui/buttonStyles";
 
 export default function Dashboard() {
   return (
@@ -42,6 +45,15 @@ export default function Dashboard() {
  * section nor its heading yet (same "briefly absent, not shown-then-yanked"
  * reasoning `CreatedCompetitions`'s old `canCreate` gate documented) — a
  * plain player never sees it flash in only to vanish.
+ *
+ * WEB-5: the "Created by you" section header also carries a persistent
+ * "Create competition" button (`/competitions/new`), not just the
+ * `EmptyState`'s own one-shot CTA inside `CreatedCompetitions`. Evidence:
+ * once an admin has created their first competition, that empty-state CTA
+ * disappears and — before this ticket — nothing else on the page pointed
+ * back at the create flow (the header ticket, below, is the other half of
+ * the fix). It reuses the SAME `capability === "allowed"` check that already
+ * gates the whole section, rather than calling the hook a second time.
  */
 function DashboardContent() {
   const { user } = useUser();
@@ -71,12 +83,23 @@ function DashboardContent() {
 
       {capability === "allowed" && (
         <section aria-labelledby="created-heading">
-          <h2 id="created-heading" className="mt-14 text-xl font-bold text-foreground">
-            Created by you
-          </h2>
-          <p className="mt-1 max-w-2xl text-base leading-relaxed text-muted-foreground">
-            Everything you&apos;ve set up, with where each one stands right now.
-          </p>
+          <div className="mt-14 flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <h2 id="created-heading" className="text-xl font-bold text-foreground">
+                Created by you
+              </h2>
+              <p className="mt-1 max-w-2xl text-base leading-relaxed text-muted-foreground">
+                Everything you&apos;ve set up, with where each one stands right now.
+              </p>
+            </div>
+            <Link
+              href="/competitions/new"
+              className={`inline-flex h-11 shrink-0 items-center gap-2 rounded-full bg-brand-gold px-5 text-sm font-bold text-brand-navy transition-colors hover:bg-brand-gold/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-navy ${GOLD_BUTTON_LIGHT_BORDER_CLASSNAME}`}
+            >
+              <PlusCircle className="size-4" aria-hidden="true" />
+              Create competition
+            </Link>
+          </div>
           <CreatedCompetitions uid={user.uid} />
         </section>
       )}

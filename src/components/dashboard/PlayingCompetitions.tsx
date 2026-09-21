@@ -126,7 +126,7 @@ function EmptyState() {
       </p>
       <Link
         href="/download"
-        className="mt-6 inline-flex h-12 items-center justify-center gap-2 rounded-full bg-brand-gold px-6 text-base font-bold text-brand-navy transition-colors hover:bg-brand-gold/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-navy"
+        className="mt-6 inline-flex h-12 items-center justify-center gap-2 rounded-full border border-[rgba(25,47,95,0.15)] bg-brand-gold px-6 text-base font-bold text-brand-navy transition-colors hover:bg-brand-gold/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-navy"
       >
         <Smartphone className="size-4" aria-hidden="true" />
         Get the app
@@ -175,12 +175,16 @@ function StandingLine({ competition }: { competition: PlayingCompetitionSummary 
 
 function PlayingCompetitionCard({ competition }: { competition: PlayingCompetitionSummary }) {
   return (
-    <div className="flex h-full flex-col rounded-2xl border border-border bg-card p-5">
+    <div className="flex h-full flex-col rounded-3xl border border-border bg-card p-5">
       <div className="flex items-start justify-between gap-2">
         <h3 className="text-base font-bold text-foreground">
           {competition.name ?? "Untitled competition"}
         </h3>
-        <CompetitionStatusChip status={competition.status} />
+        <CompetitionStatusChip
+          status={competition.status}
+          startDate={competition.startDate}
+          timeZone={competition.timeZone}
+        />
       </div>
       <p className="mt-2 text-sm text-muted-foreground">
         {formatDateRange(competition.startDate, competition.endDate)}

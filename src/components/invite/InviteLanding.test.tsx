@@ -112,6 +112,60 @@ describe("InviteLanding", () => {
     expect(link).toHaveAttribute("href", "/dashboard");
   });
 
+  // WEB-3 item 3 / engine ticket JOIN-1: the join gate now accepts a join on
+  // the exact day a competition became active, not just while scheduled.
+  // Pins that `InviteLanding` renders the JOINABLE state (not the hard stop)
+  // for a not-member on day one of an active competition.
+  it("MUT-JOIN1-DAYONE: active competition, startDate is today (competition zone) — still shows Join, not the hard stop", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-09-21T10:00:00Z"));
+    try {
+      useUserMock.mockReturnValue({ status: "signed-in", user: { uid: "u1" } });
+      useCompetitionDetailMock.mockReturnValue({
+        status: "success",
+        competition: baseCompetition({
+          status: "active",
+          startDate: "2026-09-21",
+          timeZone: "Europe/London",
+        }),
+      });
+      useOwnMembershipMock.mockReturnValue({ status: "not-member" });
+
+      render(<InviteLanding competitionId={COMPETITION_ID} />);
+
+      expect(screen.getByRole("button", { name: /join competition/i })).toBeInTheDocument();
+      expect(screen.queryByRole("heading", { name: /already under way/i })).not.toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  // Same active status, but startDate was an earlier day — the JOIN-1
+  // exception is day-one-only, so this must still hit the hard stop.
+  it("MUT-JOIN1-PASTDAY: active competition, startDate was an earlier day — still the hard stop", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-09-21T10:00:00Z"));
+    try {
+      useUserMock.mockReturnValue({ status: "signed-in", user: { uid: "u1" } });
+      useCompetitionDetailMock.mockReturnValue({
+        status: "success",
+        competition: baseCompetition({
+          status: "active",
+          startDate: "2026-09-14",
+          timeZone: "Europe/London",
+        }),
+      });
+      useOwnMembershipMock.mockReturnValue({ status: "not-member" });
+
+      render(<InviteLanding competitionId={COMPETITION_ID} />);
+
+      expect(screen.getByRole("heading", { name: /already under way/i })).toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: /join competition/i })).not.toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("MUT-2b: already started (finished) — distinct 'already finished' copy, same hard stop", () => {
     useUserMock.mockReturnValue({ status: "signed-in", user: { uid: "u1" } });
     useCompetitionDetailMock.mockReturnValue({
@@ -194,6 +248,38 @@ describe("InviteLanding", () => {
     );
     const link = screen.getByRole("link", { name: /view competition/i });
     expect(link).toHaveAttribute("href", `/competitions/${COMPETITION_ID}`);
+  });
+
+  it("WEB-4 item 1: the disabled 'Joining…' button uses the named cta-disabled tokens, not opacity", async () => {
+    useUserMock.mockReturnValue({ status: "signed-in", user: { uid: "u1" } });
+    useCompetitionDetailMock.mockReturnValue({
+      status: "success",
+      competition: baseCompetition({ status: "scheduled" }),
+    });
+    useOwnMembershipMock.mockReturnValue({ status: "not-member" });
+    let resolveJoin: (v: {
+      status: "success";
+      result: { joined: boolean; alreadyMember: boolean; playerCount: number };
+    }) => void = () => {};
+    joinCompetitionMock.mockReturnValue(
+      new Promise((resolve) => {
+        resolveJoin = resolve;
+      }),
+    );
+
+    render(<InviteLanding competitionId={COMPETITION_ID} />);
+    fireEvent.click(screen.getByRole("button", { name: /join competition/i }));
+
+    const joiningButton = await screen.findByRole("button", { name: /joining/i });
+    expect(joiningButton).toBeDisabled();
+    expect(joiningButton.className).toContain("disabled:bg-cta-disabled");
+    expect(joiningButton.className).toContain("disabled:text-cta-disabled-foreground");
+    expect(joiningButton.className).not.toContain("opacity-60");
+
+    resolveJoin({ status: "success", result: { joined: true, alreadyMember: false, playerCount: 13 } });
+    await waitFor(() =>
+      expect(screen.getByRole("heading", { name: /you're in!/i })).toBeInTheDocument(),
+    );
   });
 
   // W9-A11Y. The "You're in!" card is reached by a user ACTION on this same

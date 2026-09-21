@@ -280,3 +280,58 @@ describe("CompetitionLeaderboard — eliminated player row (W10-STATECHIP)", () 
     expect(screen.getByText(/175 points/)).toBeInTheDocument();
   });
 });
+
+describe("CompetitionLeaderboard — WEB-3 item 1 contrast fix", () => {
+  it("MUT-CONTRAST-ROW: a row's own '+N today' text is navy, not gold, since it sits on the light card row background", () => {
+    const players = [makePlayer({ id: "other", displayName: "Other", points: 300, todayPoints: 40 })];
+
+    render(
+      <CompetitionLeaderboard
+        status="active"
+        uid="me"
+        ownPlayer={makeOwnPlayer({ points: 175, todayPoints: 10 })}
+        leaderboardState={{ status: "success", players }}
+        winnerIds={[]}
+      />,
+    );
+
+    const rowToday = screen.getByText("+40 today");
+    expect(rowToday.className).toContain("text-brand-navy");
+    expect(rowToday.className).not.toContain("text-brand-gold");
+  });
+
+  it("MUT-CONTRAST-STICKY: the sticky 'your position' card's own '+N today' text stays gold, since that card's background is navy", () => {
+    const players = [makePlayer({ id: "other", displayName: "Other", points: 300, todayPoints: 40 })];
+
+    render(
+      <CompetitionLeaderboard
+        status="active"
+        uid="me"
+        ownPlayer={makeOwnPlayer({ points: 175, todayPoints: 10 })}
+        leaderboardState={{ status: "success", players }}
+        winnerIds={[]}
+      />,
+    );
+
+    const stickyToday = screen.getByText("+10 today");
+    expect(stickyToday.className).toContain("text-brand-gold");
+  });
+
+  it("MUT-CONTRAST-BANNER: the 'Final results' banner is navy, not gold, since it sits directly on the light section background", () => {
+    const players = [makePlayer({ id: "uid", displayName: "Me", points: 500, frozenRank: 1 })];
+
+    render(
+      <CompetitionLeaderboard
+        status="finished"
+        uid="uid"
+        ownPlayer={makeOwnPlayer({ points: 500 })}
+        leaderboardState={{ status: "success", players }}
+        winnerIds={["uid"]}
+      />,
+    );
+
+    const banner = screen.getByText(/final results/i);
+    expect(banner.className).toContain("text-brand-navy");
+    expect(banner.className).not.toContain("text-brand-gold");
+  });
+});

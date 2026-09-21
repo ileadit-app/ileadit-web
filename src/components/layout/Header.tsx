@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { LogOut, Menu, X } from "lucide-react";
 import { Logo } from "@/components/brand/Logo";
 import { useUser } from "@/context/AuthContext";
+import { useCanCreateCompetitions } from "@/lib/useCanCreateCompetitions";
 import type { User } from "firebase/auth";
 
 // Nav links point at "/#section" (not "#section") so they resolve correctly
@@ -26,10 +27,20 @@ export default function Header() {
   const [menuOpen, setMenuOpen] = useState(false);
   const router = useRouter();
   // `status`, not `user` — see src/context/AuthContext.tsx for why. Gating
-  // this on `user` alone would show "Log in" for one frame to every
+  // this on `user` alone would show "Sign in" for one frame to every
   // already-signed-in returning visitor before Firebase resolves the
   // persisted session.
   const { status, user, signOut } = useUser();
+  // WEB-5: gates the "Create competition" nav item below (evidence: once an
+  // admin has created their first competition, the empty-state CTA on
+  // `/dashboard` disappears and there was no other way back to
+  // `/competitions/new`). Safe to call unconditionally — while signed out,
+  // `useCanCreateCompetitions()` resolves "denied" with no network call
+  // (`adminClaim.ts`'s `getForcedRefreshClaims()` short-circuits on a null
+  // `currentUser`) — but the nav item itself is still only ever rendered
+  // inside the existing `status === "signed-in"` branches below, so a
+  // signed-out visitor never sees it flash in.
+  const capability = useCanCreateCompetitions();
 
   async function handleSignOut() {
     setMenuOpen(false);
@@ -60,7 +71,7 @@ export default function Header() {
 
         <div className="hidden items-center gap-2 sm:flex">
           {status === "loading" ? (
-            // Neutral skeleton, same slot — avoids flashing "Log in" then
+            // Neutral skeleton, same slot — avoids flashing "Sign in" then
             // swapping to the avatar a moment later (spec §6).
             <div className="h-10 w-24 animate-pulse rounded-full bg-muted" aria-hidden="true" />
           ) : status === "signed-in" && user ? (
@@ -68,16 +79,21 @@ export default function Header() {
               <Link href="/dashboard" className={authLinkClassName}>
                 Dashboard
               </Link>
+              {capability === "allowed" && (
+                <Link href="/competitions/new" className={authLinkClassName}>
+                  Create competition
+                </Link>
+              )}
               <AccountMenu user={user} onSignOut={() => void handleSignOut()} />
             </>
           ) : (
             <>
               <Link href="/login" className={authLinkClassName}>
-                Log in
+                Sign in
               </Link>
               <Link
                 href="/#employer"
-                className="inline-flex h-10 items-center rounded-full bg-brand-gold px-4 text-sm font-bold text-brand-navy transition-colors hover:bg-brand-gold/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-navy"
+                className="inline-flex h-10 items-center rounded-full border border-[rgba(25,47,95,0.15)] bg-brand-gold px-4 text-sm font-bold text-brand-navy transition-colors hover:bg-brand-gold/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-navy"
               >
                 Bring it to your team
               </Link>
@@ -127,6 +143,15 @@ export default function Header() {
               <Link href="/dashboard" className={mobileAuthLinkClassName} onClick={() => setMenuOpen(false)}>
                 Dashboard
               </Link>
+              {capability === "allowed" && (
+                <Link
+                  href="/competitions/new"
+                  className={mobileAuthLinkClassName}
+                  onClick={() => setMenuOpen(false)}
+                >
+                  Create competition
+                </Link>
+              )}
               <Link href="/account" className={mobileAuthLinkClassName} onClick={() => setMenuOpen(false)}>
                 Account
               </Link>
@@ -141,11 +166,11 @@ export default function Header() {
                 className="block py-3 text-sm font-semibold text-foreground/70 transition-colors hover:text-foreground"
                 onClick={() => setMenuOpen(false)}
               >
-                Log in
+                Sign in
               </Link>
               <Link
                 href="/#employer"
-                className="mt-2 block rounded-full bg-brand-gold px-4 py-3 text-center text-sm font-bold text-brand-navy transition-colors hover:bg-brand-gold/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-navy"
+                className="mt-2 block rounded-full border border-[rgba(25,47,95,0.15)] bg-brand-gold px-4 py-3 text-center text-sm font-bold text-brand-navy transition-colors hover:bg-brand-gold/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-navy"
                 onClick={() => setMenuOpen(false)}
               >
                 Bring it to your team

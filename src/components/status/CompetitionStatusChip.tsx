@@ -2,6 +2,7 @@ import {
   COMPETITION_STATUS_CONFIG,
   type CompetitionStatus,
 } from "@/lib/competition-status";
+import { isCompetitionStartingToday } from "@/lib/competitionDates";
 
 /**
  * The ONE competition-scoped status chip — ticket W10-STATECHIP. Renders
@@ -23,10 +24,35 @@ import {
  * a unique label string, so colour is never the only signal (WCAG + this
  * repo's W9 accessibility-audit discipline, carried into this component
  * rather than reapplied around it).
+ *
+ * WEB-3 item 3: `startDate`/`timeZone` are optional and, when both are
+ * provided alongside `status === "scheduled"`, enable a COPY-ONLY "Starting
+ * today" label override for the lag window between a competition's real
+ * start moment and the engine's own asynchronous status derivation — see
+ * `isCompetitionStartingToday`'s doc comment in `competitionDates.ts`. This
+ * never changes `config.className`/`config.icon`/`config.pulse` — visually
+ * it is still exactly the `scheduled` chip, only the word changes. Callers
+ * with no competition to describe yet (`InviteLanding.tsx`'s signed-out,
+ * not-found and generic-error states) simply omit both props.
  */
-export function CompetitionStatusChip({ status }: { status: CompetitionStatus | null }) {
+export function CompetitionStatusChip({
+  status,
+  startDate = null,
+  timeZone = null,
+  now,
+}: {
+  status: CompetitionStatus | null;
+  startDate?: string | null;
+  timeZone?: string | null;
+  /** Test-only override for "now" — real call sites never pass this. */
+  now?: Date;
+}) {
   const config = COMPETITION_STATUS_CONFIG[status ?? "unknown"];
   const Icon = config.icon;
+  const label =
+    status === "scheduled" && isCompetitionStartingToday(startDate, timeZone, now)
+      ? "Starting today"
+      : config.label;
 
   return (
     <span
@@ -37,7 +63,7 @@ export function CompetitionStatusChip({ status }: { status: CompetitionStatus | 
       ) : (
         <Icon className="size-3.5 shrink-0" aria-hidden="true" />
       )}
-      {config.label}
+      {label}
     </span>
   );
 }
