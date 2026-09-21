@@ -200,7 +200,7 @@ function InviteSkeleton() {
 }
 
 const CTA_CLASSES =
-  "flex h-12 w-full max-w-xs items-center justify-center rounded-full bg-brand-gold px-6 text-base font-bold text-brand-navy transition-colors hover:bg-brand-gold/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-navy disabled:cursor-not-allowed disabled:opacity-60";
+  "flex h-12 w-full max-w-xs items-center justify-center rounded-full bg-brand-gold px-6 text-base font-bold text-brand-navy transition-colors hover:bg-brand-gold/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-navy disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground";
 
 /* ------------------------------------------------------------------ *
  * States

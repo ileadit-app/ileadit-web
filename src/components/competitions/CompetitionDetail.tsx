@@ -358,7 +358,7 @@ function MembershipCta({
           type="button"
           onClick={() => void handleLeave()}
           disabled={pending !== null}
-          className="text-sm font-semibold text-muted-foreground underline-offset-2 hover:text-destructive hover:underline disabled:opacity-60"
+          className="text-sm font-semibold text-muted-foreground underline-offset-2 hover:text-destructive hover:underline disabled:cursor-not-allowed disabled:text-muted-foreground disabled:hover:no-underline"
         >
           {pending === "leave" ? "Leaving…" : "Leave competition"}
         </button>
@@ -368,7 +368,7 @@ function MembershipCta({
         type="button"
         onClick={() => void handleJoin()}
         disabled={pending !== null}
-        className="flex h-12 w-full items-center justify-center rounded-full bg-brand-gold text-base font-bold text-brand-navy transition-colors hover:bg-brand-gold/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-navy disabled:cursor-not-allowed disabled:opacity-60"
+        className="flex h-12 w-full items-center justify-center rounded-full bg-brand-gold text-base font-bold text-brand-navy transition-colors hover:bg-brand-gold/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-navy disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground"
       >
         {pending === "join" ? "Joining…" : "Join competition"}
       </button>

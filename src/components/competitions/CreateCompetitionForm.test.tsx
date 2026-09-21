@@ -104,4 +104,26 @@ describe("CreateCompetitionForm — createCompetition wrapper outcomes shown to 
     expect(banner).not.toHaveTextContent("You don't have permission");
     expect(pushMock).not.toHaveBeenCalled();
   });
+
+  it("WEB-3 item 5: the disabled 'Creating…' submit button uses an explicit muted colour, not opacity", async () => {
+    let resolveSubmit: (v: { data: { competitionId: string } }) => void = () => {};
+    mockCallable.mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolveSubmit = resolve;
+      }),
+    );
+    render(<CreateCompetitionForm />);
+
+    fillRequiredFields();
+    fireEvent.click(screen.getByRole("button", { name: /create competition/i }));
+
+    const submittingButton = await screen.findByRole("button", { name: /creating/i });
+    expect(submittingButton).toBeDisabled();
+    expect(submittingButton.className).toContain("disabled:bg-muted");
+    expect(submittingButton.className).toContain("disabled:text-muted-foreground");
+    expect(submittingButton.className).not.toContain("opacity-60");
+
+    resolveSubmit({ data: { competitionId: "comp_123" } });
+    await waitFor(() => expect(pushMock).toHaveBeenCalledWith("/dashboard"));
+  });
 });

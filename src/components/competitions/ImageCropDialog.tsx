@@ -207,7 +207,7 @@ export function ImageCropDialog({
             type="button"
             disabled={!areaPixels}
             onClick={() => areaPixels && onConfirm(areaPixels)}
-            className="inline-flex h-11 items-center justify-center rounded-full bg-brand-gold px-5 text-sm font-bold text-brand-navy transition-colors hover:bg-brand-gold/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-navy disabled:opacity-60"
+            className="inline-flex h-11 items-center justify-center rounded-full bg-brand-gold px-5 text-sm font-bold text-brand-navy transition-colors hover:bg-brand-gold/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-navy disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground"
           >
             {confirmLabel}
           </button>

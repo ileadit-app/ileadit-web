@@ -196,6 +196,38 @@ describe("InviteLanding", () => {
     expect(link).toHaveAttribute("href", `/competitions/${COMPETITION_ID}`);
   });
 
+  it("WEB-3 item 5: the disabled 'Joining…' button uses an explicit muted colour, not opacity", async () => {
+    useUserMock.mockReturnValue({ status: "signed-in", user: { uid: "u1" } });
+    useCompetitionDetailMock.mockReturnValue({
+      status: "success",
+      competition: baseCompetition({ status: "scheduled" }),
+    });
+    useOwnMembershipMock.mockReturnValue({ status: "not-member" });
+    let resolveJoin: (v: {
+      status: "success";
+      result: { joined: boolean; alreadyMember: boolean; playerCount: number };
+    }) => void = () => {};
+    joinCompetitionMock.mockReturnValue(
+      new Promise((resolve) => {
+        resolveJoin = resolve;
+      }),
+    );
+
+    render(<InviteLanding competitionId={COMPETITION_ID} />);
+    fireEvent.click(screen.getByRole("button", { name: /join competition/i }));
+
+    const joiningButton = await screen.findByRole("button", { name: /joining/i });
+    expect(joiningButton).toBeDisabled();
+    expect(joiningButton.className).toContain("disabled:bg-muted");
+    expect(joiningButton.className).toContain("disabled:text-muted-foreground");
+    expect(joiningButton.className).not.toContain("opacity-60");
+
+    resolveJoin({ status: "success", result: { joined: true, alreadyMember: false, playerCount: 13 } });
+    await waitFor(() =>
+      expect(screen.getByRole("heading", { name: /you're in!/i })).toBeInTheDocument(),
+    );
+  });
+
   // W9-A11Y. The "You're in!" card is reached by a user ACTION on this same
   // page (clicking Join) with no route change and no natural focus move —
   // nothing else would tell a screen reader user the click did anything.

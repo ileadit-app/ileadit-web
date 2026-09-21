@@ -110,4 +110,28 @@ describe("EngineBootstrap — ensureAccount outcomes surfaced to the user", () =
     await waitFor(() => expect(mockEnsureAccount).toHaveBeenCalledTimes(1));
     expect(screen.getByRole("alert")).toBeInTheDocument();
   });
+
+  it("MUT-BOOT-6 (WEB-3 item 5): the disabled 'Retrying…' button uses an explicit muted colour, not opacity, while a retry is in flight", async () => {
+    let resolveRetry: (v: { created: boolean; granted: boolean; coins: number }) => void = () => {};
+    mockEnsureAccount.mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolveRetry = resolve;
+      }),
+    );
+    render(<EngineBootstrap />);
+    act(() => {
+      latestOnOutcome()({ status: "failure", failure: null });
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /try again/i }));
+
+    const retryingButton = screen.getByRole("button", { name: /retrying/i });
+    expect(retryingButton).toBeDisabled();
+    expect(retryingButton.className).toContain("disabled:text-muted-foreground");
+    expect(retryingButton.className).not.toContain("opacity-60");
+
+    await act(async () => {
+      resolveRetry({ created: false, granted: false, coins: 0 });
+    });
+  });
 });

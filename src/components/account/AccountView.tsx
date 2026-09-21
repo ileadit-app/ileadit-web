@@ -224,7 +224,7 @@ function PublicProfileCard({ uid, initial }: { uid: string; initial: PublicProfi
         <button
           type="submit"
           disabled={saving}
-          className="inline-flex h-11 items-center rounded-full bg-brand-gold px-5 text-sm font-bold text-brand-navy transition-colors hover:bg-brand-gold/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-navy disabled:cursor-not-allowed disabled:opacity-60"
+          className="inline-flex h-11 items-center rounded-full bg-brand-gold px-5 text-sm font-bold text-brand-navy transition-colors hover:bg-brand-gold/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-navy disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground"
         >
           {saving ? "Saving…" : "Save profile"}
         </button>
@@ -305,7 +305,7 @@ function PrivateProfileCard({ uid, initial }: { uid: string; initial: PrivatePro
         <button
           type="submit"
           disabled={saving}
-          className="inline-flex h-11 items-center rounded-full bg-brand-gold px-5 text-sm font-bold text-brand-navy transition-colors hover:bg-brand-gold/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-navy disabled:cursor-not-allowed disabled:opacity-60"
+          className="inline-flex h-11 items-center rounded-full bg-brand-gold px-5 text-sm font-bold text-brand-navy transition-colors hover:bg-brand-gold/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-navy disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground"
         >
           {saving ? "Saving…" : "Save details"}
         </button>
