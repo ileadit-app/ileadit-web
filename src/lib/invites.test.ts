@@ -169,7 +169,7 @@ describe("listInvites / createInvite / revokeInvite — organiser callables", ()
       {
         code: "K7M4PQX2",
         displayCode: "K7M4-PQX2",
-        url: "https://ileadit-portal.web.app/invite/K7M4PQX2",
+        url: "https://ileadit.co.uk/invite/K7M4PQX2",
         label: "Marketing team",
         createdAt: "2026-09-20T10:00:00.000Z",
         expiresAt: null,
@@ -186,7 +186,7 @@ describe("listInvites / createInvite / revokeInvite — organiser callables", ()
 
   it("MUT-CREATE-1: success returns code/displayCode/url", async () => {
     mockCallable.mockResolvedValueOnce({
-      data: { code: "K7M4PQX2", displayCode: "K7M4-PQX2", url: "https://ileadit-portal.web.app/invite/K7M4PQX2" },
+      data: { code: "K7M4PQX2", displayCode: "K7M4-PQX2", url: "https://ileadit.co.uk/invite/K7M4PQX2" },
     });
     const { createInvite } = await import("./invites");
     const outcome = await createInvite({ competitionId: "comp1", label: "Marketing team" });
