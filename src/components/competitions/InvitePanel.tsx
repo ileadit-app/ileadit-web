@@ -7,6 +7,7 @@ import { TextField } from "@/components/forms/fields";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { SECONDARY_BUTTON_LIGHT_CLASSNAME } from "@/components/ui/buttonStyles";
 import { useQrDataUrl } from "@/lib/qrCode";
+import type { CompetitionVisibility } from "@/components/status/CompetitionVisibilityChip";
 import {
   createInvite,
   listInvites,
@@ -396,7 +397,13 @@ function InviteListSkeleton() {
  * Top-level panel.
  * ------------------------------------------------------------------ */
 
-export function InvitePanel({ competitionId }: { competitionId: string }) {
+export function InvitePanel({
+  competitionId,
+  visibility,
+}: {
+  competitionId: string;
+  visibility: CompetitionVisibility;
+}) {
   const { state, refresh } = useInviteList(competitionId);
 
   return (
@@ -405,9 +412,9 @@ export function InvitePanel({ competitionId }: { competitionId: string }) {
         Invite people
       </h2>
       <p className="mt-1 max-w-prose text-sm text-muted-foreground">
-        Share a link to let people join without hunting for this competition. You&apos;ll only
-        ever see how many people have joined through each link, never who they are or how
-        they&apos;re doing.
+        {visibility === "private"
+          ? "This competition is private — it won't show up in the app for anyone. The only way in is a link from here. You'll only ever see how many people have joined through each link, never who they are or how they're doing."
+          : "Share a link to let people join without hunting for this competition. You'll only ever see how many people have joined through each link, never who they are or how they're doing."}
       </p>
 
       <div className="mt-4">
@@ -419,7 +426,9 @@ export function InvitePanel({ competitionId }: { competitionId: string }) {
         {state.status === "error" ? <ErrorBanner message={state.message} /> : null}
         {state.status === "success" && state.invites.length === 0 ? (
           <p className="rounded-2xl border border-dashed border-border p-4 text-sm text-muted-foreground">
-            No invite links yet — create one above to start sharing.
+            {visibility === "private"
+              ? "No invite links yet — until you create one, nobody can join this competition. Create a link above to get started."
+              : "No invite links yet — create one above to start sharing."}
           </p>
         ) : null}
         {state.status === "success" && state.invites.length > 0 ? (

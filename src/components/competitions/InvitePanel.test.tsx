@@ -58,13 +58,13 @@ beforeEach(() => {
 describe("InvitePanel — loading / empty / error", () => {
   it("MUT-PANEL-1: shows a loading skeleton before listInvites resolves", async () => {
     listInvitesMock.mockReturnValue(new Promise(() => {})); // never resolves
-    const { container } = render(<InvitePanel competitionId={COMPETITION_ID} />);
+    const { container } = render(<InvitePanel competitionId={COMPETITION_ID} visibility="public" />);
     expect(container.querySelector(".animate-pulse")).toBeInTheDocument();
   });
 
   it("MUT-PANEL-2: an empty list shows the 'no invite links yet' state", async () => {
     listInvitesMock.mockResolvedValueOnce({ status: "success", invites: [] });
-    render(<InvitePanel competitionId={COMPETITION_ID} />);
+    render(<InvitePanel competitionId={COMPETITION_ID} visibility="public" />);
     expect(await screen.findByText(/no invite links yet/i)).toBeInTheDocument();
   });
 
@@ -73,7 +73,7 @@ describe("InvitePanel — loading / empty / error", () => {
       status: "failure",
       failure: { code: "functions/permission-denied", reason: null, message: "nope", cause: null },
     });
-    render(<InvitePanel competitionId={COMPETITION_ID} />);
+    render(<InvitePanel competitionId={COMPETITION_ID} visibility="public" />);
     expect(await screen.findByRole("alert")).toHaveTextContent(/don't have permission/i);
   });
 });
@@ -81,7 +81,7 @@ describe("InvitePanel — loading / empty / error", () => {
 describe("InvitePanel — the list, and privacy invariant", () => {
   it("MUT-PANEL-4: renders code/status/label/join-count, never a player name, point, or rank", async () => {
     listInvitesMock.mockResolvedValueOnce({ status: "success", invites: [ONE_INVITE] });
-    render(<InvitePanel competitionId={COMPETITION_ID} />);
+    render(<InvitePanel competitionId={COMPETITION_ID} visibility="public" />);
 
     expect(await screen.findByText("K7M4-PQX2")).toBeInTheDocument();
     expect(screen.getByText("Marketing team")).toBeInTheDocument();
@@ -99,7 +99,7 @@ describe("InvitePanel — the list, and privacy invariant", () => {
       status: "success",
       invites: [{ ...ONE_INVITE, status: "revoked" as const }],
     });
-    render(<InvitePanel competitionId={COMPETITION_ID} />);
+    render(<InvitePanel competitionId={COMPETITION_ID} visibility="public" />);
 
     await screen.findByText("Revoked");
     expect(screen.queryByRole("button", { name: /^revoke$/i })).not.toBeInTheDocument();
@@ -115,7 +115,7 @@ describe("InvitePanel — create", () => {
       result: { code: "K7M4PQX2", displayCode: "K7M4-PQX2", url: ONE_INVITE.url },
     });
 
-    render(<InvitePanel competitionId={COMPETITION_ID} />);
+    render(<InvitePanel competitionId={COMPETITION_ID} visibility="public" />);
     await screen.findByText(/no invite links yet/i);
 
     fireEvent.change(screen.getByLabelText(/link label/i), { target: { value: "  Marketing team  " } });
@@ -138,7 +138,7 @@ describe("InvitePanel — create", () => {
       failure: { code: "functions/resource-exhausted", reason: null, message: "too many", cause: null },
     });
 
-    render(<InvitePanel competitionId={COMPETITION_ID} />);
+    render(<InvitePanel competitionId={COMPETITION_ID} visibility="public" />);
     await screen.findByText(/no invite links yet/i);
 
     fireEvent.click(screen.getByRole("button", { name: /create invite link/i }));
@@ -156,7 +156,7 @@ describe("InvitePanel — revoke", () => {
     });
     revokeInviteMock.mockResolvedValueOnce({ status: "success" });
 
-    render(<InvitePanel competitionId={COMPETITION_ID} />);
+    render(<InvitePanel competitionId={COMPETITION_ID} visibility="public" />);
     fireEvent.click(await screen.findByRole("button", { name: /^revoke$/i }));
 
     // The confirmation dialog itself, not the row's own trigger button.
@@ -164,6 +164,34 @@ describe("InvitePanel — revoke", () => {
 
     await waitFor(() => expect(revokeInviteMock).toHaveBeenCalledWith("K7M4PQX2"));
     expect(await screen.findByText("Revoked")).toBeInTheDocument();
+  });
+});
+
+describe("InvitePanel — PC-9 visibility-aware copy", () => {
+  it("PC-9-PANEL-1: a private competition shows the private-specific intro and empty-state copy", async () => {
+    listInvitesMock.mockResolvedValueOnce({ status: "success", invites: [] });
+    render(<InvitePanel competitionId={COMPETITION_ID} visibility="private" />);
+
+    expect(
+      screen.getByText(/won't show up in the app for anyone/i),
+    ).toBeInTheDocument();
+    expect(
+      await screen.findByText(/until you create one, nobody can join this competition/i),
+    ).toBeInTheDocument();
+  });
+
+  it("PC-9-PANEL-2: a public competition shows the public-specific intro and empty-state copy, distinct from private", async () => {
+    listInvitesMock.mockResolvedValueOnce({ status: "success", invites: [] });
+    render(<InvitePanel competitionId={COMPETITION_ID} visibility="public" />);
+
+    expect(
+      screen.getByText(/let people join without hunting for this competition/i),
+    ).toBeInTheDocument();
+    expect(await screen.findByText(/create one above to start sharing/i)).toBeInTheDocument();
+
+    const panelText = document.body.textContent ?? "";
+    expect(panelText).not.toMatch(/won't show up in the app for anyone/i);
+    expect(panelText).not.toMatch(/nobody can join this competition/i);
   });
 });
 
