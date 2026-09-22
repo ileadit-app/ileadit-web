@@ -7,6 +7,7 @@ import { ErrorBanner } from "@/components/auth/formFields";
 import { NumberField, SelectField, TextAreaField, TextField } from "@/components/forms/fields";
 import { ArtworkUploadField } from "./ArtworkUploadField";
 import { CompetitionHero } from "./CompetitionHero";
+import { VisibilitySelector, type CompetitionVisibility } from "./VisibilitySelector";
 import { createDraftCompetitionId } from "@/lib/competitionArtwork";
 import { createCompetition } from "@/lib/createCompetition";
 import { createCompetitionFailureMessage } from "@/lib/createCompetitionErrors";
@@ -35,9 +36,13 @@ interface FieldErrors {
  *
  * Fields sent match the `createCompetition` callable's contract exactly
  * (`src/lib/createCompetition.ts`): `name`, `startTime`, `durationDays`,
- * `timeZone`, `description`, `imageUrl`, `backgroundImageUrl`. Nothing
- * engine-derived (`startDate`, `endDate`, `status`, `playerCount`) is ever
- * collected as an input here — there is no field for any of them below.
+ * `visibility`, `timeZone`, `description`, `imageUrl`, `backgroundImageUrl`.
+ * Nothing engine-derived (`startDate`, `endDate`, `status`, `playerCount`) is
+ * ever collected as an input here — there is no field for any of them below.
+ *
+ * `visibility` (PC-9) is always sent, pre-selected to `"private"` per Paul's
+ * decision (see `VisibilitySelector`'s own doc comment) — there is no unset
+ * state, so no `FieldErrors` entry exists for it.
  *
  * Client-side validation mirrors the server rules this agent could actually
  * read (`firestore.rules:243-246`: name ≤ 80 chars, `durationDays` a
@@ -53,6 +58,10 @@ export function CreateCompetitionForm() {
   const router = useRouter();
 
   const [name, setName] = useState("");
+  // Pre-selected to "private" — Paul's PC-9 decision. Never silently
+  // defaulted server-side; whatever is checked here is always what gets
+  // sent, unconditionally, in the createCompetition payload below.
+  const [visibility, setVisibility] = useState<CompetitionVisibility>("private");
   const [startTimeValue, setStartTimeValue] = useState("");
   const [durationDaysValue, setDurationDaysValue] = useState("7");
   const [timeZone, setTimeZone] = useState(() => detectBrowserTimeZone());
@@ -126,6 +135,7 @@ export function CreateCompetitionForm() {
       // this conversion exists at all.
       startTime: zonedWallTimeToDate(parts, timeZone),
       durationDays: Number(durationDaysValue),
+      visibility,
       timeZone,
       description: description.trim() || undefined,
       // Firebase Storage download URLs, produced by ArtworkUploadField —
@@ -141,12 +151,16 @@ export function CreateCompetitionForm() {
       return;
     }
 
-    // No `/competitions/[id]` detail page exists yet (see CLAUDE.md's page
-    // list — aspirational, not built) — the dashboard is the one place a
-    // freshly created competition is guaranteed to show up, even before the
-    // engine's onCompetitionWritten trigger has derived status/dates
-    // (CreatedCompetitions.tsx already renders a "Setting up…" badge for
-    // exactly that transient state).
+    // `/competitions/[id]` now exists (P2.1) — land there so the creator
+    // sees their own new competition (and, for a private one, the invite
+    // panel to actually share it) immediately. Fall back to the dashboard
+    // only if the engine's response didn't include an id — the competition
+    // still shows up there via CreatedCompetitions.tsx's own "Setting up…"
+    // state while the onCompetitionWritten trigger derives status/dates.
+    if (outcome.status === "success" && outcome.competitionId) {
+      router.push(`/competitions/${outcome.competitionId}`);
+      return;
+    }
     router.push("/dashboard");
   }
 
@@ -166,6 +180,8 @@ export function CreateCompetitionForm() {
           maxLength={NAME_MAX_LENGTH}
           placeholder="Marketing team step-off"
         />
+
+        <VisibilitySelector value={visibility} onChange={setVisibility} disabled={submitting} />
 
         <div className="grid gap-5 sm:grid-cols-2">
           <TextField
@@ -235,6 +251,7 @@ export function CreateCompetitionForm() {
           startTimeValue={startTimeValue}
           durationDays={Number(durationDaysValue)}
           timeZone={timeZone}
+          visibility={visibility}
         />
 
         <button
@@ -310,6 +327,7 @@ function ArtworkPreview({
   startTimeValue,
   durationDays,
   timeZone,
+  visibility,
 }: {
   name: string;
   imageUrl: string | null;
@@ -317,6 +335,7 @@ function ArtworkPreview({
   startTimeValue: string;
   durationDays: number;
   timeZone: string;
+  visibility: CompetitionVisibility;
 }) {
   if (!imageUrl && !backgroundImageUrl) return null;
 
@@ -332,6 +351,7 @@ function ArtworkPreview({
     endDate,
     durationDays: Number.isInteger(durationDays) && durationDays > 0 ? durationDays : null,
     timeZone,
+    visibility,
   };
 
   return (

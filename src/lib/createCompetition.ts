@@ -10,6 +10,14 @@ import { toCreateCompetitionFailure, type CreateCompetitionFailure } from "./cre
  *   createCompetition({ name, startTime, durationDays, timeZone?,
  *     description?, imageUrl?, backgroundImageUrl? })
  *
+ * **PC-9 update (2026-09-23):** the callable's input gains a REQUIRED
+ * `visibility: "public" | "private"` field (engine branch
+ * `engine/pc1-visibility`, also not yet deployed) — strict schema, a missing
+ * value is rejected with `functions/invalid-argument`. Unlike every other
+ * field below, this one is confirmed by the ticket brief itself (not an
+ * agent guess), so it's sent unconditionally rather than spread-in only
+ * when present.
+ *
  * Two things below are genuinely UNVERIFIED, not silently assumed — flagged
  * here rather than buried, because nobody has read (or can read — it isn't
  * merged) the callable's actual source:
@@ -54,6 +62,12 @@ export interface CreateCompetitionInput {
   startTime: Date;
   /** Required, positive integer. */
   durationDays: number;
+  /** REQUIRED (PC-9 contract correction) — no server-side default, unlike
+   * every optional field below. `CreateCompetitionForm` always sends a real
+   * value, pre-selected to `"private"` per Paul's decision; there is no
+   * "unset" UI state to guard against. Sent unconditionally in the request
+   * body below, not spread-in like the optional fields. */
+  visibility: "public" | "private";
   /** Optional server-side, but this form always sends a real, user-visible
    * IANA zone (see the P1.4 ticket: the engine currently silently defaults
    * to Europe/London when this is omitted, which is a bug for any
@@ -76,6 +90,9 @@ export async function createCompetition(input: CreateCompetitionInput): Promise<
     // See this file's header comment, point 1 — ISO string, unverified.
     startTime: input.startTime.toISOString(),
     durationDays: input.durationDays,
+    // Required, sent unconditionally — see this file's header comment and
+    // the field's own doc comment on CreateCompetitionInput above.
+    visibility: input.visibility,
     ...(input.timeZone ? { timeZone: input.timeZone } : {}),
     ...(input.description ? { description: input.description } : {}),
     ...(input.imageUrl ? { imageUrl: input.imageUrl } : {}),

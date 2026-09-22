@@ -61,14 +61,14 @@ beforeEach(() => {
 });
 
 describe("CreateCompetitionForm — createCompetition wrapper outcomes shown to the user", () => {
-  it("success: navigates to /dashboard and shows no error banner", async () => {
+  it("success: navigates to /competitions/{id} and shows no error banner", async () => {
     mockCallable.mockResolvedValueOnce({ data: { competitionId: "comp_123" } });
     render(<CreateCompetitionForm />);
 
     fillRequiredFields();
     fireEvent.click(screen.getByRole("button", { name: /create competition/i }));
 
-    await waitFor(() => expect(pushMock).toHaveBeenCalledWith("/dashboard"));
+    await waitFor(() => expect(pushMock).toHaveBeenCalledWith("/competitions/comp_123"));
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 
@@ -124,6 +124,52 @@ describe("CreateCompetitionForm — createCompetition wrapper outcomes shown to 
     expect(submittingButton.className).not.toContain("opacity-60");
 
     resolveSubmit({ data: { competitionId: "comp_123" } });
-    await waitFor(() => expect(pushMock).toHaveBeenCalledWith("/dashboard"));
+    await waitFor(() => expect(pushMock).toHaveBeenCalledWith("/competitions/comp_123"));
+  });
+});
+
+/**
+ * PC-9: the Public/Private choice. `createCompetition`'s `visibility` field
+ * is REQUIRED (engine contract correction (a)) with no server-side default —
+ * `VisibilitySelector` guarantees a real value is always checked, starting
+ * from "private" per Paul's decision, so there is never an "unset" state a
+ * user could submit through.
+ */
+describe("CreateCompetitionForm — PC-9 visibility choice", () => {
+  it("PC-9-1: Private is pre-selected, and exactly one option is ever checked (no unset state)", () => {
+    const { container } = render(<CreateCompetitionForm />);
+
+    const privateRadio = screen.getByRole("radio", { name: /private/i });
+    expect(privateRadio).toBeChecked();
+
+    const checked = container.querySelectorAll('input[type="radio"]:checked');
+    expect(checked).toHaveLength(1);
+  });
+
+  it("PC-9-2: submitting without touching the selector sends visibility:\"private\"", async () => {
+    mockCallable.mockResolvedValueOnce({ data: { competitionId: "comp_123" } });
+    render(<CreateCompetitionForm />);
+
+    fillRequiredFields();
+    fireEvent.click(screen.getByRole("button", { name: /create competition/i }));
+
+    await waitFor(() =>
+      expect(mockCallable).toHaveBeenCalledWith(expect.objectContaining({ visibility: "private" })),
+    );
+  });
+
+  it("PC-9-3: choosing Public sends visibility:\"public\" instead", async () => {
+    mockCallable.mockResolvedValueOnce({ data: { competitionId: "comp_123" } });
+    render(<CreateCompetitionForm />);
+
+    fireEvent.click(screen.getByRole("radio", { name: /public/i }));
+    fillRequiredFields();
+    fireEvent.click(screen.getByRole("button", { name: /create competition/i }));
+
+    await waitFor(() =>
+      expect(mockCallable).toHaveBeenCalledWith(expect.objectContaining({ visibility: "public" })),
+    );
+    expect(screen.getByRole("radio", { name: /public/i })).toBeChecked();
+    expect(screen.getByRole("radio", { name: /private/i })).not.toBeChecked();
   });
 });
