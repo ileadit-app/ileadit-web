@@ -27,6 +27,24 @@ function functionsError(code: FunctionsError["code"], message: string): Function
   return error;
 }
 
+/**
+ * PC-9 contract corrections (b)/(c): unlike every other case in this file,
+ * `competition-private` and `overlapping-competition` are distinguished by
+ * `details.reason`, not just `code`+message substring — see
+ * `competitionMembershipErrors.ts`. `functionsError` above hardcodes
+ * `details: undefined`, so it can't express this; this sibling helper can.
+ */
+function functionsErrorWithReason(
+  code: FunctionsError["code"],
+  message: string,
+  reason: string,
+): FunctionsError {
+  const error = new Error(message) as unknown as FunctionsError;
+  (error as { code: FunctionsError["code"] }).code = code;
+  (error as { details?: unknown }).details = { reason };
+  return error;
+}
+
 beforeEach(() => {
   mockCallable.mockReset();
 });
@@ -159,6 +177,62 @@ describe("acceptInvite", () => {
     if (outcome.status === "failure") {
       expect(outcome.failure.kind).toBe("invite-unavailable");
       expect(acceptInviteFailureMessage(outcome.failure)).toMatch(/isn't available any more/i);
+    }
+  });
+
+  it("PC-9-ACCEPT-5: a permission-denied with details.reason:competition-private maps to kind:join-refused, with the private-specific copy", async () => {
+    mockCallable.mockRejectedValueOnce(
+      functionsErrorWithReason("functions/permission-denied", "not authorized", "competition-private"),
+    );
+    const { acceptInvite, acceptInviteFailureMessage } = await import("./invites");
+    const outcome = await acceptInvite("K7M4-PQX2");
+    expect(outcome.status).toBe("failure");
+    if (outcome.status === "failure") {
+      expect(outcome.failure.kind).toBe("join-refused");
+      if (outcome.failure.kind === "join-refused") {
+        expect(outcome.failure.failure.reason).toBe("competition-private");
+      }
+      expect(acceptInviteFailureMessage(outcome.failure)).toBe(
+        "This is a private competition — you'll need an invite link to join it.",
+      );
+    }
+  });
+
+  it("PC-9-ACCEPT-6: a failed-precondition with details.reason:overlapping-competition maps to kind:join-refused, with the overlap-specific copy", async () => {
+    mockCallable.mockRejectedValueOnce(
+      functionsErrorWithReason(
+        "functions/failed-precondition",
+        "already in another competition",
+        "overlapping-competition",
+      ),
+    );
+    const { acceptInvite, acceptInviteFailureMessage } = await import("./invites");
+    const outcome = await acceptInvite("K7M4-PQX2");
+    expect(outcome.status).toBe("failure");
+    if (outcome.status === "failure") {
+      expect(outcome.failure.kind).toBe("join-refused");
+      if (outcome.failure.kind === "join-refused") {
+        expect(outcome.failure.failure.reason).toBe("overlapping-competition");
+      }
+      expect(acceptInviteFailureMessage(outcome.failure)).toBe(
+        "You're already in another active competition, and ileadit only allows one at a time. Leave that one first if you want to switch.",
+      );
+    }
+  });
+
+  it("PC-9-ACCEPT-7: the pre-existing JOIN-1 not-joinable failed-precondition (no details.reason) is unaffected by the new reason check", async () => {
+    mockCallable.mockRejectedValueOnce(
+      functionsError("functions/failed-precondition", "competition is not open for joining"),
+    );
+    const { acceptInvite, acceptInviteFailureMessage } = await import("./invites");
+    const outcome = await acceptInvite("K7M4-PQX2");
+    expect(outcome.status).toBe("failure");
+    if (outcome.status === "failure") {
+      expect(outcome.failure.kind).toBe("join-refused");
+      if (outcome.failure.kind === "join-refused") {
+        expect(outcome.failure.failure.reason).toBe("not-joinable");
+      }
+      expect(acceptInviteFailureMessage(outcome.failure)).toMatch(/already under way|finished|left/i);
     }
   });
 });

@@ -228,6 +228,16 @@ export interface InvitePreviewAvailable {
   /** Set only when `status === "active"` — "you're joining on day N". */
   dayNumber: number | null;
   playerCount: number | null;
+  /** PC-9 contract correction (d) — engine ticket in progress, NOT yet
+   * confirmed shipped on `previewInvite`. Deliberately OPTIONAL, not
+   * nullable like every other visibility field in this codebase
+   * (`CompetitionDetailDoc.visibility` etc, which are always-present-but-
+   * possibly-null). `InviteCodeLanding.tsx` renders the visibility chip
+   * ONLY when this key is actually present on the response — never
+   * defaults an absent value to "public" the way `resolveCompetitionVisibility`
+   * does for every other surface. Do not route this field through that
+   * helper; the two absent-value semantics are different on purpose. */
+  visibility?: "public" | "private";
 }
 
 export interface InvitePreviewUnavailable {
@@ -296,6 +306,14 @@ export interface AcceptInviteResult {
  * (the safer default: it doesn't invent copy about the join gate for a
  * failure that might actually be about the invite itself). Re-verify this
  * split against Ivor's real callable source the moment it's readable.
+ *
+ * **PC-9 contract corrections (b)/(c)** add two further, CONFIRMED (not
+ * best-effort) `join-refused` triggers, checked before the substring
+ * fallback above: `permission-denied` with `details.reason ===
+ * "competition-private"`, and `failed-precondition` with `details.reason
+ * === "overlapping-competition"`. Both apply here too (not just to
+ * `joinCompetition` directly) — accepting an invite still ultimately calls
+ * the same join gate.
  */
 export type AcceptInviteFailure =
   | { kind: "invite-unavailable"; failure: InviteCallableFailure }
@@ -320,11 +338,16 @@ export async function acceptInvite(code: string): Promise<AcceptInviteOutcome> {
     const result = await callable({ code: normalizeInviteCodeInput(code) });
     return { status: "success", result: result.data };
   } catch (error) {
-    if (
+    const wireReason = isFunctionsError(error)
+      ? (error.details as { reason?: unknown } | undefined)?.reason
+      : undefined;
+    const isJoinRefusal =
       isFunctionsError(error) &&
-      error.code === "functions/failed-precondition" &&
-      JOIN_REFUSAL_MESSAGE_SUBSTRINGS.some((substring) => error.message.includes(substring))
-    ) {
+      ((error.code === "functions/permission-denied" && wireReason === "competition-private") ||
+        (error.code === "functions/failed-precondition" && wireReason === "overlapping-competition") ||
+        (error.code === "functions/failed-precondition" &&
+          JOIN_REFUSAL_MESSAGE_SUBSTRINGS.some((substring) => error.message.includes(substring))));
+    if (isJoinRefusal) {
       return {
         status: "failure",
         failure: { kind: "join-refused", failure: toCompetitionMembershipFailure(error) },

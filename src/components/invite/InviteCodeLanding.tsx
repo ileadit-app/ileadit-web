@@ -6,6 +6,7 @@ import { AlertCircle, PlayCircle } from "lucide-react";
 import { useUser } from "@/context/AuthContext";
 import { LogoMark } from "@/components/brand/Logo";
 import { CompetitionStatusChip } from "@/components/status/CompetitionStatusChip";
+import { CompetitionVisibilityChip } from "@/components/status/CompetitionVisibilityChip";
 import { useOwnMembership } from "@/lib/competitionDetail";
 import { formatShortDate } from "@/lib/competitionDates";
 import {
@@ -15,6 +16,7 @@ import {
   buildInviteUrl,
   formatInviteCodeForDisplay,
   type InvitePreviewAvailable,
+  type AcceptInviteFailure,
 } from "@/lib/invites";
 import { InviteQrCode } from "./InviteQrCode";
 
@@ -243,8 +245,14 @@ function InvitePreviewCard({
       aria-live={live ? "polite" : undefined}
     >
       <LogoMark className="mx-auto h-10 w-10" />
-      <div className="mt-4 flex justify-center">
+      <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
         <CompetitionStatusChip status={preview.status} startDate={preview.startDate} />
+        {/* PC-9 contract correction (d): `preview.visibility` is OPTIONAL
+            (engine ticket in progress) — render the chip ONLY when actually
+            present, never default an absent value to "public" the way every
+            other surface does via `resolveCompetitionVisibility`. See that
+            field's own doc comment in `invites.ts`. */}
+        {preview.visibility ? <CompetitionVisibilityChip visibility={preview.visibility} /> : null}
       </div>
       <h1 className="mt-4 text-2xl font-extrabold text-foreground">
         {preview.competitionName ?? "You've been invited to play"}
@@ -304,6 +312,12 @@ function SignedOutInviteCode({
   const redirect = `/invite/${code}`;
   return (
     <InvitePreviewCard preview={preview} code={code}>
+      {preview.visibility === "private" ? (
+        <p className="text-sm text-muted-foreground">
+          This is a private competition — you&apos;re seeing this because someone shared this
+          invite link with you directly.
+        </p>
+      ) : null}
       <p className="text-sm text-muted-foreground">
         Sign in (or create a free account) to join — it only takes a minute. Nobody but you ever
         sees your step count.
@@ -385,7 +399,7 @@ function JoinInviteCode({
 }) {
   const [pending, setPending] = useState(false);
   const [joined, setJoined] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [failure, setFailure] = useState<AcceptInviteFailure | null>(null);
   const [dayNumber, setDayNumber] = useState<number | null>(preview.dayNumber);
 
   const showMidCompetitionNote = preview.status === "active" && preview.dayNumber !== null;
@@ -411,16 +425,23 @@ function JoinInviteCode({
 
   async function handleJoin() {
     setPending(true);
-    setError(null);
+    setFailure(null);
     const outcome = await acceptInvite(code);
     setPending(false);
     if (outcome.status === "success") {
       setDayNumber(outcome.result.dayNumber);
       setJoined(true);
     } else {
-      setError(acceptInviteFailureMessage(outcome.failure));
+      setFailure(outcome.failure);
     }
   }
+
+  // PC-9 contract correction (c): when the refusal is specifically the
+  // one-active-competition overlap, point the visitor at their dashboard —
+  // the fix is to leave whichever competition is already active, not to
+  // retry this same join.
+  const isOverlapFailure =
+    failure?.kind === "join-refused" && failure.failure.reason === "overlapping-competition";
 
   return (
     <InvitePreviewCard preview={preview} code={code}>
@@ -438,10 +459,20 @@ function JoinInviteCode({
       >
         {pending ? "Joining…" : "Join competition"}
       </button>
-      {error ? (
-        <p className="text-sm text-destructive" role="alert">
-          {error}
-        </p>
+      {failure ? (
+        <>
+          <p className="text-sm text-destructive" role="alert">
+            {acceptInviteFailureMessage(failure)}
+          </p>
+          {isOverlapFailure ? (
+            <Link
+              href="/dashboard"
+              className="text-sm font-semibold text-brand-navy underline-offset-2 hover:underline"
+            >
+              Go to your dashboard
+            </Link>
+          ) : null}
+        </>
       ) : null}
     </InvitePreviewCard>
   );

@@ -195,3 +195,154 @@ describe("InviteCodeLanding — signed-in, already a member", () => {
     expect(screen.getByRole("link", { name: /view competition/i })).toBeInTheDocument();
   });
 });
+
+/**
+ * PC-9 contract correction (d): `previewInvite`'s `visibility` field is
+ * OPTIONAL, with different semantics from every other visibility surface —
+ * the chip renders ONLY when the field is actually present on the preview
+ * result, never defaulted via `resolveCompetitionVisibility`. `AVAILABLE_ACTIVE`
+ * (above) deliberately has no `visibility` key at all, so it doubles as the
+ * "absent" fixture here.
+ */
+describe("InviteCodeLanding — PC-9 visibility chip (optional on the preview, unlike every other surface)", () => {
+  it("PC-9-INV-1: no visibility field on the preview result renders no visibility chip at all", async () => {
+    previewInviteMock.mockResolvedValueOnce({ status: "success", result: AVAILABLE_ACTIVE });
+    useUserMock.mockReturnValue({ status: "signed-out", user: null });
+
+    render(<InviteCodeLanding code={CODE} />);
+
+    await screen.findByText("Step Champs");
+    expect(screen.queryByText(/^public$/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/^private$/i)).not.toBeInTheDocument();
+  });
+
+  it("PC-9-INV-2: visibility:\"private\" on the preview result renders the Private chip", async () => {
+    previewInviteMock.mockResolvedValueOnce({
+      status: "success",
+      result: { ...AVAILABLE_ACTIVE, visibility: "private" as const },
+    });
+    useUserMock.mockReturnValue({ status: "signed-out", user: null });
+
+    render(<InviteCodeLanding code={CODE} />);
+
+    await screen.findByText("Step Champs");
+    expect(screen.getByText(/^private$/i)).toBeInTheDocument();
+  });
+
+  it("PC-9-INV-3: visibility:\"public\" on the preview result renders the Public chip", async () => {
+    previewInviteMock.mockResolvedValueOnce({
+      status: "success",
+      result: { ...AVAILABLE_ACTIVE, visibility: "public" as const },
+    });
+    useUserMock.mockReturnValue({ status: "signed-out", user: null });
+
+    render(<InviteCodeLanding code={CODE} />);
+
+    await screen.findByText("Step Champs");
+    expect(screen.getByText(/^public$/i)).toBeInTheDocument();
+  });
+
+  it("PC-9-INV-4: a private competition's signed-out view shows the 'someone shared this invite link with you directly' line", async () => {
+    previewInviteMock.mockResolvedValueOnce({
+      status: "success",
+      result: { ...AVAILABLE_ACTIVE, visibility: "private" as const },
+    });
+    useUserMock.mockReturnValue({ status: "signed-out", user: null });
+
+    render(<InviteCodeLanding code={CODE} />);
+
+    expect(
+      await screen.findByText(/someone shared this invite link with you directly/i),
+    ).toBeInTheDocument();
+  });
+
+  it("PC-9-INV-5: a public competition's signed-out view does NOT show the private-specific line", async () => {
+    previewInviteMock.mockResolvedValueOnce({
+      status: "success",
+      result: { ...AVAILABLE_ACTIVE, visibility: "public" as const },
+    });
+    useUserMock.mockReturnValue({ status: "signed-out", user: null });
+
+    render(<InviteCodeLanding code={CODE} />);
+
+    await screen.findByText("Step Champs");
+    expect(
+      screen.queryByText(/someone shared this invite link with you directly/i),
+    ).not.toBeInTheDocument();
+  });
+});
+
+/**
+ * PC-9 contract corrections (b)/(c): `acceptInvite`'s join-refused failure
+ * copy for the two new engine reasons, on the invite-landing surface. Same
+ * `toCompetitionMembershipFailure`/`competitionMembershipFailureMessage`
+ * wiring as `CompetitionDetail.tsx`'s detail-page CTA
+ * (`CompetitionDetail.test.tsx`'s PC-9-DETAIL-JOIN-* pair) — this file pins
+ * the SAME two messages arrive via the `acceptInvite`/invite-landing path
+ * too, plus the overlap-only "Go to your dashboard" link.
+ */
+describe("InviteCodeLanding — PC-9 competition-private / overlapping-competition join refusals", () => {
+  beforeEach(() => {
+    useUserMock.mockReturnValue({ status: "signed-in", user: { uid: "u1" } });
+    useOwnMembershipMock.mockReturnValue({ status: "not-member" });
+  });
+
+  it("PC-9-INV-6: a competition-private refusal shows the private-specific copy, no dashboard link", async () => {
+    previewInviteMock.mockResolvedValueOnce({ status: "success", result: AVAILABLE_ACTIVE });
+    acceptInviteMock.mockResolvedValueOnce({
+      status: "failure",
+      failure: {
+        kind: "join-refused",
+        failure: {
+          reason: "competition-private",
+          code: "functions/permission-denied",
+          message: "not authorized",
+          cause: null,
+        },
+      },
+    });
+
+    const { fireEvent } = await import("@testing-library/react");
+    render(<InviteCodeLanding code={CODE} />);
+
+    const button = await screen.findByRole("button", { name: /join competition/i });
+    fireEvent.click(button);
+
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent(
+      "This is a private competition — you'll need an invite link to join it.",
+    );
+    expect(screen.queryByRole("link", { name: /go to your dashboard/i })).not.toBeInTheDocument();
+  });
+
+  it("PC-9-INV-7: an overlapping-competition refusal shows the overlap-specific copy and a 'Go to your dashboard' link", async () => {
+    previewInviteMock.mockResolvedValueOnce({ status: "success", result: AVAILABLE_ACTIVE });
+    acceptInviteMock.mockResolvedValueOnce({
+      status: "failure",
+      failure: {
+        kind: "join-refused",
+        failure: {
+          reason: "overlapping-competition",
+          code: "functions/failed-precondition",
+          message: "already in another competition",
+          cause: null,
+        },
+      },
+    });
+
+    const { fireEvent } = await import("@testing-library/react");
+    render(<InviteCodeLanding code={CODE} />);
+
+    const button = await screen.findByRole("button", { name: /join competition/i });
+    fireEvent.click(button);
+
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent(
+      "You're already in another active competition, and ileadit only allows one at a time. Leave that one first if you want to switch.",
+    );
+    expect(screen.getByRole("link", { name: /go to your dashboard/i })).toHaveAttribute(
+      "href",
+      "/dashboard",
+    );
+  });
+});
