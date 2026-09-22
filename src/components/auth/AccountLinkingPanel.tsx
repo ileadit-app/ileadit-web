@@ -106,8 +106,8 @@ export function AccountLinkingPanel({
           <ErrorBanner message={error} />
           <p className="text-center text-xs text-muted-foreground">
             Still stuck?{" "}
-            <a href="mailto:hello@ileadit.app" className="font-semibold text-foreground hover:underline">
-              Email hello@ileadit.app
+            <a href="mailto:hello@ileadit.co.uk" className="font-semibold text-foreground hover:underline">
+              Email hello@ileadit.co.uk
             </a>
           </p>
         </div>

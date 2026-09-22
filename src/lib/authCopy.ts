@@ -35,7 +35,7 @@ export function providerLabel(provider: "google" | "microsoft" | "email"): strin
  */
 export function authFailureMessage(failure: AuthFailure): string {
   if (failure.cause?.code === "auth/popup-blocked") {
-    return "Your browser blocked the sign-in popup. Allow pop-ups for ileadit.app and try again.";
+    return "Your browser blocked the sign-in popup. Allow pop-ups for this site and try again.";
   }
   switch (failure.reason) {
     case "too-many-requests":
@@ -47,7 +47,7 @@ export function authFailureMessage(failure: AuthFailure): string {
       // shown — kept as a safe fallback in case the email/credential
       // couldn't be recovered from the error (see AuthCard's collision
       // handler).
-      return "This email is already linked to a different sign-in method. Try the original method, or email hello@ileadit.app.";
+      return "This email is already linked to a different sign-in method. Try the original method, or email hello@ileadit.co.uk.";
     default:
       return failure.message || "Something went wrong. Please try again.";
   }
@@ -56,7 +56,7 @@ export function authFailureMessage(failure: AuthFailure): string {
 /** Mirrors the app-wide convention (engineErrors.ts) of failing the same way
  * everywhere rather than inventing new copy per page. */
 export function engineFailureMessage(failure: EngineFailure): string {
-  return `We signed you in, but couldn't finish setting up your account (${failure.reason}). Please refresh and try again, or email hello@ileadit.app if it keeps happening.`;
+  return `We signed you in, but couldn't finish setting up your account (${failure.reason}). Please refresh and try again, or email hello@ileadit.co.uk if it keeps happening.`;
 }
 
 /**
@@ -74,6 +74,6 @@ export function ensureAccountRetryMessage(failure: EngineFailure | null): string
   const detail = failure ? ` (${failure.reason})` : "";
   return (
     `We couldn't finish setting up your account${detail}. Some features may not work until ` +
-    "this succeeds — try again, or email hello@ileadit.app if it keeps happening."
+    "this succeeds — try again, or email hello@ileadit.co.uk if it keeps happening."
   );
 }

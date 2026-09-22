@@ -154,7 +154,7 @@ export function inviteCallableFailureMessage(failure: InviteCallableFailure): st
     case "functions/not-found":
       return "This invite link doesn't exist any more.";
     default:
-      return `Something went wrong${detail ? ` (${detail})` : ""} — try again, or email hello@ileadit.app if it keeps happening.`;
+      return `Something went wrong${detail ? ` (${detail})` : ""} — try again, or email hello@ileadit.co.uk if it keeps happening.`;
   }
 }
 

@@ -52,7 +52,7 @@ export function PricingSection() {
                 a quote and a walkthrough.
               </p>
               <Link
-                href="mailto:hello@ileadit.app"
+                href="mailto:hello@ileadit.co.uk"
                 className="mt-6 inline-flex h-12 w-full items-center justify-center gap-2 rounded-full bg-brand-gold text-base font-bold text-brand-navy transition-colors hover:bg-brand-gold/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-gold"
               >
                 Talk to us

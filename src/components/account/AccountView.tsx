@@ -78,8 +78,8 @@ function AccountContent({ user }: { user: User }) {
               </p>
               <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
                 Try reloading the page. If this keeps happening, email{" "}
-                <a href="mailto:hello@ileadit.app" className="font-semibold underline">
-                  hello@ileadit.app
+                <a href="mailto:hello@ileadit.co.uk" className="font-semibold underline">
+                  hello@ileadit.co.uk
                 </a>
                 .
               </p>

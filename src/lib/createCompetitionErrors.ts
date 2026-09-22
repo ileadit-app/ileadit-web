@@ -76,14 +76,14 @@ export function createCompetitionFailureMessage(failure: CreateCompetitionFailur
 
   switch (failure.code) {
     case "functions/permission-denied":
-      return "You don't have permission to create competitions. If you think this is wrong, email hello@ileadit.app.";
+      return "You don't have permission to create competitions. If you think this is wrong, email hello@ileadit.co.uk.";
     case "functions/invalid-argument":
       return `Something about this competition isn't valid${detail ? ` (${detail})` : ""}. Check the fields above and try again.`;
     case "functions/unauthenticated":
       return "You've been signed out. Sign in again and try creating this competition once more.";
     case "functions/resource-exhausted":
-      return "You've hit a limit on your plan. Contact hello@ileadit.app if you need more room.";
+      return "You've hit a limit on your plan. Contact hello@ileadit.co.uk if you need more room.";
     default:
-      return `We couldn't create that competition${detail ? ` (${detail})` : ""}. Please try again, or email hello@ileadit.app if it keeps happening.`;
+      return `We couldn't create that competition${detail ? ` (${detail})` : ""}. Please try again, or email hello@ileadit.co.uk if it keeps happening.`;
   }
 }

@@ -153,7 +153,7 @@ export function AuthCard({ mode }: { mode: "signin" | "signup" }) {
     if (existingMethod !== "google.com" && existingMethod !== "microsoft.com" && existingMethod !== "password") {
       setPageError(
         "This email already has an ileadit account with a different sign-in method. " +
-          "Try the original method, or email hello@ileadit.app for help linking them.",
+          "Try the original method, or email hello@ileadit.co.uk for help linking them.",
       );
       return;
     }

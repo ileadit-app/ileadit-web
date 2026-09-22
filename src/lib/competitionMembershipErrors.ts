@@ -148,6 +148,6 @@ export function competitionMembershipFailureMessage(
     case "invalid-argument":
       return "Something went wrong on our end — try reloading the page.";
     default:
-      return `Couldn't ${operation === "join" ? "join" : "leave"} that competition — try again, or email hello@ileadit.app if it keeps happening.`;
+      return `Couldn't ${operation === "join" ? "join" : "leave"} that competition — try again, or email hello@ileadit.co.uk if it keeps happening.`;
   }
 }

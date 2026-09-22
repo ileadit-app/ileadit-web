@@ -42,8 +42,8 @@ export function CreateCompetitionGate() {
         <p className="mx-auto mt-3 max-w-md text-sm leading-relaxed text-muted-foreground">
           Creating a competition is limited to organisation admins and ileadit admins right now.
           If your team should be able to run competitions on ileadit,{" "}
-          <a href="mailto:hello@ileadit.app" className="font-semibold text-foreground underline">
-            email hello@ileadit.app
+          <a href="mailto:hello@ileadit.co.uk" className="font-semibold text-foreground underline">
+            email hello@ileadit.co.uk
           </a>{" "}
           and we&apos;ll get you set up.
         </p>
