@@ -40,6 +40,20 @@ import type { FunctionsError } from "firebase/functions";
  * which `engineErrors.ts` maps) — every distinction below comes from `code`
  * plus a message-substring check, same technique `engineErrors.ts` already
  * uses for its own message-only case (`missing-game-state`).
+ *
+ * **PC-9 contract corrections (2026-09-23, engine branch
+ * `engine/pc1-visibility`, NOT deployed — overrides the design doc's own
+ * guesses, which flagged these exact strings as unverified):**
+ *   - Joining a PRIVATE competition without an invite: `HttpsError` code
+ *     **`permission-denied`**, `details.reason === "competition-private"`.
+ *     This is the one place either callable DOES set `details.reason` — a
+ *     genuinely new shape for this file, not a message-substring case.
+ *   - The one-active-competition-at-a-time overlap refusal (engine ticket
+ *     in progress): code **`failed-precondition`**,
+ *     `details.reason === "overlapping-competition"`. Distinguished from the
+ *     existing JOIN-1 "not joinable" `failed-precondition` (which never sets
+ *     `details.reason`) by checking `details.reason` FIRST, before falling
+ *     through to the message-substring checks below.
  */
 export type CompetitionMembershipFailureReason =
   | "not-found"
@@ -48,6 +62,8 @@ export type CompetitionMembershipFailureReason =
   | "config-not-seeded"
   | "unauthenticated"
   | "invalid-argument"
+  | "competition-private"
+  | "overlapping-competition"
   | "unknown";
 
 export interface CompetitionMembershipFailure {
@@ -87,7 +103,17 @@ export function toCompetitionMembershipFailure(error: unknown): CompetitionMembe
   if (error.code === "functions/invalid-argument") {
     return { reason: "invalid-argument", code: error.code, message: error.message, cause: error };
   }
+  if (error.code === "functions/permission-denied") {
+    const details = error.details as { reason?: unknown } | undefined;
+    if (details?.reason === "competition-private") {
+      return { reason: "competition-private", code: error.code, message: error.message, cause: error };
+    }
+  }
   if (error.code === "functions/failed-precondition") {
+    const details = error.details as { reason?: unknown } | undefined;
+    if (details?.reason === "overlapping-competition") {
+      return { reason: "overlapping-competition", code: error.code, message: error.message, cause: error };
+    }
     // TODO(LEAVE-1): once the engine ships a distinguishable signal (a
     // distinct `details.reason`, or a message that names this case
     // specifically) for "this player left this competition while it was
@@ -147,6 +173,12 @@ export function competitionMembershipFailureMessage(
       return "You've been signed out. Sign in again and try once more.";
     case "invalid-argument":
       return "Something went wrong on our end — try reloading the page.";
+    case "competition-private":
+      return "This is a private competition — you'll need an invite link to join it.";
+    case "overlapping-competition":
+      return operation === "join"
+        ? "You're already in another active competition, and ileadit only allows one at a time. Leave that one first if you want to switch."
+        : "You're already in another active competition.";
     default:
       return `Couldn't ${operation === "join" ? "join" : "leave"} that competition — try again, or email hello@ileadit.co.uk if it keeps happening.`;
   }

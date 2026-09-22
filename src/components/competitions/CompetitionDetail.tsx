@@ -2,10 +2,14 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { AlertCircle, ArrowLeft, Calendar, Coins, Heart, Percent } from "lucide-react";
+import { AlertCircle, ArrowLeft, Calendar, Coins, Heart, Lock, Percent } from "lucide-react";
 import { useUser } from "@/context/AuthContext";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { CompetitionHero } from "./CompetitionHero";
+import {
+  resolveCompetitionVisibility,
+  type CompetitionVisibility,
+} from "@/components/status/CompetitionVisibilityChip";
 import { PlayerAvatar } from "./PlayerAvatar";
 import {
   useCompetitionDetail,
@@ -147,6 +151,7 @@ function CompetitionDetailContent({ competitionId, uid }: { competitionId: strin
             status={status}
             startDate={competition.startDate}
             timeZone={competition.timeZone}
+            visibility={resolveCompetitionVisibility(competition.visibility)}
             membershipState={membershipState}
           />
         ) : null}
@@ -168,7 +173,10 @@ function CompetitionDetailContent({ competitionId, uid }: { competitionId: strin
             invites may not be a player in their own competition at all. */}
         {organiserCapability === "organiser" ? (
           <div className="mt-4">
-            <InvitePanel competitionId={competitionId} />
+            <InvitePanel
+              competitionId={competitionId}
+              visibility={resolveCompetitionVisibility(competition.visibility)}
+            />
           </div>
         ) : null}
       </div>
@@ -349,6 +357,7 @@ function MembershipCta({
   status,
   startDate,
   timeZone,
+  visibility,
   membershipState,
 }: {
   competitionId: string;
@@ -356,6 +365,12 @@ function MembershipCta({
   status: CompetitionStatus;
   startDate: string | null;
   timeZone: string | null;
+  /** PC-9 — a non-member sees a locked, no-Join-button state whenever the
+   * competition is private and they'd otherwise be inside the joinable
+   * window (scheduled, or active on its first day). Never editable after
+   * create (contract correction (e)), so this never needs to react to a
+   * mid-session change. */
+  visibility: CompetitionVisibility;
   membershipState: ReturnType<typeof useOwnMembership>;
 }) {
   const [pending, setPending] = useState<"join" | "leave" | null>(null);
@@ -388,6 +403,21 @@ function MembershipCta({
   }
 
   const isMember = optimisticMember ?? membershipState.status === "member";
+
+  // PC-9 contract correction (b): joinCompetition refuses a private
+  // competition outright (permission-denied / competition-private) unless
+  // the player arrived via an invite. Pre-empt that round trip: a
+  // non-member looking at a private competition, inside what would
+  // otherwise be the joinable window, sees a locked explainer instead of a
+  // Join button that's guaranteed to fail. Only within the joinable window
+  // (scheduled, or active on its own first day, mirroring `canStillJoin`
+  // below) — outside that window the existing "not joinable"/"finished"
+  // copy already covers it and shouldn't be replaced by private-specific
+  // wording that would be misleading once the window has simply closed.
+  const isPrivateLocked =
+    !isMember &&
+    visibility === "private" &&
+    (status === "scheduled" || (status === "active" && isDayOneOfActiveCompetition(startDate, timeZone)));
 
   async function handleJoin() {
     setPending("join");
@@ -439,7 +469,15 @@ function MembershipCta({
 
   let body: React.ReactNode;
 
-  if (status === "scheduled") {
+  if (isPrivateLocked) {
+    body = (
+      <div className="flex items-center justify-center gap-2 rounded-2xl bg-muted p-4 text-center text-sm text-muted-foreground">
+        <Lock className="size-4 shrink-0" aria-hidden="true" />
+        This is a private competition — you&apos;ll need an invite link to join. Ask whoever&apos;s
+        running it to send you one.
+      </div>
+    );
+  } else if (status === "scheduled") {
     body = isMember ? (
       <div className="flex flex-col items-center gap-2">
         <span className="flex h-12 w-full items-center justify-center rounded-full bg-secondary text-sm font-bold text-secondary-foreground">

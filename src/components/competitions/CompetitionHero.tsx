@@ -4,6 +4,10 @@ import { useEffect, useState } from "react";
 import { LogoMark } from "@/components/brand/Logo";
 import { CompetitionStatusChip } from "@/components/status/CompetitionStatusChip";
 import {
+  CompetitionVisibilityChip,
+  resolveCompetitionVisibility,
+} from "@/components/status/CompetitionVisibilityChip";
+import {
   competitionActiveTimeLabel,
   competitionScheduledTimeLabel,
   formatShortDate,
@@ -79,6 +83,10 @@ export interface CompetitionHeroCompetition {
   /** IANA zone the competition's own dates are computed in (WEB-3 item 3) —
    * feeds `CompetitionStatusChip`'s "Starting today" copy override. */
   timeZone: string | null;
+  /** `"public" | "private" | null` (PC-9) — `null` (a doc predating this
+   * field) resolves to Public via `resolveCompetitionVisibility` at the one
+   * render site below, never guessed anywhere else. */
+  visibility: "public" | "private" | null;
 }
 
 function dateLineFor(
@@ -159,6 +167,9 @@ export function CompetitionHero({
               status={competition.status}
               startDate={competition.startDate}
               timeZone={competition.timeZone}
+            />
+            <CompetitionVisibilityChip
+              visibility={resolveCompetitionVisibility(competition.visibility)}
             />
             {/* `tabular-nums` — WEB-4 item 2's "no layout shift" requirement:
                 the last-day countdown's digits change every tick

@@ -70,6 +70,12 @@ export interface CompetitionDetailDoc {
    * discipline this hook already applies uniformly, not a claim that this
    * field specifically has a known transient-null window. */
   creatorId: string | null;
+  /** `"public" | "private" | null` (PC-9). `null` means a doc that predates
+   * this field — treat as public (legacy); see
+   * `resolveCompetitionVisibility` in `CompetitionVisibilityChip.tsx`, the
+   * one place that conversion happens. Set only at create, not editable
+   * afterwards (contract correction (e)). */
+  visibility: "public" | "private" | null;
 }
 
 export type CompetitionDetailState =
@@ -114,6 +120,10 @@ export function useCompetitionDetail(competitionId: string): CompetitionDetailSt
             winnerIds: asStringArray(data.winnerIds),
             timeZone: typeof data.timeZone === "string" ? data.timeZone : null,
             creatorId: typeof data.creatorId === "string" ? data.creatorId : null,
+            visibility:
+              data.visibility === "public" || data.visibility === "private"
+                ? data.visibility
+                : null,
           },
         });
       },

@@ -1,7 +1,8 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { CompetitionDetail } from "./CompetitionDetail";
 import { leaveCompetition } from "@/lib/leaveCompetition";
+import { joinCompetition } from "@/lib/joinCompetition";
 
 /**
  * Pins WEB-3 item 6's "Back to dashboard" link on the happy path. Before
@@ -304,6 +305,151 @@ describe("CompetitionDetail — WEB-4 item 3 / LEAVE-1 active-leave UI", () => {
     expect(screen.queryByRole("heading", { name: /leave march madness steps\?/i })).not.toBeInTheDocument();
   });
 
+});
+
+/**
+ * PC-9: the private-competition locked CTA on the detail page, and the
+ * `competition-private`/`overlapping-competition` join-refusal copy — both
+ * per the PC-9 engine contract corrections (b)/(c), read directly from
+ * `competitionMembershipErrors.ts` above rather than guessed.
+ */
+describe("CompetitionDetail — PC-9 private competition CTA and join refusals", () => {
+  beforeEach(() => {
+    vi.mocked(joinCompetition).mockReset();
+  });
+
+  it("PC-9-DETAIL-LOCKED: a scheduled, private competition shows the locked explainer, not a Join button, for a non-member", () => {
+    useCompetitionDetailMock.mockReturnValue({
+      status: "success",
+      competition: {
+        id: COMPETITION_ID,
+        name: "March Madness Steps",
+        description: null,
+        imageUrl: null,
+        backgroundImageUrl: null,
+        status: "scheduled",
+        startDate: "2026-10-01",
+        endDate: "2026-10-08",
+        durationDays: 7,
+        playerCount: 12,
+        winnerIds: [],
+        timeZone: null,
+        visibility: "private",
+      },
+    });
+
+    render(<CompetitionDetail competitionId={COMPETITION_ID} />);
+
+    expect(
+      screen.getByText(/you'll need an invite link to join/i),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /join competition/i })).not.toBeInTheDocument();
+  });
+
+  it("PC-9-DETAIL-PUBLIC-STILL-JOINABLE: the same scheduled competition, but public (or visibility absent), still shows the Join button", () => {
+    useCompetitionDetailMock.mockReturnValue({
+      status: "success",
+      competition: {
+        id: COMPETITION_ID,
+        name: "March Madness Steps",
+        description: null,
+        imageUrl: null,
+        backgroundImageUrl: null,
+        status: "scheduled",
+        startDate: "2026-10-01",
+        endDate: "2026-10-08",
+        durationDays: 7,
+        playerCount: 12,
+        winnerIds: [],
+        timeZone: null,
+        visibility: null,
+      },
+    });
+
+    render(<CompetitionDetail competitionId={COMPETITION_ID} />);
+
+    expect(screen.getByRole("button", { name: /join competition/i })).toBeInTheDocument();
+  });
+
+  it("PC-9-DETAIL-JOIN-PRIVATE-ERROR: a competition-private join refusal shows the private-specific copy", async () => {
+    vi.mocked(joinCompetition).mockResolvedValue({
+      status: "failure",
+      failure: {
+        reason: "competition-private",
+        code: "functions/permission-denied",
+        message: "not authorized",
+        cause: null,
+      },
+    });
+    useCompetitionDetailMock.mockReturnValue({
+      status: "success",
+      competition: {
+        id: COMPETITION_ID,
+        name: "March Madness Steps",
+        description: null,
+        imageUrl: null,
+        backgroundImageUrl: null,
+        status: "scheduled",
+        startDate: "2026-10-01",
+        endDate: "2026-10-08",
+        durationDays: 7,
+        playerCount: 12,
+        winnerIds: [],
+        timeZone: null,
+        visibility: null,
+      },
+    });
+
+    render(<CompetitionDetail competitionId={COMPETITION_ID} />);
+    fireEvent.click(screen.getByRole("button", { name: /join competition/i }));
+
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent(
+      "This is a private competition — you'll need an invite link to join it.",
+    );
+  });
+
+  it("PC-9-DETAIL-JOIN-OVERLAP-ERROR: an overlapping-competition join refusal shows the overlap-specific copy", async () => {
+    vi.mocked(joinCompetition).mockResolvedValue({
+      status: "failure",
+      failure: {
+        reason: "overlapping-competition",
+        code: "functions/failed-precondition",
+        message: "already in another competition",
+        cause: null,
+      },
+    });
+    useCompetitionDetailMock.mockReturnValue({
+      status: "success",
+      competition: {
+        id: COMPETITION_ID,
+        name: "March Madness Steps",
+        description: null,
+        imageUrl: null,
+        backgroundImageUrl: null,
+        status: "scheduled",
+        startDate: "2026-10-01",
+        endDate: "2026-10-08",
+        durationDays: 7,
+        playerCount: 12,
+        winnerIds: [],
+        timeZone: null,
+        visibility: null,
+      },
+    });
+
+    render(<CompetitionDetail competitionId={COMPETITION_ID} />);
+    fireEvent.click(screen.getByRole("button", { name: /join competition/i }));
+
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent(
+      "You're already in another active competition, and ileadit only allows one at a time. Leave that one first if you want to switch.",
+    );
+    await waitFor(() => expect(joinCompetition).toHaveBeenCalledWith(COMPETITION_ID));
+  });
+});
+
+describe("CompetitionDetail — WEB-4 item 3 / LEAVE-1 scheduled leave still uses window.confirm", () => {
   it("MUT-LEAVE1-SCHEDULED-STILL-WINDOWCONFIRM: leaving a SCHEDULED competition still uses window.confirm, not the styled dialog", () => {
     const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(false);
     useCompetitionDetailMock.mockReturnValue({
