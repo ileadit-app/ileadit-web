@@ -4,6 +4,10 @@ import Link from "next/link";
 import { AlertCircle, PlusCircle, Trophy, Users } from "lucide-react";
 import { useCreatedCompetitions, type CreatedCompetitionSummary } from "@/lib/competitions";
 import { CompetitionStatusChip } from "@/components/status/CompetitionStatusChip";
+import {
+  CompetitionVisibilityChip,
+  resolveCompetitionVisibility,
+} from "@/components/status/CompetitionVisibilityChip";
 
 /**
  * "The competitions you created" (P1.5). Takes `uid` rather than calling
@@ -159,11 +163,16 @@ function CompetitionCard({ competition }: { competition: CreatedCompetitionSumma
         <h3 className="text-base font-bold text-foreground">
           {competition.name ?? "Untitled competition"}
         </h3>
-        <CompetitionStatusChip
-          status={competition.status}
-          startDate={competition.startDate}
-          timeZone={competition.timeZone}
-        />
+        <div className="flex flex-wrap items-center gap-1.5">
+          <CompetitionStatusChip
+            status={competition.status}
+            startDate={competition.startDate}
+            timeZone={competition.timeZone}
+          />
+          <CompetitionVisibilityChip
+            visibility={resolveCompetitionVisibility(competition.visibility)}
+          />
+        </div>
       </div>
       <p className="mt-2 text-sm text-muted-foreground">
         {formatDateRange(competition.startDate, competition.endDate)}

@@ -53,6 +53,11 @@ export interface CreatedCompetitionSummary {
    * a viewer in a different zone. `null` before the engine trigger has
    * populated it; callers fall back to `DEFAULT_COMPETITION_ZONE`. */
   timeZone: string | null;
+  /** `"public" | "private" | null` (PC-9). `null` means a doc that predates
+   * this field — treat as public (legacy); see
+   * `resolveCompetitionVisibility` in `CompetitionVisibilityChip.tsx`, the
+   * one place that conversion happens. Not editable after creation. */
+  visibility: "public" | "private" | null;
 }
 
 export type CreatedCompetitionsState =
@@ -114,6 +119,10 @@ export function useCreatedCompetitions(uid: string | null): CreatedCompetitionsS
             endDate: typeof data.endDate === "string" ? data.endDate : null,
             playerCount: typeof data.playerCount === "number" ? data.playerCount : null,
             timeZone: typeof data.timeZone === "string" ? data.timeZone : null,
+            visibility:
+              data.visibility === "public" || data.visibility === "private"
+                ? data.visibility
+                : null,
           };
         });
         setState({ status: "success", competitions });
