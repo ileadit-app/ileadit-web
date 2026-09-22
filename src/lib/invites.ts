@@ -91,7 +91,7 @@ export function formatInviteCodeForDisplay(code: string): string {
  * built through `buildInviteUrl` below, never string-concatenated ad hoc,
  * so a future domain swap is a one-line change.
  */
-export const INVITE_BASE_URL = "https://ileadit-portal.web.app/invite";
+export const INVITE_BASE_URL = "https://ileadit.co.uk/invite"; // ileadit.co.uk registered 22 Sep 2026; must match the engine INVITE_LINK_BASE_URL
 
 export function buildInviteUrl(code: string): string {
   return `${INVITE_BASE_URL}/${normalizeInviteCodeInput(code)}`;
