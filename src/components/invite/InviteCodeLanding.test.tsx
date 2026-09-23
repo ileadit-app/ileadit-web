@@ -171,6 +171,70 @@ describe("InviteCodeLanding — signed-in, not a member yet", () => {
   });
 });
 
+/**
+ * PORTAL-NAV-1, BUG 2: `preview.playerCount` is a pre-join snapshot;
+ * `acceptInvite`'s own result carries no `playerCount` at all. Before this
+ * fix, the "joined" confirmation card kept showing the stale pre-join
+ * count (e.g. "0 players joined" immediately after becoming player #1).
+ * `JoinInviteCode` now re-fetches the preview after a successful join and
+ * falls back to a local +1 if that refresh itself doesn't come back
+ * available.
+ */
+describe("InviteCodeLanding — PORTAL-NAV-1 bug 2: player count refreshes after joining", () => {
+  beforeEach(() => {
+    useUserMock.mockReturnValue({ status: "signed-in", user: { uid: "u1" } });
+    useOwnMembershipMock.mockReturnValue({ status: "not-member" });
+  });
+
+  it("PORTAL-NAV-1-I: shows the refreshed playerCount from a successful re-fetch after joining", async () => {
+    previewInviteMock.mockResolvedValueOnce({ status: "success", result: AVAILABLE_ACTIVE });
+    acceptInviteMock.mockResolvedValueOnce({
+      status: "success",
+      result: { competitionId: "comp1", joined: true, alreadyMember: false, dayNumber: 3 },
+    });
+    // The re-fetch after joining — a real deployment would now report one
+    // more player than the pre-join preview did.
+    previewInviteMock.mockResolvedValueOnce({
+      status: "success",
+      result: { ...AVAILABLE_ACTIVE, playerCount: 13 },
+    });
+
+    const { fireEvent } = await import("@testing-library/react");
+    render(<InviteCodeLanding code={CODE} />);
+
+    const button = await screen.findByRole("button", { name: /join competition/i });
+    fireEvent.click(button);
+
+    await screen.findByText(/you joined on day 3/i);
+    expect(await screen.findByText(/13 players joined/i)).toBeInTheDocument();
+    expect(screen.queryByText(/12 players joined/i)).not.toBeInTheDocument();
+  });
+
+  it("PORTAL-NAV-1-J: falls back to a local +1 when the post-join refresh itself fails", async () => {
+    previewInviteMock.mockResolvedValueOnce({ status: "success", result: AVAILABLE_ACTIVE });
+    acceptInviteMock.mockResolvedValueOnce({
+      status: "success",
+      result: { competitionId: "comp1", joined: true, alreadyMember: false, dayNumber: 3 },
+    });
+    // The post-join refresh call fails (network blip) — the fallback must
+    // still show a count that reflects this visitor's own successful join,
+    // not the stale pre-join number.
+    previewInviteMock.mockResolvedValueOnce({
+      status: "failure",
+      failure: { code: "functions/internal", reason: null, message: "boom", cause: null },
+    });
+
+    const { fireEvent } = await import("@testing-library/react");
+    render(<InviteCodeLanding code={CODE} />);
+
+    const button = await screen.findByRole("button", { name: /join competition/i });
+    fireEvent.click(button);
+
+    await screen.findByText(/you joined on day 3/i);
+    expect(await screen.findByText(/13 players joined/i)).toBeInTheDocument();
+  });
+});
+
 describe("InviteCodeLanding — signed-in, already a member", () => {
   it("MUT-INV-7: shows 'already a player' copy and a View competition link, not a Join button", async () => {
     previewInviteMock.mockResolvedValueOnce({ status: "success", result: AVAILABLE_ACTIVE });
