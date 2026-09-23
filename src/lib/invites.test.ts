@@ -277,6 +277,53 @@ describe("listInvites / createInvite / revokeInvite — organiser callables", ()
     }
   });
 
+  it("MUT-CREATE-3: an explicit label:undefined is NOT sent to the callable — regression test for functions/invalid-argument on a blank label", async () => {
+    // This is the exact shape of the production bug (commit 7f76770,
+    // 2026-09-23): InvitePanel.tsx used to call
+    // createInvite({ competitionId, label: undefined }) for a blank label
+    // field. The Firebase SDK serializes an `undefined` property as JSON
+    // `null`, which the engine's `label: z.string().max(40).optional()`
+    // schema rejects. `createInvite` must strip the key via
+    // `compactPayload`, not merely forward whatever the caller passed.
+    mockCallable.mockResolvedValueOnce({
+      data: { code: "K7M4PQX2", displayCode: "K7M4-PQX2", url: "https://ileadit.co.uk/invite/K7M4PQX2" },
+    });
+    const { createInvite } = await import("./invites");
+    await createInvite({ competitionId: "comp1", label: undefined });
+
+    expect(mockCallable).toHaveBeenCalledWith({ competitionId: "comp1" });
+    const sentPayload = mockCallable.mock.calls[0][0] as Record<string, unknown>;
+    expect("label" in sentPayload).toBe(false);
+  });
+
+  it("MUT-CREATE-4: a real label IS sent to the callable", async () => {
+    mockCallable.mockResolvedValueOnce({
+      data: { code: "K7M4PQX2", displayCode: "K7M4-PQX2", url: "https://ileadit.co.uk/invite/K7M4PQX2" },
+    });
+    const { createInvite } = await import("./invites");
+    await createInvite({ competitionId: "comp1", label: "Marketing team" });
+
+    expect(mockCallable).toHaveBeenCalledWith({ competitionId: "comp1", label: "Marketing team" });
+  });
+
+  it("MUT-CREATE-5: explicit expiresAt:undefined and maxUses:undefined are also stripped, not sent as null", async () => {
+    mockCallable.mockResolvedValueOnce({
+      data: { code: "K7M4PQX2", displayCode: "K7M4-PQX2", url: "https://ileadit.co.uk/invite/K7M4PQX2" },
+    });
+    const { createInvite } = await import("./invites");
+    await createInvite({
+      competitionId: "comp1",
+      label: "Marketing team",
+      expiresAt: undefined,
+      maxUses: undefined,
+    });
+
+    const sentPayload = mockCallable.mock.calls[0][0] as Record<string, unknown>;
+    expect(sentPayload).toEqual({ competitionId: "comp1", label: "Marketing team" });
+    expect("expiresAt" in sentPayload).toBe(false);
+    expect("maxUses" in sentPayload).toBe(false);
+  });
+
   it("MUT-REVOKE-1: success resolves to status:success with no payload to check", async () => {
     mockCallable.mockResolvedValueOnce({ data: { revoked: true } });
     const { revokeInvite } = await import("./invites");

@@ -1,6 +1,7 @@
 import { httpsCallable } from "firebase/functions";
 import type { FunctionsError } from "firebase/functions";
 import { getFunctionsClient } from "./functions";
+import { compactPayload } from "./callablePayload";
 import type { CompetitionStatus } from "./competitionDetail";
 import {
   toCompetitionMembershipFailure,
@@ -167,13 +168,20 @@ export function inviteCallableFailureMessage(failure: InviteCallableFailure): st
 export interface CreateInviteInput {
   competitionId: string;
   /** <=40 chars per the INV-1 data model. Not enforced here beyond the
-   * `<input maxLength>` on the form — the callable is the real boundary. */
+   * `<input maxLength>` on the form — the callable is the real boundary.
+   * Optional per the engine's zod schema (`.optional()` — MISSING key only,
+   * never `null`). A caller building this input from an empty/blank form
+   * field must either omit the key entirely or pass `undefined` and rely on
+   * `compactPayload` below (see BUG note in `callablePayload.ts`) — never
+   * pass an empty string through as a stand-in for "no label". */
   label?: string;
   /** ISO-8601 string — see this file's header comment on the Timestamp
    * wire-format assumption. Not exposed by the BUILD-1 form (label only,
    * per the ticket's explicit scope) — present for a future form that adds
-   * it without needing a new wrapper. */
+   * it without needing a new wrapper. Same undefined-vs-null caveat as
+   * `label` above applies here too. */
   expiresAt?: string;
+  /** Same undefined-vs-null caveat as `label` above. */
   maxUses?: number;
 }
 
@@ -193,7 +201,14 @@ export async function createInvite(input: CreateInviteInput): Promise<CreateInvi
     "createInvite",
   );
   try {
-    const result = await callable(input);
+    // compactPayload strips any of label/expiresAt/maxUses a caller passed
+    // as `undefined` (e.g. an empty label field) — sending the key at all
+    // with an `undefined` value would serialize to JSON `null` on the wire
+    // and be rejected by the engine's `.optional()` zod schema. Defense in
+    // depth: `InvitePanel.tsx`'s form also builds its own request without
+    // an explicit `label: undefined`, but this wrapper must be correct on
+    // its own for any future caller too. See `callablePayload.ts`.
+    const result = await callable(compactPayload(input));
     return { status: "success", result: result.data };
   } catch (error) {
     return {
