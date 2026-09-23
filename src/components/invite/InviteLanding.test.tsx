@@ -332,4 +332,134 @@ describe("InviteLanding", () => {
     await waitFor(() => expect(screen.getByRole("alert")).toBeInTheDocument());
     expect(screen.queryByRole("heading", { name: /you're in!/i })).not.toBeInTheDocument();
   });
+
+  /* ------------------------------------------------------------------ *
+   * PC-6: the legacy door's handling of private competitions. See
+   * `InviteLanding.tsx`'s own header comment (cases a/b/c) for the full
+   * reasoning — these five tests each pin one case.
+   * ------------------------------------------------------------------ */
+
+  // Case (a): the doc itself says private, viewer isn't a member, and the
+  // competition is still inside its joinable window — must lock, not offer
+  // a Join button that's guaranteed to fail.
+  it("PC-6-PRIVATE-LOCK: private competition, not a member, still joinable — shows the invite-only door, no Join button", () => {
+    useUserMock.mockReturnValue({ status: "signed-in", user: { uid: "u1" } });
+    useCompetitionDetailMock.mockReturnValue({
+      status: "success",
+      competition: baseCompetition({ status: "scheduled", visibility: "private" }),
+    });
+    useOwnMembershipMock.mockReturnValue({ status: "not-member" });
+
+    render(<InviteLanding competitionId={COMPETITION_ID} />);
+
+    expect(screen.getByRole("heading", { name: /invite-only/i })).toBeInTheDocument();
+    expect(screen.getByText(/you'll need an invite link to join it/i)).toBeInTheDocument();
+    expect(screen.getByText("Private · invite only")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /join competition/i })).not.toBeInTheDocument();
+    expect(joinCompetitionMock).not.toHaveBeenCalled();
+  });
+
+  // Case (b): the competition doc itself can't be read at all. Under the
+  // new visibility-aware rules this is what a non-member hitting a private
+  // competition's legacy link looks like — must degrade to the same
+  // invite-only door, never a crash and never the "not found" copy (the
+  // doc DOES exist, it's just not visible to this viewer).
+  it("PC-6-DENIED: competition doc read comes back permission-denied — shows the invite-only door, not 'not found' or a crash", () => {
+    useUserMock.mockReturnValue({ status: "signed-in", user: { uid: "u1" } });
+    useCompetitionDetailMock.mockReturnValue({ status: "denied" });
+    useOwnMembershipMock.mockReturnValue({ status: "not-member" });
+
+    render(<InviteLanding competitionId={COMPETITION_ID} />);
+
+    expect(screen.getByRole("heading", { name: /invite-only/i })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: /invite link isn't valid/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: /couldn't load this invite/i })).not.toBeInTheDocument();
+  });
+
+  // Case (c): the proactive lock didn't fire (e.g. `visibility` wasn't
+  // `"private"` on the last read this client saw), but `joinCompetition`
+  // itself still refuses with `competition-private` — the card must swap
+  // away from the dead Join button entirely, not just show an inline error
+  // next to a button that can never succeed.
+  it("PC-6-JOIN-PRIVATE: joinCompetition returns competition-private — swaps to the invite-only door instead of a dead Join button", async () => {
+    useUserMock.mockReturnValue({ status: "signed-in", user: { uid: "u1" } });
+    useCompetitionDetailMock.mockReturnValue({
+      status: "success",
+      competition: baseCompetition({ status: "scheduled" }),
+    });
+    useOwnMembershipMock.mockReturnValue({ status: "not-member" });
+    joinCompetitionMock.mockResolvedValue({
+      status: "failure",
+      failure: {
+        reason: "competition-private",
+        code: "functions/permission-denied",
+        message: "not authorized",
+        cause: null,
+      },
+    });
+
+    render(<InviteLanding competitionId={COMPETITION_ID} />);
+    fireEvent.click(screen.getByRole("button", { name: /join competition/i }));
+
+    await waitFor(() =>
+      expect(screen.getByRole("heading", { name: /invite-only/i })).toBeInTheDocument(),
+    );
+    expect(screen.queryByRole("button", { name: /join competition/i })).not.toBeInTheDocument();
+    // Reached via a user action on this same page — must be announced.
+    const status = screen.getByRole("status");
+    expect(status).toHaveTextContent(/invite-only/i);
+  });
+
+  // The unrelated "one active competition at a time" refusal — same copy +
+  // dashboard link treatment as `CompetitionDetail.tsx`/`InviteCodeLanding
+  // .tsx`. Must stay an inline alert, NOT the invite-only door (this has
+  // nothing to do with privacy).
+  it("PC-6-JOIN-OVERLAP: joinCompetition returns overlapping-competition — inline copy plus a dashboard link, Join button stays", async () => {
+    useUserMock.mockReturnValue({ status: "signed-in", user: { uid: "u1" } });
+    useCompetitionDetailMock.mockReturnValue({
+      status: "success",
+      competition: baseCompetition({ status: "scheduled" }),
+    });
+    useOwnMembershipMock.mockReturnValue({ status: "not-member" });
+    joinCompetitionMock.mockResolvedValue({
+      status: "failure",
+      failure: {
+        reason: "overlapping-competition",
+        code: "functions/failed-precondition",
+        message: "already in another competition",
+        cause: null,
+      },
+    });
+
+    render(<InviteLanding competitionId={COMPETITION_ID} />);
+    fireEvent.click(screen.getByRole("button", { name: /join competition/i }));
+
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent(
+      "You're already in another active competition, and ileadit only allows one at a time. Leave that one first if you want to switch.",
+    );
+    expect(screen.getByRole("link", { name: /go to your dashboard/i })).toHaveAttribute(
+      "href",
+      "/dashboard",
+    );
+    expect(screen.queryByRole("heading", { name: /invite-only/i })).not.toBeInTheDocument();
+  });
+
+  // Public competitions: unchanged. Explicit `visibility: "public"` (rather
+  // than relying on the field being absent, as every other test in this
+  // file does) — the happy path must still show a plain Join button, with
+  // no invite-only wall anywhere in front of it.
+  it("PC-6-PUBLIC-UNCHANGED: an explicitly public competition still shows the ordinary Join flow", () => {
+    useUserMock.mockReturnValue({ status: "signed-in", user: { uid: "u1" } });
+    useCompetitionDetailMock.mockReturnValue({
+      status: "success",
+      competition: baseCompetition({ status: "scheduled", visibility: "public" }),
+    });
+    useOwnMembershipMock.mockReturnValue({ status: "not-member" });
+
+    render(<InviteLanding competitionId={COMPETITION_ID} />);
+
+    expect(screen.getByRole("button", { name: /join competition/i })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: /invite-only/i })).not.toBeInTheDocument();
+  });
 });

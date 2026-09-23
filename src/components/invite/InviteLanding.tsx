@@ -7,13 +7,21 @@ import { useUser } from "@/context/AuthContext";
 import { LogoMark } from "@/components/brand/Logo";
 import { CompetitionStatusChip } from "@/components/status/CompetitionStatusChip";
 import {
+  CompetitionVisibilityChip,
+  resolveCompetitionVisibility,
+  type CompetitionVisibility,
+} from "@/components/status/CompetitionVisibilityChip";
+import {
   useCompetitionDetail,
   useOwnMembership,
   type CompetitionDetailDoc,
 } from "@/lib/competitionDetail";
 import { isDayOneOfActiveCompetition } from "@/lib/competitionDates";
 import { joinCompetition } from "@/lib/joinCompetition";
-import { competitionMembershipFailureMessage } from "@/lib/competitionMembershipErrors";
+import {
+  competitionMembershipFailureMessage,
+  type CompetitionMembershipFailure,
+} from "@/lib/competitionMembershipErrors";
 
 /**
  * `/invite/[code]` (W6-INVITE) — the page someone lands on from a
@@ -50,6 +58,43 @@ import { competitionMembershipFailureMessage } from "@/lib/competitionMembership
  *    `competitionMembershipErrors.ts` corresponds to "full". There is
  *    deliberately no "competition full" state in this file: it would be
  *    designing for an error the engine cannot produce.
+ *
+ * **PC-6 (2026-09-23): private competitions.** This is the LEGACY invite
+ * door — `code` is a raw `competitions/{id}` document ID, reachable by
+ * anyone who has it, unlike the newer `invites/{CODE}`-backed
+ * `InviteCodeLanding.tsx`. PC-9 added a `visibility` field
+ * (`"public" | "private" | null`) to `competitions/{id}` and taught
+ * `joinCompetition` to refuse a private competition outright
+ * (`permission-denied` / `details.reason: "competition-private"`) unless the
+ * caller arrived via a real invite — this legacy door never carries invite
+ * provenance, so a private competition must be treated as an invite-only
+ * dead end here, reached three ways (all rendered via the shared
+ * `InviteOnlyInvite` below, reusing `competitionMembershipErrors.ts`'s own
+ * `competition-private` copy rather than inventing a fourth phrasing of the
+ * same sentence — see that component's own comment):
+ *   (a) proactively, when the doc itself says `visibility === "private"` and
+ *       the viewer isn't a member — mirrors `CompetitionDetail.tsx`'s
+ *       `isPrivateLocked`;
+ *   (b) when the doc can't be read at all (`useCompetitionDetail`'s
+ *       `"denied"` state) — under the engine branch that introduces this
+ *       field (`engine/pc1-visibility`, NOT deployed as of 2026-09-23),
+ *       that rules-side denial is what a non-member hitting a private
+ *       competition's legacy link looks like, not a crash or a false
+ *       "not found" (see `competitionDetail.ts`'s own comment on this
+ *       branch, written in anticipation of exactly this);
+ *   (c) defensively, if `joinCompetition` itself still returns
+ *       `competition-private` despite (a) not having fired — see
+ *       `JoinableInvite` below. Deliberately swaps the WHOLE card away from
+ *       the dead Join button (unlike `CompetitionDetail.tsx`'s own
+ *       `competition-private` handling, which only adds an inline alert
+ *       next to a Join button that's normally unreachable there anyway
+ *       because of its own proactive lock) — on this legacy, invite-less
+ *       door, a retry can never succeed, so leaving the button up would be
+ *       actively misleading.
+ * The separate `overlapping-competition` refusal (one active competition at
+ * a time) is unrelated to privacy — it stays an inline alert with a
+ * "Go to your dashboard" link, same treatment as `CompetitionDetail.tsx` and
+ * `InviteCodeLanding.tsx` already give it.
  */
 export function InviteLanding({ competitionId }: { competitionId: string }) {
   const { status: authStatus } = useUser();
@@ -89,13 +134,18 @@ function SignedInInviteContent({
     return <NotFoundInvite />;
   }
 
-  if (competitionState.status === "denied" || competitionState.status === "error") {
-    // `competitions/{id}`'s read rule (`admin-web/firestore.rules:232`) is
-    // an unconditional `allow read: if signedIn();` — no per-document
-    // condition — so "denied" cannot actually happen for a signed-in
-    // reader today. Kept as a safe, generic fallback (matching
-    // `CompetitionDetail.tsx`'s same defensive branch) rather than an
-    // assumption that today's rule is permanent.
+  if (competitionState.status === "denied") {
+    // PC-6: as of the `engine/pc1-visibility` branch (not deployed),
+    // `competitions/{id}` is no longer unconditionally readable by every
+    // signed-in user — a `permission-denied` here is what a non-member
+    // hitting a PRIVATE competition's legacy invite link looks like (the
+    // doc exists, it just isn't visible to this viewer), not a generic bug
+    // and not a "this link is broken" not-found. See this file's header
+    // comment (case (b)) and `InviteOnlyInvite` below.
+    return <InviteOnlyInvite />;
+  }
+
+  if (competitionState.status === "error") {
     return <GenericErrorInvite />;
   }
 
@@ -137,6 +187,23 @@ function SignedInInviteContent({
     (competition.status === "active" &&
       isDayOneOfActiveCompetition(competition.startDate, competition.timeZone));
 
+  // PC-6 case (a): a private competition refuses everyone who doesn't carry
+  // invite provenance, which this legacy door never does — pre-empt the
+  // doomed join attempt rather than showing a Join button. Only checked
+  // within the window that would otherwise be joinable; outside it,
+  // `AlreadyStartedInvite`'s existing copy already covers the refusal
+  // without needing private-specific wording (mirrors
+  // `CompetitionDetail.tsx`'s `isPrivateLocked`).
+  if (stillJoinable && resolveCompetitionVisibility(competition.visibility) === "private") {
+    return (
+      <InviteOnlyInvite
+        status={competition.status}
+        startDate={competition.startDate}
+        timeZone={competition.timeZone}
+      />
+    );
+  }
+
   if (!stillJoinable) {
     return (
       <AlreadyStartedInvite
@@ -164,6 +231,7 @@ function InviteStatusCard({
   status,
   startDate,
   timeZone,
+  visibility,
 }: {
   title: string;
   body: string;
@@ -189,6 +257,12 @@ function InviteStatusCard({
    * Omitted wherever `status` is omitted. */
   startDate?: string | null;
   timeZone?: string | null;
+  /** PC-6 — only passed by `InviteOnlyInvite`, the one state on this page
+   * where visibility is actually the point. Every other call site omits
+   * this; per-state visibility surfacing for the non-private states
+   * (Join/already-member/already-started) is out of scope for this ticket
+   * — see `InviteOnlyInvite`'s own comment. */
+  visibility?: CompetitionVisibility;
 }) {
   return (
     <div
@@ -201,9 +275,12 @@ function InviteStatusCard({
       ) : (
         <LogoMark className="mx-auto h-10 w-10" />
       )}
-      {status !== undefined ? (
-        <div className="mt-4 flex justify-center">
-          <CompetitionStatusChip status={status} startDate={startDate} timeZone={timeZone} />
+      {status !== undefined || visibility !== undefined ? (
+        <div className="mt-4 flex flex-wrap justify-center gap-2">
+          {status !== undefined ? (
+            <CompetitionStatusChip status={status} startDate={startDate} timeZone={timeZone} />
+          ) : null}
+          {visibility !== undefined ? <CompetitionVisibilityChip visibility={visibility} /> : null}
         </div>
       ) : null}
       <h1 className="mt-4 text-2xl font-extrabold text-foreground">{title}</h1>
@@ -264,6 +341,65 @@ function GenericErrorInvite() {
       isError
       title="We couldn't load this invite"
       body="Something went wrong talking to ileadit. Try reloading the page."
+    >
+      <Link href="/" className={CTA_CLASSES}>
+        Back to ileadit
+      </Link>
+    </InviteStatusCard>
+  );
+}
+
+/**
+ * PC-6 — the shared "this legacy link leads to a private competition, and
+ * this door has no invite provenance to offer" dead end. Reached three ways
+ * (see this file's header comment): (a) proactively, competition known and
+ * private; (b) the doc read came back `permission-denied`, so nothing about
+ * the competition is actually known; (c) `joinCompetition` itself returned
+ * `competition-private`, from inside `JoinableInvite`.
+ *
+ * `status`/`startDate`/`timeZone` are only ever passed for (a) and (c) —
+ * case (b) renders with none of them (no status chip; the "Private" chip
+ * still renders, since that IS the one thing a permission-denied read on
+ * this document tells us). `live` is only passed by (c), the one path
+ * reached by a user action (clicking Join) on this same page with no
+ * route change to otherwise announce the new heading to a screen reader —
+ * same discipline as the join-success card above.
+ *
+ * Body copy is the exact string `competitionMembershipFailureMessage`
+ * already renders for a live `competition-private` join refusal
+ * (`competitionMembershipErrors.ts`) — reused via a synthetic failure value
+ * rather than hand-written again, so this sentence exists in exactly one
+ * place. Deliberately NOT the same wording as `CompetitionDetail.tsx`'s own
+ * `isPrivateLocked` explainer ("This is a private competition — you'll need
+ * an invite link to join. Ask whoever's running it to send you one.") —
+ * that duplication already existed before this ticket (two hand-written
+ * phrasings of the same idea); this file reuses the OTHER existing one
+ * rather than inventing a third.
+ */
+function InviteOnlyInvite({
+  status,
+  startDate,
+  timeZone,
+  live,
+}: {
+  status?: CompetitionDetailDoc["status"];
+  startDate?: string | null;
+  timeZone?: string | null;
+  live?: boolean;
+} = {}) {
+  const body = competitionMembershipFailureMessage(
+    { reason: "competition-private", code: null, message: "", cause: null },
+    "join",
+  );
+  return (
+    <InviteStatusCard
+      live={live}
+      status={status}
+      startDate={startDate ?? null}
+      timeZone={timeZone ?? null}
+      visibility="private"
+      title="This competition is invite-only"
+      body={body}
     >
       <Link href="/" className={CTA_CLASSES}>
         Back to ileadit
@@ -354,7 +490,12 @@ function JoinableInvite({
 }) {
   const [pending, setPending] = useState(false);
   const [joined, setJoined] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  // PC-6: keeps the raw failure (not just its rendered message), same
+  // reason `CompetitionDetail.tsx`'s `actionFailure` does — the
+  // `overlapping-competition` case needs to add a dashboard link, and
+  // `competition-private` needs to swap the whole card, neither of which is
+  // possible from a plain string.
+  const [failure, setFailure] = useState<CompetitionMembershipFailure | null>(null);
 
   if (joined) {
     return (
@@ -375,15 +516,38 @@ function JoinableInvite({
 
   async function handleJoin() {
     setPending(true);
-    setError(null);
+    setFailure(null);
     const outcome = await joinCompetition(competitionId);
     setPending(false);
     if (outcome.status === "success") {
       setJoined(true);
     } else {
-      setError(competitionMembershipFailureMessage(outcome.failure, "join"));
+      setFailure(outcome.failure);
     }
   }
+
+  // PC-6 case (c): a live `competition-private` refusal means the proactive
+  // lock in `SignedInInviteContent` either didn't fire (this doc's own
+  // `visibility` genuinely wasn't `"private"` on the last read, but the
+  // engine's own check disagrees) or raced ahead of a doc update. Either
+  // way there is no retry that can succeed — swap the whole card to the
+  // same invite-only dead end used for the proactive lock, rather than
+  // leaving a dead "Join" button on screen with an inline error under it.
+  if (failure?.reason === "competition-private") {
+    return (
+      <InviteOnlyInvite
+        live
+        status={competition.status}
+        startDate={competition.startDate}
+        timeZone={competition.timeZone}
+      />
+    );
+  }
+
+  // PC-9's "one active competition at a time" refusal is unrelated to
+  // privacy — same inline-alert-plus-dashboard-link treatment
+  // `CompetitionDetail.tsx` and `InviteCodeLanding.tsx` already give it.
+  const isOverlapFailure = failure?.reason === "overlapping-competition";
 
   return (
     <InviteStatusCard
@@ -401,10 +565,20 @@ function JoinableInvite({
       >
         {pending ? "Joining…" : "Join competition"}
       </button>
-      {error ? (
-        <p className="text-sm text-destructive" role="alert">
-          {error}
-        </p>
+      {failure ? (
+        <>
+          <p className="text-sm text-destructive" role="alert">
+            {competitionMembershipFailureMessage(failure, "join")}
+          </p>
+          {isOverlapFailure ? (
+            <Link
+              href="/dashboard"
+              className="text-sm font-semibold text-brand-navy underline-offset-2 hover:underline"
+            >
+              Go to your dashboard
+            </Link>
+          ) : null}
+        </>
       ) : null}
     </InviteStatusCard>
   );
