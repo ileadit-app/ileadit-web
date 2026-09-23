@@ -1,6 +1,7 @@
 import { getFunctions, type Functions } from "firebase/functions";
 import { getFirebaseApp } from "./firebase";
 import { getAppCheckClient } from "./appCheck";
+import { connectFunctionsEmulatorOnce, isEmulatorModeEnabled } from "./firebaseEmulators";
 
 /**
  * THE web portal's ONLY Cloud Functions client, and the ONLY file in this
@@ -24,15 +25,22 @@ let functionsInstance: Functions | null = null;
 
 export function getFunctionsClient(): Functions {
   if (!functionsInstance) {
-    // Touch App Check before the first callable is ever made from this
-    // client, so the App Check token header is attached from the very
-    // first call once a site key is configured (src/lib/appCheck.ts). A
-    // missing site key degrades to "no App Check token" rather than a
-    // crash - safe today because the engine's first deploy is unenforced
-    // (see appCheck.ts for the enforcement-day consequences of skipping
-    // this setup).
-    getAppCheckClient();
+    // PORTAL-EMU-1: App Check has no emulator equivalent and the local
+    // Functions emulator does not enforce it - skip entirely when the
+    // emulator switch is on (src/lib/firebaseEmulators.ts) rather than
+    // initializing a real reCAPTCHA/App Check client against a test build.
+    if (!isEmulatorModeEnabled()) {
+      // Touch App Check before the first callable is ever made from this
+      // client, so the App Check token header is attached from the very
+      // first call once a site key is configured (src/lib/appCheck.ts). A
+      // missing site key degrades to "no App Check token" rather than a
+      // crash - safe today because the engine's first deploy is unenforced
+      // (see appCheck.ts for the enforcement-day consequences of skipping
+      // this setup).
+      getAppCheckClient();
+    }
     functionsInstance = getFunctions(getFirebaseApp(), REGION);
+    connectFunctionsEmulatorOnce(functionsInstance);
   }
   return functionsInstance;
 }

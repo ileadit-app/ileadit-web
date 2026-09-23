@@ -6,6 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
+    "start:emulators": "echo Set NEXT_PUBLIC_USE_FIREBASE_EMULATORS=true and NEXT_PUBLIC_FIREBASE_EMULATOR_HOST (plus optional _AUTH_PORT/_FIRESTORE_PORT/_FUNCTIONS_PORT/_STORAGE_PORT overrides) in your shell or .env.local before running this - see .env.example and src/lib/firebaseEmulators.ts. TEST-ONLY, never in a real deploy. && next dev",
     "lint": "eslint",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"

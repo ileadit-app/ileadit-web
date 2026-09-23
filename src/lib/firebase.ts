@@ -2,6 +2,11 @@ import { initializeApp, getApps, type FirebaseApp } from "firebase/app";
 import { getAuth, type Auth } from "firebase/auth";
 import { getFirestore, type Firestore } from "firebase/firestore";
 import { getStorage, type FirebaseStorage } from "firebase/storage";
+import {
+  connectAuthEmulatorOnce,
+  connectFirestoreEmulatorOnce,
+  connectStorageEmulatorOnce,
+} from "./firebaseEmulators";
 
 // Firebase config for ileadit-app project.
 // Actual values must be added to .env.local — see .env.example.
@@ -76,6 +81,10 @@ export function getFirebaseApp(): FirebaseApp {
 export function getFirebaseAuth(): Auth {
   if (!authInstance) {
     authInstance = getAuth(getFirebaseApp());
+    // PORTAL-EMU-1: no-op unless NEXT_PUBLIC_USE_FIREBASE_EMULATORS==="true"
+    // — see src/lib/firebaseEmulators.ts. Production behaviour is
+    // byte-identical when the switch is off/unset.
+    connectAuthEmulatorOnce(authInstance);
   }
   return authInstance;
 }
@@ -83,6 +92,7 @@ export function getFirebaseAuth(): Auth {
 export function getFirebaseDb(): Firestore {
   if (!dbInstance) {
     dbInstance = getFirestore(getFirebaseApp());
+    connectFirestoreEmulatorOnce(dbInstance);
   }
   return dbInstance;
 }
@@ -103,6 +113,7 @@ export function getFirebaseStorage(): FirebaseStorage {
   }
   if (!storageInstance) {
     storageInstance = getStorage(getFirebaseApp());
+    connectStorageEmulatorOnce(storageInstance);
   }
   return storageInstance;
 }

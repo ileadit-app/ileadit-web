@@ -3,6 +3,7 @@ import { Plus_Jakarta_Sans, Fraunces } from "next/font/google";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import EngineBootstrap from "@/components/EngineBootstrap";
+import EmulatorBanner from "@/components/EmulatorBanner";
 import { AuthProvider } from "@/context/AuthContext";
 import "./globals.css";
 
@@ -56,6 +57,7 @@ export default function RootLayout({
         suppressHydrationWarning
       >
         <AuthProvider>
+          <EmulatorBanner />
           {/* Skip link (WCAG 2.2 AA, 2.4.1 Bypass Blocks) — first focusable
               element on every page. Visually hidden until it receives
               keyboard focus, so a sighted mouse user never sees it, but a
