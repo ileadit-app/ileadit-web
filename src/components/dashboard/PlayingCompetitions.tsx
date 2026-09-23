@@ -177,13 +177,29 @@ function StandingLine({ competition }: { competition: PlayingCompetitionSummary 
   );
 }
 
+/**
+ * PORTAL-NAV-1: the whole card is the link to `/competitions/{id}` (details,
+ * leaderboard, Leave competition) — before this fix these cards were plain
+ * `div`s with no way to actually get there from the Dashboard. One
+ * whole-card `<Link>`, no nested interactive elements inside it (the status/
+ * visibility chips are decorative text, not links/buttons), an explicit
+ * `aria-label` so the accessible name is always exactly "View {competition
+ * name}" rather than the concatenation of every chip/date/points text node,
+ * and the same light-background focus-ring convention as the rest of this
+ * codebase (`outline-brand-navy`, not `outline-brand-gold` — see the W9-A11Y
+ * focus-outline memory: the ring sits on the page background behind the
+ * card, not on the card's own fill).
+ */
 function PlayingCompetitionCard({ competition }: { competition: PlayingCompetitionSummary }) {
+  const name = competition.name ?? "Untitled competition";
   return (
-    <div className="flex h-full flex-col rounded-3xl border border-border bg-card p-5">
+    <Link
+      href={`/competitions/${competition.id}`}
+      aria-label={`View ${name}`}
+      className="flex h-full flex-col rounded-3xl border border-border bg-card p-5 transition-colors hover:border-brand-navy/40 hover:shadow-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-navy"
+    >
       <div className="flex items-start justify-between gap-2">
-        <h3 className="text-base font-bold text-foreground">
-          {competition.name ?? "Untitled competition"}
-        </h3>
+        <h3 className="text-base font-bold text-foreground">{name}</h3>
         <div className="flex flex-wrap items-center gap-1.5">
           <CompetitionStatusChip
             status={competition.status}
@@ -202,6 +218,6 @@ function PlayingCompetitionCard({ competition }: { competition: PlayingCompetiti
         <Medal className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
         <StandingLine competition={competition} />
       </div>
-    </div>
+    </Link>
   );
 }
