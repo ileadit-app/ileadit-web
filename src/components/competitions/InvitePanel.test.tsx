@@ -145,6 +145,31 @@ describe("InvitePanel — create", () => {
 
     expect(await screen.findByText(/20 active links/i)).toBeInTheDocument();
   });
+
+  it("MUT-PANEL-9: creating an invite with a BLANK label calls createInvite with no label key at all — regression test for the functions/invalid-argument production bug (commit 7f76770)", async () => {
+    // The bug: submitting the create-link form with the label field left
+    // empty used to call createInvite({ competitionId, label: undefined }).
+    // The Firebase callable serializer turns an `undefined` property into
+    // JSON `null`, and the engine's optional zod schema rejects `null` —
+    // only a genuinely MISSING key is accepted. This pins that the form
+    // never constructs a `label` key at all when the field is blank.
+    listInvitesMock.mockResolvedValueOnce({ status: "success", invites: [] });
+    listInvitesMock.mockResolvedValueOnce({ status: "success", invites: [ONE_INVITE] });
+    createInviteMock.mockResolvedValueOnce({
+      status: "success",
+      result: { code: "K7M4PQX2", displayCode: "K7M4-PQX2", url: ONE_INVITE.url },
+    });
+
+    render(<InvitePanel competitionId={COMPETITION_ID} visibility="public" />);
+    await screen.findByText(/no invite links yet/i);
+
+    fireEvent.click(screen.getByRole("button", { name: /create invite link/i }));
+
+    await waitFor(() => expect(createInviteMock).toHaveBeenCalledWith({ competitionId: COMPETITION_ID }));
+    const sentArgs = createInviteMock.mock.calls[0][0] as Record<string, unknown>;
+    expect("label" in sentArgs).toBe(false);
+    expect(await screen.findByText("K7M4-PQX2")).toBeInTheDocument();
+  });
 });
 
 describe("InvitePanel — revoke", () => {
