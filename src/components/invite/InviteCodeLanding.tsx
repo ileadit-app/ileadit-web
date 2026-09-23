@@ -401,12 +401,24 @@ function JoinInviteCode({
   const [joined, setJoined] = useState(false);
   const [failure, setFailure] = useState<AcceptInviteFailure | null>(null);
   const [dayNumber, setDayNumber] = useState<number | null>(preview.dayNumber);
+  // PORTAL-NAV-1 bug 2: `preview` is the snapshot fetched BEFORE this
+  // visitor joined, and `acceptInvite`'s own result carries no `playerCount`
+  // (see `AcceptInviteResult` in `src/lib/invites.ts`) — so without this,
+  // the "joined" confirmation card would keep showing the stale pre-join
+  // count (e.g. "0 players joined" immediately after becoming player #1).
+  // `postJoinPreview` holds a re-fetched, up-to-date preview once available;
+  // falls back to a local +1 if the refresh call itself fails or the invite
+  // became unavailable in the meantime (e.g. it was single-use) — this
+  // visitor is, by construction, exactly one NEW player either way, so a
+  // local +1 is never wrong even when the refresh can't be trusted.
+  const [postJoinPreview, setPostJoinPreview] = useState<InvitePreviewAvailable | null>(null);
 
   const showMidCompetitionNote = preview.status === "active" && preview.dayNumber !== null;
+  const displayPreview = postJoinPreview ?? preview;
 
   if (joined) {
     return (
-      <InvitePreviewCard preview={preview} code={code} live>
+      <InvitePreviewCard preview={displayPreview} code={code} live>
         <p className="text-sm text-muted-foreground">
           Welcome to {preview.competitionName ?? "the competition"} — good luck out there.
         </p>
@@ -423,6 +435,27 @@ function JoinInviteCode({
     );
   }
 
+  async function refreshPreviewAfterJoin() {
+    try {
+      const refreshed = await previewInvite(code);
+      if (refreshed.status === "success" && refreshed.result.available) {
+        setPostJoinPreview(refreshed.result);
+        return;
+      }
+    } catch (error) {
+      // `previewInvite` itself never rejects (it catches internally — see
+      // its own header comment) — kept as a defensive fallback in case that
+      // contract is ever violated, same discipline as `usePreviewInvite`
+      // above. Either way, fall through to the local +1 below rather than
+      // leaving the stale pre-join count on screen.
+      console.error("[InviteCodeLanding] post-join preview refresh threw unexpectedly", error);
+    }
+    setPostJoinPreview({
+      ...preview,
+      playerCount: preview.playerCount !== null ? preview.playerCount + 1 : null,
+    });
+  }
+
   async function handleJoin() {
     setPending(true);
     setFailure(null);
@@ -431,6 +464,7 @@ function JoinInviteCode({
     if (outcome.status === "success") {
       setDayNumber(outcome.result.dayNumber);
       setJoined(true);
+      void refreshPreviewAfterJoin();
     } else {
       setFailure(outcome.failure);
     }

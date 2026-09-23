@@ -156,13 +156,23 @@ function formatDateRange(startDate: string | null, endDate: string | null): stri
   return `${format(startDate)} – ${format(endDate)}`;
 }
 
+/**
+ * PORTAL-NAV-1: the whole card is the link to `/competitions/{id}` (details,
+ * leaderboard, edit/manage) — same fix and same reasoning as
+ * `PlayingCompetitions.tsx`'s `PlayingCompetitionCard`, applied here too so
+ * BOTH dashboard sections are reachable. See that component's comment for
+ * the accessible-name and focus-ring reasoning; kept identical on purpose.
+ */
 function CompetitionCard({ competition }: { competition: CreatedCompetitionSummary }) {
+  const name = competition.name ?? "Untitled competition";
   return (
-    <div className="flex h-full flex-col rounded-3xl border border-border bg-card p-5">
+    <Link
+      href={`/competitions/${competition.id}`}
+      aria-label={`View ${name}`}
+      className="flex h-full flex-col rounded-3xl border border-border bg-card p-5 transition-colors hover:border-brand-navy/40 hover:shadow-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-navy"
+    >
       <div className="flex items-start justify-between gap-2">
-        <h3 className="text-base font-bold text-foreground">
-          {competition.name ?? "Untitled competition"}
-        </h3>
+        <h3 className="text-base font-bold text-foreground">{name}</h3>
         <div className="flex flex-wrap items-center gap-1.5">
           <CompetitionStatusChip
             status={competition.status}
@@ -183,6 +193,6 @@ function CompetitionCard({ competition }: { competition: CreatedCompetitionSumma
           ? "Player count pending"
           : `${competition.playerCount} ${competition.playerCount === 1 ? "player" : "players"}`}
       </div>
-    </div>
+    </Link>
   );
 }
