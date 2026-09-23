@@ -19,7 +19,10 @@ import {
 } from "@/lib/competitionDetail";
 import { joinCompetition } from "@/lib/joinCompetition";
 import { leaveCompetition } from "@/lib/leaveCompetition";
-import { competitionMembershipFailureMessage } from "@/lib/competitionMembershipErrors";
+import {
+  competitionMembershipFailureMessage,
+  type CompetitionMembershipFailure,
+} from "@/lib/competitionMembershipErrors";
 import { formatShortDate, isDayOneOfActiveCompetition } from "@/lib/competitionDates";
 import { CompetitionLeaderboard } from "./CompetitionLeaderboard";
 import { TodayCard } from "./TodayCard";
@@ -153,6 +156,7 @@ function CompetitionDetailContent({ competitionId, uid }: { competitionId: strin
             timeZone={competition.timeZone}
             visibility={resolveCompetitionVisibility(competition.visibility)}
             membershipState={membershipState}
+            isOrganiser={organiserCapability === "organiser"}
           />
         ) : null}
 
@@ -359,6 +363,7 @@ function MembershipCta({
   timeZone,
   visibility,
   membershipState,
+  isOrganiser,
 }: {
   competitionId: string;
   competitionName: string | null;
@@ -372,9 +377,26 @@ function MembershipCta({
    * mid-session change. */
   visibility: CompetitionVisibility;
   membershipState: ReturnType<typeof useOwnMembership>;
+  /** PC-9 review item 1 — `useIsCompetitionOrganiser` resolved to
+   * `"organiser"` (creator or admin claim) for the signed-in viewer. An
+   * organiser who isn't personally a member of their OWN private
+   * competition still hits the same locked branch below (whether creators
+   * are auto-joined needs confirming with the engine contract — see the
+   * review), but they must never be told to go ask "whoever's running it"
+   * for a link, since that's them — they're pointed at the invite panel
+   * (`InvitePanel`, rendered further down this page for any organiser)
+   * instead. */
+  isOrganiser: boolean;
 }) {
   const [pending, setPending] = useState<"join" | "leave" | null>(null);
-  const [actionError, setActionError] = useState<string | null>(null);
+  // PC-9 review item 8: keeps the raw failure (not just its rendered
+  // message) so the "overlapping-competition" case can also render a
+  // dashboard link here, matching `InviteCodeLanding.tsx`'s existing
+  // "Go to your dashboard" treatment for the same reason.
+  const [actionFailure, setActionFailure] = useState<{
+    failure: CompetitionMembershipFailure;
+    operation: "join" | "leave";
+  } | null>(null);
   // WEB-4 item 3: gates the styled destructive confirmation for leaving an
   // ACTIVE competition. Leaving a SCHEDULED one keeps the plain
   // `window.confirm` below — nothing is lost by leaving a competition that
@@ -421,13 +443,13 @@ function MembershipCta({
 
   async function handleJoin() {
     setPending("join");
-    setActionError(null);
+    setActionFailure(null);
     const outcome = await joinCompetition(competitionId);
     setPending(null);
     if (outcome.status === "success") {
       setOptimisticMember(true);
     } else {
-      setActionError(competitionMembershipFailureMessage(outcome.failure, "join"));
+      setActionFailure({ failure: outcome.failure, operation: "join" });
     }
   }
 
@@ -436,13 +458,13 @@ function MembershipCta({
   // the styled `ConfirmDialog` for an active one).
   async function performLeave() {
     setPending("leave");
-    setActionError(null);
+    setActionFailure(null);
     const outcome = await leaveCompetition(competitionId);
     setPending(null);
     if (outcome.status === "success") {
       setOptimisticMember(false);
     } else {
-      setActionError(competitionMembershipFailureMessage(outcome.failure, "leave"));
+      setActionFailure({ failure: outcome.failure, operation: "leave" });
     }
   }
 
@@ -451,12 +473,21 @@ function MembershipCta({
   // player's points in this competition and blocks re-joining it (LEAVE-1)
   // — that needs the styled, destructive `ConfirmDialog` instead, which a
   // native `window.confirm` cannot carry (no way to colour its buttons).
+  //
+  // PC-9 review item 7: "you can rejoin any time before it starts" is only
+  // true for a PUBLIC competition — a private one requires a fresh invite
+  // link to rejoin (there's no "just come back to the page" path once
+  // you've left), same as any other private-competition join.
   function handleLeaveClick() {
     if (status === "active") {
       setConfirmingActiveLeave(true);
       return;
     }
-    if (!window.confirm("Leave this competition? You can rejoin any time before it starts.")) {
+    const confirmCopy =
+      visibility === "private"
+        ? "Leave this competition? It's private, so you'll need a valid invite link to rejoin."
+        : "Leave this competition? You can rejoin any time before it starts.";
+    if (!window.confirm(confirmCopy)) {
       return;
     }
     void performLeave();
@@ -473,8 +504,21 @@ function MembershipCta({
     body = (
       <div className="flex items-center justify-center gap-2 rounded-2xl bg-muted p-4 text-center text-sm text-muted-foreground">
         <Lock className="size-4 shrink-0" aria-hidden="true" />
-        This is a private competition — you&apos;ll need an invite link to join. Ask whoever&apos;s
-        running it to send you one.
+        {isOrganiser ? (
+          // PC-9 review item 1: the organiser IS "whoever's running it" —
+          // telling them to go ask themselves for a link is nonsensical.
+          // Point them at the invite panel this same page renders further
+          // down instead.
+          <span>
+            This is a private competition. As the organiser, use one of your invite links below
+            to join it yourself.
+          </span>
+        ) : (
+          <span>
+            This is a private competition — you&apos;ll need an invite link to join. Ask
+            whoever&apos;s running it to send you one.
+          </span>
+        )}
       </div>
     );
   } else if (status === "scheduled") {
@@ -566,13 +610,32 @@ function MembershipCta({
     );
   }
 
+  // PC-9 review item 8: the invite landing already points an overlap
+  // refusal at the visitor's dashboard (`InviteCodeLanding.tsx`'s "Go to
+  // your dashboard" link) — the fix for that refusal is the same here
+  // (leave whichever OTHER competition is already active), so this page
+  // gets the identical link.
+  const isOverlapFailure = actionFailure?.failure.reason === "overlapping-competition";
+
   return (
     <div className="mt-6">
       {body}
-      {actionError ? (
-        <p className="mt-2 text-center text-sm text-destructive" role="alert">
-          {actionError}
-        </p>
+      {actionFailure ? (
+        <>
+          <p className="mt-2 text-center text-sm text-destructive" role="alert">
+            {competitionMembershipFailureMessage(actionFailure.failure, actionFailure.operation)}
+          </p>
+          {isOverlapFailure ? (
+            <p className="mt-1 text-center text-sm">
+              <Link
+                href="/dashboard"
+                className="font-semibold text-brand-navy underline-offset-2 hover:underline"
+              >
+                Go to your dashboard
+              </Link>
+            </p>
+          ) : null}
+        </>
       ) : null}
       <ConfirmDialog
         open={confirmingActiveLeave}

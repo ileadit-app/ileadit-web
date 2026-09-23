@@ -193,7 +193,7 @@ describe("acceptInvite", () => {
         expect(outcome.failure.failure.reason).toBe("competition-private");
       }
       expect(acceptInviteFailureMessage(outcome.failure)).toBe(
-        "This is a private competition — you'll need an invite link to join it.",
+        "This invite can't be used to join — ask the organiser for a new invite link.",
       );
     }
   });

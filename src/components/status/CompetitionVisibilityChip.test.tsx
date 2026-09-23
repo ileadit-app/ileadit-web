@@ -38,15 +38,22 @@ describe("CompetitionVisibilityChip", () => {
 
   it("PC-9-CHIP-4: renders the Private label with an opaque navy fill, distinct from the Public chip's outline treatment", () => {
     render(<CompetitionVisibilityChip visibility="private" />);
-    const chip = screen.getByText("Private").closest("span");
+    const chip = screen.getByText(/private/i).closest("span");
     expect(chip?.className).toContain("bg-brand-navy");
     expect(chip?.className).toContain("text-on-navy-foreground");
   });
 
   it("PC-9-CHIP-5: Public and Private render visibly different label text, never the same word", () => {
     const { rerender } = render(<CompetitionVisibilityChip visibility="public" />);
-    expect(screen.queryByText("Private")).not.toBeInTheDocument();
+    expect(screen.queryByText(/private/i)).not.toBeInTheDocument();
     rerender(<CompetitionVisibilityChip visibility="private" />);
     expect(screen.queryByText("Public")).not.toBeInTheDocument();
+  });
+
+  it("PC-9-CHIP-6: the Private chip's VISIBLE text says 'invite only', not only a title tooltip (review item 2)", () => {
+    render(<CompetitionVisibilityChip visibility="private" />);
+    // The accessible name comes from plain text content — asserting the
+    // visible text itself is enough to prove it isn't tooltip-only.
+    expect(screen.getByText("Private · invite only")).toBeInTheDocument();
   });
 });

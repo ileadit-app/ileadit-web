@@ -365,6 +365,20 @@ export async function acceptInvite(code: string): Promise<AcceptInviteOutcome> {
 
 export function acceptInviteFailureMessage(failure: AcceptInviteFailure): string {
   if (failure.kind === "join-refused") {
+    // PC-9 review item 3: `competitionMembershipFailureMessage`'s generic
+    // "competition-private" copy ("you'll need an invite link to join it")
+    // is written for `joinCompetition`'s OTHER caller — a non-member who
+    // reached a private competition's own page WITHOUT an invite. Here, on
+    // `/invite/[code]`, the visitor is by definition already holding an
+    // invite link; telling them they need one makes no sense. A
+    // `competition-private` refusal from `acceptInvite` means the specific
+    // invite they used no longer grants access (its competition has since
+    // gone private-and-invite-required in a way this particular link
+    // doesn't cover, or the link itself doesn't carry an active grant) — so
+    // the fix is a NEW link, not "find an invite link" as if they had none.
+    if (failure.failure.reason === "competition-private") {
+      return "This invite can't be used to join — ask the organiser for a new invite link.";
+    }
     return competitionMembershipFailureMessage(failure.failure, "join");
   }
   return "This invite isn't available any more — it may have been revoked, expired, run out of uses, or point to a competition that's no longer open to new joins.";

@@ -49,7 +49,12 @@ const VISIBILITY_CONFIG: Record<
     className: "border border-border bg-card text-muted-foreground",
   },
   private: {
-    label: "Private",
+    // PC-9 review item 2: "invite only" must be part of the VISIBLE label,
+    // not only the `title` tooltip below — a tooltip is invisible to
+    // keyboard, touch and most screen-reader users. The accessible name
+    // stays identical to the visible text (it's plain text content, not a
+    // separate `aria-label`), so there's nothing to keep in sync.
+    label: "Private · invite only",
     icon: Lock,
     // Solid opaque navy fill, white text — ~12.6:1 contrast. Deliberately
     // NOT coral/destructive (private is a deliberate choice, not a warning)

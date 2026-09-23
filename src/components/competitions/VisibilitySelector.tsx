@@ -102,7 +102,7 @@ function VisibilityCard({
   return (
     <label
       htmlFor={inputId}
-      className={`flex items-start gap-3 rounded-2xl border-2 p-4 sm:p-5 transition-colors ${
+      className={`flex items-start gap-3 rounded-2xl border-2 p-4 sm:p-5 transition-colors focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-brand-navy ${
         checked ? "border-brand-navy bg-[rgba(25,47,95,0.04)]" : "border-border bg-card"
       } ${disabled ? "cursor-not-allowed opacity-60" : "cursor-pointer hover:border-brand-navy/40"}`}
     >
@@ -113,7 +113,13 @@ function VisibilityCard({
         checked={checked}
         onChange={onSelect}
         disabled={disabled}
-        className="mt-0.5 size-5 shrink-0 accent-primary"
+        // WCAG 1.4.11 non-text contrast: the browser's native checked-radio
+        // dot uses `accent-color`. `accent-primary` (gold, #F8A92F) on the
+        // card's white/near-white fill measures ~1.9:1 — below the 3:1 floor
+        // for a UI-state indicator. `accent-brand-navy` (#192F5F) measures
+        // ~12.6:1. The navy 2px card border already marks selection too, but
+        // the dot itself must independently pass on its own.
+        className="mt-0.5 size-5 shrink-0 accent-brand-navy"
       />
       <span className="flex items-start gap-3">
         <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-full bg-brand-gold/15 text-brand-navy">

@@ -51,6 +51,24 @@ vi.mock("@/lib/leaveCompetition", () => ({ leaveCompetition: vi.fn() }));
 // more hooks this file has no other reason to touch.
 vi.mock("./TodayCard", () => ({ TodayCard: () => null }));
 
+// PC-9 review item 1: an organiser (creatorId === uid) mounts `InvitePanel`
+// too, same as `InvitePanel.test.tsx`'s own "CompetitionDetail — InvitePanel
+// is organiser-gated" block — `listInvites` is stubbed to a never-resolving
+// promise since these tests only need the panel to mount without crashing,
+// not to exercise its own list/create/revoke behaviour (that's
+// `InvitePanel.test.tsx`'s job).
+const listInvitesMock = vi.fn();
+vi.mock("@/lib/invites", async () => {
+  const actual = await vi.importActual<typeof import("@/lib/invites")>("@/lib/invites");
+  return {
+    ...actual,
+    listInvites: (...args: unknown[]) => listInvitesMock(...args),
+  };
+});
+vi.mock("@/lib/qrCode", () => ({
+  useQrDataUrl: () => ({ status: "loading" }),
+}));
+
 const COMPETITION_ID = "comp-123";
 
 beforeEach(() => {
@@ -58,6 +76,8 @@ beforeEach(() => {
   useCompetitionDetailMock.mockReset();
   useOwnMembershipMock.mockReset();
   useCompetitionPlayersMock.mockReset();
+  listInvitesMock.mockReset();
+  listInvitesMock.mockReturnValue(new Promise(() => {})); // never resolves — see the mock's own comment above
 
   useUserMock.mockReturnValue({ user: { uid: "u1" } });
   useCompetitionDetailMock.mockReturnValue({
@@ -446,6 +466,155 @@ describe("CompetitionDetail — PC-9 private competition CTA and join refusals",
       "You're already in another active competition, and ileadit only allows one at a time. Leave that one first if you want to switch.",
     );
     await waitFor(() => expect(joinCompetition).toHaveBeenCalledWith(COMPETITION_ID));
+    // PC-9 review item 8: the invite landing already gets a "Go to your
+    // dashboard" link for this exact refusal — the detail page's own Join
+    // button must match it.
+    expect(screen.getByRole("link", { name: /go to your dashboard/i })).toBeInTheDocument();
+  });
+
+  it("PC-9-DETAIL-JOIN-PRIVATE-ERROR-NO-DASHBOARD-LINK: a competition-private refusal does NOT get the dashboard link (that's overlap-only)", async () => {
+    vi.mocked(joinCompetition).mockResolvedValue({
+      status: "failure",
+      failure: {
+        reason: "competition-private",
+        code: "functions/permission-denied",
+        message: "not authorized",
+        cause: null,
+      },
+    });
+    useCompetitionDetailMock.mockReturnValue({
+      status: "success",
+      competition: {
+        id: COMPETITION_ID,
+        name: "March Madness Steps",
+        description: null,
+        imageUrl: null,
+        backgroundImageUrl: null,
+        status: "scheduled",
+        startDate: "2026-10-01",
+        endDate: "2026-10-08",
+        durationDays: 7,
+        playerCount: 12,
+        winnerIds: [],
+        timeZone: null,
+        visibility: null,
+      },
+    });
+
+    render(<CompetitionDetail competitionId={COMPETITION_ID} />);
+    fireEvent.click(screen.getByRole("button", { name: /join competition/i }));
+
+    await screen.findByRole("alert");
+    expect(screen.queryByRole("link", { name: /go to your dashboard/i })).not.toBeInTheDocument();
+  });
+
+  it("PC-9-DETAIL-LOCKED-ACTIVE-DAYONE: an active, private competition on its own first day shows the locked explainer, not a Join button, for a non-member", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-09-21T10:00:00Z"));
+    try {
+      useCompetitionDetailMock.mockReturnValue({
+        status: "success",
+        competition: {
+          id: COMPETITION_ID,
+          name: "March Madness Steps",
+          description: null,
+          imageUrl: null,
+          backgroundImageUrl: null,
+          status: "active",
+          startDate: "2026-09-21",
+          endDate: "2026-09-28",
+          durationDays: 7,
+          playerCount: 12,
+          winnerIds: [],
+          timeZone: "Europe/London",
+          visibility: "private",
+        },
+      });
+
+      render(<CompetitionDetail competitionId={COMPETITION_ID} />);
+
+      expect(screen.getByText(/you'll need an invite link to join/i)).toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: /join competition/i })).not.toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("PC-9-DETAIL-LOCKED-ORGANISER: the competition's own creator sees organiser-framed copy pointing at the invite panel, never the outsider 'ask whoever's running it' copy", async () => {
+    useCompetitionDetailMock.mockReturnValue({
+      status: "success",
+      competition: {
+        id: COMPETITION_ID,
+        name: "March Madness Steps",
+        description: null,
+        imageUrl: null,
+        backgroundImageUrl: null,
+        status: "scheduled",
+        startDate: "2026-10-01",
+        endDate: "2026-10-08",
+        durationDays: 7,
+        playerCount: 12,
+        winnerIds: [],
+        timeZone: null,
+        visibility: "private",
+        creatorId: "u1",
+      },
+    });
+
+    render(<CompetitionDetail competitionId={COMPETITION_ID} />);
+
+    expect(
+      await screen.findByText(/as the organiser, use one of your invite links below/i),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/ask whoever's running it to send you one/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /join competition/i })).not.toBeInTheDocument();
+    // The organiser also gets the invite panel itself, on the same render.
+    expect(await screen.findByRole("heading", { name: /invite people/i })).toBeInTheDocument();
+  });
+
+  it("PC-9-DETAIL-LEAVE-PRIVATE-CONFIRM-COPY: leaving a SCHEDULED private competition warns that rejoining needs a valid invite link, not 'any time before it starts'", () => {
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(false);
+    useCompetitionDetailMock.mockReturnValue({
+      status: "success",
+      competition: {
+        id: COMPETITION_ID,
+        name: "March Madness Steps",
+        description: null,
+        imageUrl: null,
+        backgroundImageUrl: null,
+        status: "scheduled",
+        startDate: "2026-10-01",
+        endDate: "2026-10-08",
+        durationDays: 7,
+        playerCount: 12,
+        winnerIds: [],
+        timeZone: null,
+        visibility: "private",
+      },
+    });
+    useOwnMembershipMock.mockReturnValue({
+      status: "member",
+      player: {
+        displayName: "Test Player",
+        avatarIndex: 0,
+        points: 0,
+        todayPoints: 0,
+        livesRemaining: 3,
+        eliminated: false,
+        frozenRank: null,
+      },
+    });
+
+    render(<CompetitionDetail competitionId={COMPETITION_ID} />);
+    fireEvent.click(screen.getByRole("button", { name: /leave competition/i }));
+
+    expect(confirmSpy).toHaveBeenCalledWith(
+      "Leave this competition? It's private, so you'll need a valid invite link to rejoin.",
+    );
+    expect(confirmSpy).not.toHaveBeenCalledWith(
+      expect.stringContaining("You can rejoin any time before it starts"),
+    );
+    confirmSpy.mockRestore();
   });
 });
 

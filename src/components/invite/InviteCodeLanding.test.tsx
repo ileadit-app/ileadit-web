@@ -213,7 +213,7 @@ describe("InviteCodeLanding — PC-9 visibility chip (optional on the preview, u
 
     await screen.findByText("Step Champs");
     expect(screen.queryByText(/^public$/i)).not.toBeInTheDocument();
-    expect(screen.queryByText(/^private$/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/private · invite only/i)).not.toBeInTheDocument();
   });
 
   it("PC-9-INV-2: visibility:\"private\" on the preview result renders the Private chip", async () => {
@@ -226,7 +226,7 @@ describe("InviteCodeLanding — PC-9 visibility chip (optional on the preview, u
     render(<InviteCodeLanding code={CODE} />);
 
     await screen.findByText("Step Champs");
-    expect(screen.getByText(/^private$/i)).toBeInTheDocument();
+    expect(screen.getByText(/private · invite only/i)).toBeInTheDocument();
   });
 
   it("PC-9-INV-3: visibility:\"public\" on the preview result renders the Public chip", async () => {
@@ -275,11 +275,13 @@ describe("InviteCodeLanding — PC-9 visibility chip (optional on the preview, u
 /**
  * PC-9 contract corrections (b)/(c): `acceptInvite`'s join-refused failure
  * copy for the two new engine reasons, on the invite-landing surface. Same
- * `toCompetitionMembershipFailure`/`competitionMembershipFailureMessage`
- * wiring as `CompetitionDetail.tsx`'s detail-page CTA
- * (`CompetitionDetail.test.tsx`'s PC-9-DETAIL-JOIN-* pair) — this file pins
- * the SAME two messages arrive via the `acceptInvite`/invite-landing path
- * too, plus the overlap-only "Go to your dashboard" link.
+ * `toCompetitionMembershipFailure` mapping as `CompetitionDetail.tsx`'s
+ * detail-page CTA (`CompetitionDetail.test.tsx`'s PC-9-DETAIL-JOIN-* pair),
+ * plus the overlap-only "Go to your dashboard" link. The `competition-private`
+ * COPY deliberately diverges from the detail page (review item 3,
+ * `acceptInviteFailureMessage` in `invites.ts`): a visitor here is already
+ * holding an invite link, so the detail page's generic "you'll need an
+ * invite link" would be nonsensical — this surface gets its own wording.
  */
 describe("InviteCodeLanding — PC-9 competition-private / overlapping-competition join refusals", () => {
   beforeEach(() => {
@@ -310,7 +312,7 @@ describe("InviteCodeLanding — PC-9 competition-private / overlapping-competiti
 
     const alert = await screen.findByRole("alert");
     expect(alert).toHaveTextContent(
-      "This is a private competition — you'll need an invite link to join it.",
+      "This invite can't be used to join — ask the organiser for a new invite link.",
     );
     expect(screen.queryByRole("link", { name: /go to your dashboard/i })).not.toBeInTheDocument();
   });
