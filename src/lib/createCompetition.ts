@@ -1,5 +1,6 @@
 import { httpsCallable } from "firebase/functions";
 import { getFunctionsClient } from "./functions";
+import { compactPayload } from "./callablePayload";
 import { toCreateCompetitionFailure, type CreateCompetitionFailure } from "./createCompetitionErrors";
 
 /**
@@ -71,19 +72,28 @@ export type CreateCompetitionOutcome =
 export async function createCompetition(input: CreateCompetitionInput): Promise<CreateCompetitionOutcome> {
   const callable = httpsCallable(getFunctionsClient(), "createCompetition");
 
-  const requestBody = {
+  // compactPayload (see callablePayload.ts) strips any key whose value is
+  // `undefined` before this reaches `httpsCallable` — an `undefined`-valued
+  // key serializes to JSON `null` on the wire, which the engine's
+  // `.optional()` zod schema rejects (it only accepts the key being
+  // MISSING). The `|| undefined` normalisation below preserves this
+  // function's existing behaviour of treating an empty string the same as
+  // "not provided" for these four fields, while routing the actual
+  // omission through the one shared helper instead of a local
+  // conditional-spread per field.
+  const requestBody = compactPayload({
     name: input.name,
     // See this file's header comment, point 1 — ISO string, unverified.
     startTime: input.startTime.toISOString(),
     durationDays: input.durationDays,
-    ...(input.timeZone ? { timeZone: input.timeZone } : {}),
-    ...(input.description ? { description: input.description } : {}),
-    ...(input.imageUrl ? { imageUrl: input.imageUrl } : {}),
-    ...(input.backgroundImageUrl ? { backgroundImageUrl: input.backgroundImageUrl } : {}),
+    timeZone: input.timeZone || undefined,
+    description: input.description || undefined,
+    imageUrl: input.imageUrl || undefined,
+    backgroundImageUrl: input.backgroundImageUrl || undefined,
     // Deliberately absent: startDate, endDate, status, playerCount,
     // configVersion, finalisedAt, winnerIds — all engine-derived, per this
     // file's header comment. Do not add any of them here.
-  };
+  });
 
   try {
     const result = await callable(requestBody);

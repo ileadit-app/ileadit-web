@@ -109,10 +109,20 @@ function CreateInviteForm({
     event.preventDefault();
     setPending(true);
     setError(null);
-    const outcome = await createInvite({
-      competitionId,
-      label: label.trim().length > 0 ? label.trim() : undefined,
-    });
+    const trimmedLabel = label.trim();
+    // Omit the `label` key entirely when blank, rather than sending
+    // `label: undefined` — the Firebase callable serializer turns an
+    // `undefined` property value into JSON `null`, which the engine's
+    // `label: z.string().max(40).optional()` schema rejects with
+    // `functions/invalid-argument` (missing key is fine; `null` is not).
+    // This was a real bug, live on production: creating a link WITHOUT a
+    // label failed outright. `createInvite` itself also runs every request
+    // through `compactPayload` as a second line of defense — see
+    // `callablePayload.ts` — but building the request without the key here
+    // in the first place is the clearest fix at the call site itself.
+    const outcome = await createInvite(
+      trimmedLabel.length > 0 ? { competitionId, label: trimmedLabel } : { competitionId },
+    );
     setPending(false);
     if (outcome.status === "success") {
       setLabel("");
