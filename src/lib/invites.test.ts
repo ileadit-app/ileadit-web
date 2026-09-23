@@ -215,7 +215,7 @@ describe("acceptInvite", () => {
         expect(outcome.failure.failure.reason).toBe("overlapping-competition");
       }
       expect(acceptInviteFailureMessage(outcome.failure)).toBe(
-        "You're already in another active competition, and ileadit only allows one at a time. Leave that one first if you want to switch.",
+        "You're already in a competition that runs at the same time. You can be in one competition at a time. Leave that one first if you want to switch.",
       );
     }
   });

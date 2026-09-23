@@ -463,7 +463,7 @@ describe("CompetitionDetail — PC-9 private competition CTA and join refusals",
 
     const alert = await screen.findByRole("alert");
     expect(alert).toHaveTextContent(
-      "You're already in another active competition, and ileadit only allows one at a time. Leave that one first if you want to switch.",
+      "You're already in a competition that runs at the same time. You can be in one competition at a time. Leave that one first if you want to switch.",
     );
     await waitFor(() => expect(joinCompetition).toHaveBeenCalledWith(COMPETITION_ID));
     // PC-9 review item 8: the invite landing already gets a "Go to your
