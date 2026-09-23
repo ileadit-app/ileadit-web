@@ -340,7 +340,7 @@ describe("InviteCodeLanding — PC-9 competition-private / overlapping-competiti
 
     const alert = await screen.findByRole("alert");
     expect(alert).toHaveTextContent(
-      "You're already in another active competition, and ileadit only allows one at a time. Leave that one first if you want to switch.",
+      "You're already in a competition that runs at the same time. You can be in one competition at a time. Leave that one first if you want to switch.",
     );
     expect(screen.getByRole("link", { name: /go to your dashboard/i })).toHaveAttribute(
       "href",

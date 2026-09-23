@@ -71,7 +71,7 @@ describe("toCompetitionMembershipFailure — PC-9 competition-private / overlapp
     );
     expect(failure.reason).toBe("overlapping-competition");
     expect(competitionMembershipFailureMessage(failure, "join")).toBe(
-      "You're already in another active competition, and ileadit only allows one at a time. Leave that one first if you want to switch.",
+      "You're already in a competition that runs at the same time. You can be in one competition at a time. Leave that one first if you want to switch.",
     );
   });
 

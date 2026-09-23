@@ -177,8 +177,8 @@ export function competitionMembershipFailureMessage(
       return "This is a private competition — you'll need an invite link to join it.";
     case "overlapping-competition":
       return operation === "join"
-        ? "You're already in another active competition, and ileadit only allows one at a time. Leave that one first if you want to switch."
-        : "You're already in another active competition.";
+        ? "You're already in a competition that runs at the same time. You can be in one competition at a time. Leave that one first if you want to switch."
+        : "You're already in a competition that runs at the same time.";
     default:
       return `Couldn't ${operation === "join" ? "join" : "leave"} that competition — try again, or email hello@ileadit.co.uk if it keeps happening.`;
   }
