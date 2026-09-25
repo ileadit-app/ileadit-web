@@ -46,8 +46,7 @@ export default function Privacy() {
             heading="2. Account and profile data we collect"
             mustCover={[
               "Display name, avatar, profile photo, and city (shown to other players)",
-              "First name, surname, email address, date of birth, gender, and country (kept private, not shown to other players)",
-              "Why date of birth, gender, and country are collected: used for the 'Best At' weekly leaderboard feature (e.g. \"Best 42-year-old in London\"), and must be described as optional at signup where the product allows it",
+              "First name, surname, email address, and country (kept private, not shown to other players)",
               "That email is used for account identification and essential service communication only",
             ]}
             placeholder="Placeholder — description of account/profile fields collected at signup and during use of the app."
@@ -118,7 +117,7 @@ export default function Privacy() {
             mustCover={[
               "Right to access, correct, export, and delete your data",
               "A direct link to the account deletion flow (see /account-deletion)",
-              "Right to object to or restrict certain processing, and how to withdraw consent for optional data (date of birth, gender, country)",
+              "Right to object to or restrict certain processing, and how to withdraw consent for optional data (country)",
               "Right to complain to a supervisory authority (e.g. the ICO in the UK) if unsatisfied with the response",
             ]}
             placeholder="Placeholder — GDPR/UK GDPR rights section with the actual process and response time commitments for each right."

@@ -30,8 +30,6 @@ export interface PublicProfile {
 export interface PrivateProfile {
   firstName: string | null;
   surname: string | null;
-  dateOfBirth: string | null;
-  gender: string | null;
   country: string | null;
   notificationsEnabled: boolean | null;
   profileCompleted: boolean | null;
@@ -130,8 +128,6 @@ export function useAccountProfile(uid: string | null): AccountProfileState {
         privateData = {
           firstName: typeof d.firstName === "string" ? d.firstName : null,
           surname: typeof d.surname === "string" ? d.surname : null,
-          dateOfBirth: typeof d.dateOfBirth === "string" ? d.dateOfBirth : null,
-          gender: typeof d.gender === "string" ? d.gender : null,
           country: typeof d.country === "string" ? d.country : null,
           notificationsEnabled:
             typeof d.notificationsEnabled === "boolean" ? d.notificationsEnabled : null,
@@ -203,7 +199,11 @@ export async function updatePublicProfile(
 }
 
 /**
- * Updates the six owner-editable fields on `users/{uid}/private/profile`.
+ * Updates the owner-editable fields on `users/{uid}/private/profile` that
+ * the portal offers: firstName, surname, country, notificationsEnabled.
+ * Date of birth and gender are deliberately NOT accepted, read or written,
+ * ever -- not even as null/empty (F-DOB-1, Paul 25 Sep 2026: iLeadIt does
+ * not collect or retain them as profile data).
  * `profileCompleted` is deliberately never written from here even though
  * the rules permit it (firestore.rules:132-135) — it almost certainly drives
  * an onboarding state machine this ticket hasn't read (mobile app and/or a
@@ -217,8 +217,6 @@ export async function updatePrivateProfile(
   fields: {
     firstName?: string;
     surname?: string;
-    dateOfBirth?: string;
-    gender?: string;
     country?: string;
     notificationsEnabled?: boolean;
   },
@@ -226,8 +224,6 @@ export async function updatePrivateProfile(
   const updates: Record<string, string | boolean> = {};
   if (fields.firstName !== undefined) updates.firstName = fields.firstName;
   if (fields.surname !== undefined) updates.surname = fields.surname;
-  if (fields.dateOfBirth !== undefined) updates.dateOfBirth = fields.dateOfBirth;
-  if (fields.gender !== undefined) updates.gender = fields.gender;
   if (fields.country !== undefined) updates.country = fields.country;
   if (fields.notificationsEnabled !== undefined)
     updates.notificationsEnabled = fields.notificationsEnabled;
