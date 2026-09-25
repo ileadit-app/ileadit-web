@@ -82,6 +82,22 @@ describe("/account-deletion — W3-DELETION-AUDIT fixes", () => {
     expect(screen.getByText(/display name, avatar, profile photo, city/i)).toBeInTheDocument();
   });
 
+  // FDOB1-WEB M-W1: ileadit does not collect or retain date of birth or
+  // gender (product rule ILR-30, Procedure A confirmed 0 production
+  // accounts held either field as of 25 Sep 2026). The "what gets deleted"
+  // personal-details bullet must not mention either. Mutation-proven:
+  // temporarily restored "date of birth, gender" on this bullet -> RED,
+  // reverted -> GREEN.
+  it("does not mention date of birth or gender anywhere on the page", () => {
+    render(<AccountDeletion />);
+
+    expect(screen.queryByText(/date of birth/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/gender/i)).not.toBeInTheDocument();
+    expect(
+      screen.getByText(/your personal details: first name, surname, country/i),
+    ).toBeInTheDocument();
+  });
+
   // MUT-D5: deleted the entire "What can't be undone" <Section> -> RED,
   // restored -> GREEN.
   it('has an explicit, standalone "what can\'t be undone" irreversibility statement', () => {

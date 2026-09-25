@@ -77,7 +77,7 @@ export default function AccountDeletion() {
         <BulletList
           items={[
             "Your profile: display name, avatar, profile photo, city",
-            "Your personal details: first name, surname, date of birth, gender, country",
+            "Your personal details: first name, surname, country",
             "Your coin and points balance, and your lifetime points total",
             "Your day-by-day step and points history",
             "Your place in any competition that hasn't finished yet (your row is removed entirely, not just hidden)",
