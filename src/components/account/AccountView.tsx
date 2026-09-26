@@ -245,8 +245,6 @@ function PublicProfileCard({ uid, initial }: { uid: string; initial: PublicProfi
 function PrivateProfileCard({ uid, initial }: { uid: string; initial: PrivateProfile }) {
   const [firstName, setFirstName] = useState(initial.firstName ?? "");
   const [surname, setSurname] = useState(initial.surname ?? "");
-  const [dateOfBirth, setDateOfBirth] = useState(initial.dateOfBirth ?? "");
-  const [gender, setGender] = useState(initial.gender ?? "");
   const [country, setCountry] = useState(initial.country ?? "");
   const [notificationsEnabled, setNotificationsEnabled] = useState(
     initial.notificationsEnabled ?? true,
@@ -261,8 +259,6 @@ function PrivateProfileCard({ uid, initial }: { uid: string; initial: PrivatePro
     const result = await updatePrivateProfile(uid, {
       firstName: firstName.trim(),
       surname: surname.trim(),
-      dateOfBirth,
-      gender: gender.trim(),
       country: country.trim(),
       notificationsEnabled,
     });
@@ -280,15 +276,6 @@ function PrivateProfileCard({ uid, initial }: { uid: string; initial: PrivatePro
         <div className="grid gap-4 sm:grid-cols-2">
           <TextField label="First name" value={firstName} onChange={setFirstName} maxLength={50} />
           <TextField label="Surname" value={surname} onChange={setSurname} maxLength={50} />
-        </div>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <TextField
-            label="Date of birth"
-            type="date"
-            value={dateOfBirth}
-            onChange={setDateOfBirth}
-          />
-          <TextField label="Gender" value={gender} onChange={setGender} maxLength={16} />
         </div>
         <TextField label="Country" value={country} onChange={setCountry} maxLength={56} />
         <ToggleField
