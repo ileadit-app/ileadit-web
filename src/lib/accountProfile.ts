@@ -30,7 +30,6 @@ export interface PublicProfile {
 export interface PrivateProfile {
   firstName: string | null;
   surname: string | null;
-  country: string | null;
   notificationsEnabled: boolean | null;
   profileCompleted: boolean | null;
 }
@@ -128,7 +127,6 @@ export function useAccountProfile(uid: string | null): AccountProfileState {
         privateData = {
           firstName: typeof d.firstName === "string" ? d.firstName : null,
           surname: typeof d.surname === "string" ? d.surname : null,
-          country: typeof d.country === "string" ? d.country : null,
           notificationsEnabled:
             typeof d.notificationsEnabled === "boolean" ? d.notificationsEnabled : null,
           profileCompleted: typeof d.profileCompleted === "boolean" ? d.profileCompleted : null,
@@ -198,9 +196,47 @@ export async function updatePublicProfile(
   }
 }
 
+/** The owner-editable fields on `users/{uid}/private/profile` that the
+ * portal offers. There is NO country field (OV-1 / C-24, Paul: the profile
+ * is name details plus town/city, as the app has). */
+export interface PrivateProfileFields {
+  firstName?: string;
+  surname?: string;
+  notificationsEnabled?: boolean;
+}
+
 /**
- * Updates the owner-editable fields on `users/{uid}/private/profile` that
- * the portal offers: firstName, surname, country, notificationsEnabled.
+ * Pure payload builder for `updatePrivateProfile`: returns ONLY the fields
+ * whose submitted value differs from what the form was showing (`current`),
+ * so a save never resends unchanged fields (WEB-B3 / WEB-PROFILE-1). Text is
+ * compared trimmed, with a missing stored value treated as "" (what the form
+ * displays). `notificationsEnabled` is compared against the form's displayed
+ * default (`true` when nothing is stored), so an untouched toggle is never
+ * written. Anything outside the three allowed keys is dropped.
+ */
+export function buildPrivateProfileUpdate(
+  current: Pick<PrivateProfile, "firstName" | "surname" | "notificationsEnabled">,
+  next: PrivateProfileFields,
+): PrivateProfileFields {
+  const updates: PrivateProfileFields = {};
+  if (next.firstName !== undefined && next.firstName.trim() !== (current.firstName ?? "").trim())
+    updates.firstName = next.firstName.trim();
+  if (next.surname !== undefined && next.surname.trim() !== (current.surname ?? "").trim())
+    updates.surname = next.surname.trim();
+  if (
+    next.notificationsEnabled !== undefined &&
+    next.notificationsEnabled !== (current.notificationsEnabled ?? true)
+  )
+    updates.notificationsEnabled = next.notificationsEnabled;
+  return updates;
+}
+
+/**
+ * Writes the given owner-editable fields to `users/{uid}/private/profile`.
+ * Callers pass only what changed (build it with `buildPrivateProfileUpdate`);
+ * an empty update writes nothing. Only firstName, surname and
+ * notificationsEnabled are ever written; anything else a caller passes is
+ * dropped. There is no country field (OV-1 / C-24).
  * Date of birth and gender are deliberately NOT accepted, read or written,
  * ever -- not even as null/empty (F-DOB-1, Paul 25 Sep 2026: iLeadIt does
  * not collect or retain them as profile data).
@@ -214,17 +250,11 @@ export async function updatePublicProfile(
  */
 export async function updatePrivateProfile(
   uid: string,
-  fields: {
-    firstName?: string;
-    surname?: string;
-    country?: string;
-    notificationsEnabled?: boolean;
-  },
+  fields: PrivateProfileFields,
 ): Promise<ProfileUpdateOutcome> {
   const updates: Record<string, string | boolean> = {};
   if (fields.firstName !== undefined) updates.firstName = fields.firstName;
   if (fields.surname !== undefined) updates.surname = fields.surname;
-  if (fields.country !== undefined) updates.country = fields.country;
   if (fields.notificationsEnabled !== undefined)
     updates.notificationsEnabled = fields.notificationsEnabled;
   if (Object.keys(updates).length === 0) return { status: "success" };
