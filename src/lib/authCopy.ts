@@ -41,7 +41,7 @@ export function authFailureMessage(failure: AuthFailure): string {
     case "too-many-requests":
       return "Too many attempts — please wait a moment and try again.";
     case "network-request-failed":
-      return "We couldn't reach ileadit. Check your connection and try again.";
+      return CONNECTION_FAILED_MESSAGE;
     case "account-exists-with-different-credential":
       // Should always be intercepted into the collision flow before this is
       // shown — kept as a safe fallback in case the email/credential
@@ -50,6 +50,36 @@ export function authFailureMessage(failure: AuthFailure): string {
       return "This email is already linked to a different sign-in method. Try the original method, or email hello@ileadit.co.uk.";
     default:
       return failure.message || "Something went wrong. Please try again.";
+  }
+}
+
+/**
+ * Neutral account-existence copy (WEB-AUTH-1 / N-15 / WEB-H2). None of these
+ * may ever reveal whether an account exists for a given email.
+ */
+export const SIGN_IN_FAILED_MESSAGE = "Check your email and password and try again.";
+export const SIGN_UP_COLLISION_MESSAGE =
+  "We couldn't create that account. If you already have one, sign in or reset your password.";
+export const RESET_SENT_MESSAGE = "If there's an account for that email, we've sent a reset link.";
+export const CONNECTION_FAILED_MESSAGE = "We couldn't reach ileadit. Check your connection and try again.";
+
+/**
+ * Copy for an email/password SIGN-IN failure. Wrong password, unknown user
+ * and disabled account all map to `invalid-credential` (authErrors.ts) and
+ * get the same message; a network failure gets a distinct connection
+ * message; anything unrecognised gets a generic retry rather than the raw
+ * Firebase message (which can name the underlying code).
+ */
+export function signInFailureMessage(failure: AuthFailure): string {
+  switch (failure.reason) {
+    case "invalid-credential":
+      return SIGN_IN_FAILED_MESSAGE;
+    case "network-request-failed":
+      return CONNECTION_FAILED_MESSAGE;
+    case "too-many-requests":
+      return authFailureMessage(failure);
+    default:
+      return "We couldn't sign you in. Please try again.";
   }
 }
 
