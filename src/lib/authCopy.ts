@@ -49,7 +49,9 @@ export function authFailureMessage(failure: AuthFailure): string {
       // handler).
       return "This email is already linked to a different sign-in method. Try the original method, or email hello@ileadit.co.uk.";
     default:
-      return failure.message || "Something went wrong. Please try again.";
+      // Never the raw Firebase text: it can name the underlying error code
+      // (e.g. "auth/user-disabled") and so leak account state.
+      return GENERIC_FAILURE_MESSAGE;
   }
 }
 
@@ -61,6 +63,7 @@ export const SIGN_IN_FAILED_MESSAGE = "Check your email and password and try aga
 export const SIGN_UP_COLLISION_MESSAGE =
   "We couldn't create that account. If you already have one, sign in or reset your password.";
 export const RESET_SENT_MESSAGE = "If there's an account for that email, we've sent a reset link.";
+export const GENERIC_FAILURE_MESSAGE = "We couldn't complete that. Please try again.";
 export const CONNECTION_FAILED_MESSAGE = "We couldn't reach ileadit. Check your connection and try again.";
 
 /**

@@ -39,7 +39,7 @@ describe("ResetPasswordCard", () => {
   it("shows only a field error for a malformed email and never calls Firebase", () => {
     render(<ResetPasswordCard />);
     submit("not-an-email");
-    expect(screen.getByText("Enter a valid email address.")).toBeInTheDocument();
+    expect(screen.getByRole("alert")).toHaveTextContent("Enter a valid email address.");
     expect(screen.getByLabelText("Email")).toHaveAttribute("aria-invalid", "true");
     expect(requestPasswordResetMock).not.toHaveBeenCalled();
   });
@@ -73,9 +73,16 @@ describe("ResetPasswordCard", () => {
     });
     expect(button).toBeEnabled();
 
+    const firstConfirmation = screen.getByText((t) => t.includes("we've sent a reset link"));
+    expect(firstConfirmation.closest("[aria-live]")).not.toBeNull();
+    expect(firstConfirmation).toHaveTextContent(/Sent at/);
+
     fireEvent.click(button);
     await act(async () => {});
     expect(requestPasswordResetMock).toHaveBeenCalledTimes(2);
+    // A fresh node in the live region, so screen readers announce the resend.
+    const secondConfirmation = screen.getByText((t) => t.includes("we've sent a reset link"));
+    expect(secondConfirmation).not.toBe(firstConfirmation);
     expect(screen.getByRole("button", { name: "Resend link" })).toBeDisabled();
   });
 });

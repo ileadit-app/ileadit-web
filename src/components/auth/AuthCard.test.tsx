@@ -84,6 +84,16 @@ describe("AuthCard sign-up collision", () => {
   });
 });
 
+describe("AuthCard unrecognised failures", () => {
+  it("sign-up shows generic copy, never raw Firebase text", async () => {
+    signUpWithEmailMock.mockResolvedValue(failure("auth/operation-not-allowed"));
+    render(<AuthCard mode="signup" />);
+    submitForm();
+    expect(await screen.findByRole("alert")).toHaveTextContent("We couldn't complete that. Please try again.");
+    expect(document.body.textContent).not.toContain("auth/");
+  });
+});
+
 describe("AuthCard sign-in failures", () => {
   it.each(["auth/invalid-credential", "auth/wrong-password", "auth/user-not-found", "auth/user-disabled"])(
     "%s shows the same neutral message",

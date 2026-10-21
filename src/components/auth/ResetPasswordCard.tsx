@@ -24,7 +24,11 @@ export function ResetPasswordCard() {
   const [email, setEmail] = useState("");
   const [emailError, setEmailError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
-  const [sent, setSent] = useState(false);
+  // Time of the latest send (null = not sent yet). Shown in the confirmation
+  // and used as its React key, so each resend remounts the text inside the
+  // live region and screen readers announce it again.
+  const [sentAt, setSentAt] = useState<Date | null>(null);
+  const sent = sentAt !== null;
   const [cooldown, setCooldown] = useState(0);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -63,7 +67,7 @@ export function ResetPasswordCard() {
       setEmailError("Enter a valid email address.");
       return;
     }
-    setSent(true);
+    setSentAt(new Date());
     startCooldown();
   }
 
@@ -78,11 +82,12 @@ export function ResetPasswordCard() {
       </p>
 
       <div aria-live="polite">
-        {sent ? (
-          <div className="mt-6 flex items-start gap-2 rounded-xl border border-border bg-secondary p-3 text-sm font-medium text-foreground">
+        {sentAt ? (
+          <div key={sentAt.getTime()} className="mt-6 flex items-start gap-2 rounded-xl border border-border bg-secondary p-3 text-sm font-medium text-foreground">
             <MailCheck className="mt-0.5 size-4 shrink-0 text-brand-navy" aria-hidden="true" />
             <span>
-              {RESET_SENT_MESSAGE} Check your spam folder if it doesn&apos;t arrive in a few minutes.
+              {RESET_SENT_MESSAGE} Check your spam folder if it doesn&apos;t arrive in a few minutes. (Sent at{" "}
+              {sentAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })}.)
             </span>
           </div>
         ) : null}
