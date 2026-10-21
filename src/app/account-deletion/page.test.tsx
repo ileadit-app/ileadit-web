@@ -93,9 +93,9 @@ describe("/account-deletion — W3-DELETION-AUDIT fixes", () => {
 
     expect(screen.queryByText(/date of birth/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/gender/i)).not.toBeInTheDocument();
-    expect(
-      screen.getByText(/your personal details: first name, surname, country/i),
-    ).toBeInTheDocument();
+    expect(screen.getByText(/your name details/i)).toBeInTheDocument();
+    // OV-1 / C-24: no Country anywhere.
+    expect(screen.queryByText(/country/i)).not.toBeInTheDocument();
   });
 
   // MUT-D5: deleted the entire "What can't be undone" <Section> -> RED,

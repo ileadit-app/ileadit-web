@@ -10,6 +10,7 @@ import { ErrorBanner } from "@/components/auth/formFields";
 import { TextField, ToggleField } from "@/components/forms/fields";
 import { providerLabelForMethod } from "@/lib/authCopy";
 import {
+  buildPrivateProfileUpdate,
   updatePrivateProfile,
   updatePublicProfile,
   useAccountProfile,
@@ -245,7 +246,6 @@ function PublicProfileCard({ uid, initial }: { uid: string; initial: PublicProfi
 function PrivateProfileCard({ uid, initial }: { uid: string; initial: PrivateProfile }) {
   const [firstName, setFirstName] = useState(initial.firstName ?? "");
   const [surname, setSurname] = useState(initial.surname ?? "");
-  const [country, setCountry] = useState(initial.country ?? "");
   const [notificationsEnabled, setNotificationsEnabled] = useState(
     initial.notificationsEnabled ?? true,
   );
@@ -256,12 +256,12 @@ function PrivateProfileCard({ uid, initial }: { uid: string; initial: PrivatePro
     e.preventDefault();
     setOutcome(null);
     setSaving(true);
-    const result = await updatePrivateProfile(uid, {
-      firstName: firstName.trim(),
-      surname: surname.trim(),
-      country: country.trim(),
-      notificationsEnabled,
-    });
+    // Send only what changed (WEB-PROFILE-1). `initial` is the live
+    // snapshot, so after a save it reflects the stored values.
+    const result = await updatePrivateProfile(
+      uid,
+      buildPrivateProfileUpdate(initial, { firstName, surname, notificationsEnabled }),
+    );
     setSaving(false);
     setOutcome(result.status === "success" ? "success" : { message: result.message });
   }
@@ -277,7 +277,6 @@ function PrivateProfileCard({ uid, initial }: { uid: string; initial: PrivatePro
           <TextField label="First name" value={firstName} onChange={setFirstName} maxLength={50} />
           <TextField label="Surname" value={surname} onChange={setSurname} maxLength={50} />
         </div>
-        <TextField label="Country" value={country} onChange={setCountry} maxLength={56} />
         <ToggleField
           label="Notifications"
           description="Reminders and challenge updates from ileadit."

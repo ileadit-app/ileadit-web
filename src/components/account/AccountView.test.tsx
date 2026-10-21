@@ -28,7 +28,9 @@ vi.mock("next/navigation", () => ({
 const useAccountProfileMock = vi.fn();
 const updatePrivateProfileMock = vi.fn();
 const updatePublicProfileMock = vi.fn();
-vi.mock("@/lib/accountProfile", () => ({
+vi.mock("@/lib/accountProfile", async (importOriginal) => ({
+  buildPrivateProfileUpdate: (await importOriginal<typeof import("@/lib/accountProfile")>())
+    .buildPrivateProfileUpdate,
   useAccountProfile: (uid: string | null) => useAccountProfileMock(uid),
   updatePrivateProfile: (...args: unknown[]) => updatePrivateProfileMock(...args),
   updatePublicProfile: (...args: unknown[]) => updatePublicProfileMock(...args),
@@ -37,10 +39,10 @@ vi.mock("@/lib/accountProfile", () => ({
 const LEGACY_PRIVATE_PROFILE = {
   firstName: "Paul",
   surname: "Tester",
-  country: "United Kingdom",
   notificationsEnabled: true,
   profileCompleted: true,
-  // Legacy fields a pre-F-DOB-1 document may still hold.
+  // Legacy fields an older document may still hold (pre-F-DOB-1, pre-OV-1).
+  country: "United Kingdom",
   dateOfBirth: "1980-01-01",
   gender: "legacy-gender-value",
 };
@@ -70,7 +72,6 @@ describe("AccountView - F-DOB-1: no date of birth or gender", () => {
     const { container } = render(<AccountView />);
     // Sanity: the Personal details form did render.
     expect(screen.getByLabelText("First name")).toBeInTheDocument();
-    expect(screen.getByLabelText("Country")).toBeInTheDocument();
 
     expect(screen.queryByLabelText(/date of birth/i)).not.toBeInTheDocument();
     expect(screen.queryByLabelText(/gender/i)).not.toBeInTheDocument();
@@ -84,6 +85,7 @@ describe("AccountView - F-DOB-1: no date of birth or gender", () => {
 
   it("saving Personal details never sends dateOfBirth or gender", async () => {
     render(<AccountView />);
+    fireEvent.change(screen.getByLabelText("First name"), { target: { value: "Pauline" } });
     fireEvent.click(screen.getByRole("button", { name: "Save details" }));
 
     await waitFor(() => expect(updatePrivateProfileMock).toHaveBeenCalledTimes(1));
@@ -91,11 +93,24 @@ describe("AccountView - F-DOB-1: no date of birth or gender", () => {
     expect(uid).toBe("user-1");
     expect(payload).not.toHaveProperty("dateOfBirth");
     expect(payload).not.toHaveProperty("gender");
-    expect(payload).toEqual({
-      firstName: "Paul",
-      surname: "Tester",
-      country: "United Kingdom",
-      notificationsEnabled: true,
-    });
+  });
+});
+
+describe("AccountView - WEB-PROFILE-1: no Country, only changed fields", () => {
+  it("renders no Country field and never shows a stored legacy country", () => {
+    const { container } = render(<AccountView />);
+    expect(screen.queryByLabelText(/country/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/country/i)).not.toBeInTheDocument();
+    expect(container.innerHTML).not.toContain("United Kingdom");
+  });
+
+  it("a first-name-only save sends just firstName (no country, no unchanged fields)", async () => {
+    render(<AccountView />);
+    fireEvent.change(screen.getByLabelText("First name"), { target: { value: "Pauline" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save details" }));
+
+    await waitFor(() => expect(updatePrivateProfileMock).toHaveBeenCalledTimes(1));
+    const [, payload] = updatePrivateProfileMock.mock.calls[0] as [string, Record<string, unknown>];
+    expect(payload).toEqual({ firstName: "Pauline" });
   });
 });

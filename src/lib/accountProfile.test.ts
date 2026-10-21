@@ -1,6 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { act, renderHook } from "@testing-library/react";
-import { updatePrivateProfile, useAccountProfile } from "./accountProfile";
+import { buildPrivateProfileUpdate, updatePrivateProfile, useAccountProfile } from "./accountProfile";
 
 /**
  * Pins F-DOB-1 (Paul, 25 Sep 2026) at the Firestore boundary: the portal
@@ -43,6 +43,7 @@ describe("updatePrivateProfile - F-DOB-1", () => {
       dateOfBirth: "1980-01-01",
       gender: "x",
     } as unknown as Parameters<typeof updatePrivateProfile>[1];
+    // `country` is passed too, to prove the write layer drops it (OV-1 / C-24).
 
     const result = await updatePrivateProfile("user-1", fields);
 
@@ -52,7 +53,8 @@ describe("updatePrivateProfile - F-DOB-1", () => {
     expect(ref.path).toBe("users/user-1/private/profile");
     expect(payload).not.toHaveProperty("dateOfBirth");
     expect(payload).not.toHaveProperty("gender");
-    expect(payload).toEqual({ firstName: "Paul", country: "United Kingdom" });
+    expect(payload).not.toHaveProperty("country");
+    expect(payload).toEqual({ firstName: "Paul" });
   });
 
   it("with only dateOfBirth/gender passed, writes nothing at all", async () => {
@@ -62,6 +64,56 @@ describe("updatePrivateProfile - F-DOB-1", () => {
     const result = await updatePrivateProfile("user-1", fields);
     expect(result).toEqual({ status: "success" });
     expect(updateDocMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("buildPrivateProfileUpdate - WEB-PROFILE-1", () => {
+  const current = { firstName: "Paul", surname: "Tester", notificationsEnabled: true };
+
+  it("a first-name-only change yields only firstName (no country, nothing unchanged)", () => {
+    const payload = buildPrivateProfileUpdate(current, {
+      firstName: "Pauline",
+      surname: "Tester",
+      notificationsEnabled: true,
+    });
+    expect(payload).toEqual({ firstName: "Pauline" });
+    expect(payload).not.toHaveProperty("country");
+  });
+
+  it("drops a country key even if a caller passes one", () => {
+    const next = { firstName: "Pauline", country: "United Kingdom" } as unknown as Parameters<
+      typeof buildPrivateProfileUpdate
+    >[1];
+    expect(buildPrivateProfileUpdate(current, next)).toEqual({ firstName: "Pauline" });
+  });
+
+  it("no changes (whitespace only) yields an empty update, which writes nothing", async () => {
+    const payload = buildPrivateProfileUpdate(current, {
+      firstName: " Paul ",
+      surname: "Tester",
+      notificationsEnabled: true,
+    });
+    expect(payload).toEqual({});
+    await updatePrivateProfile("user-1", payload);
+    expect(updateDocMock).not.toHaveBeenCalled();
+  });
+
+  it("treats missing stored values as the form's displayed defaults", () => {
+    const empty = { firstName: null, surname: null, notificationsEnabled: null };
+    expect(
+      buildPrivateProfileUpdate(empty, { firstName: "", surname: "", notificationsEnabled: true }),
+    ).toEqual({});
+    expect(
+      buildPrivateProfileUpdate(empty, { firstName: "", surname: "", notificationsEnabled: false }),
+    ).toEqual({ notificationsEnabled: false });
+  });
+
+  it("first-name-only save end to end: updateDoc receives only firstName", async () => {
+    await updatePrivateProfile("user-1", buildPrivateProfileUpdate(current, { firstName: "Pauline" }));
+    expect(updateDocMock).toHaveBeenCalledTimes(1);
+    const [ref, payload] = updateDocMock.mock.calls[0] as [{ path: string }, Record<string, unknown>];
+    expect(ref.path).toBe("users/user-1/private/profile");
+    expect(payload).toEqual({ firstName: "Pauline" });
   });
 });
 
@@ -85,6 +137,7 @@ describe("useAccountProfile - F-DOB-1", () => {
     if (result.current.status !== "success") return;
     expect(result.current.privateProfile).not.toHaveProperty("dateOfBirth");
     expect(result.current.privateProfile).not.toHaveProperty("gender");
+    expect(result.current.privateProfile).not.toHaveProperty("country");
     expect(result.current.privateProfile.firstName).toBe("Paul");
   });
 });
