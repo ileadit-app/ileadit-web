@@ -87,12 +87,15 @@ export function toAuthFailure(error: unknown): AuthFailure {
     case "auth/invalid-credential":
     case "auth/wrong-password":
     case "auth/user-not-found":
+    case "auth/user-disabled":
       // Firebase intentionally does not distinguish "wrong password" from
       // "no such user" in newer SDK versions (email enumeration
       // protection) — both surface as `auth/invalid-credential`. The two
       // legacy codes are kept here in case a project has that protection
       // disabled and still returns them individually; all three mean the
       // same thing to a sign-in form: "check your email and password."
+      // `auth/user-disabled` is folded in too (WEB-AUTH-1 / N-15): telling a
+      // stranger "this account is disabled" confirms the account exists.
       return { reason: "invalid-credential", message: error.message, cause: error };
     case "auth/weak-password":
       return { reason: "weak-password", message: error.message, cause: error };

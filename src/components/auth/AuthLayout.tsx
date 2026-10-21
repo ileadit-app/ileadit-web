@@ -24,13 +24,18 @@ const COPY = {
     subcopy:
       "One ileadit account works everywhere — sign up here and it's the exact same account you'd get in the app.",
   },
+  reset: {
+    headline: "Locked out? It happens.",
+    subcopy:
+      "We'll email you a link to choose a new password, then you're straight back to your coins, lives and competitions.",
+  },
 } as const;
 
 export function AuthLayout({
   mode,
   children,
 }: {
-  mode: "signin" | "signup";
+  mode: "signin" | "signup" | "reset";
   children: ReactNode;
 }) {
   const copy = COPY[mode];

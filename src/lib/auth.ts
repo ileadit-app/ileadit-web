@@ -2,6 +2,7 @@ import {
   createUserWithEmailAndPassword,
   GoogleAuthProvider,
   OAuthProvider,
+  sendPasswordResetEmail,
   signInWithEmailAndPassword,
   signInWithPopup,
   signOut as firebaseSignOut,
@@ -79,6 +80,23 @@ export async function signInWithEmail(email: string, password: string): Promise<
  */
 export async function signInWithGoogle(): Promise<AuthOutcome> {
   return runSignIn(() => signInWithPopup(getFirebaseAuth(), new GoogleAuthProvider()));
+}
+
+/**
+ * Outcome of a password-reset request (WEB-AUTH-1). Deliberately only two
+ * states: the reset screen must show the SAME neutral confirmation whether
+ * or not an account exists for the email (N-15 / WEB-H2), so every Firebase
+ * result other than a malformed email address collapses to `"sent"`.
+ */
+export type PasswordResetOutcome = { status: "sent" } | { status: "invalid-email" };
+
+export async function requestPasswordReset(email: string): Promise<PasswordResetOutcome> {
+  try {
+    await sendPasswordResetEmail(getFirebaseAuth(), email);
+  } catch (error) {
+    if (toAuthFailure(error).reason === "invalid-email") return { status: "invalid-email" };
+  }
+  return { status: "sent" };
 }
 
 const MICROSOFT_PROVIDER_ID = "microsoft.com";

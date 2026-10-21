@@ -12,7 +12,7 @@ import {
 import { CheckCircle2, Link2 } from "lucide-react";
 import { getFirebaseAuth } from "@/lib/firebase";
 import { toAuthFailure } from "@/lib/authErrors";
-import { providerLabelForMethod } from "@/lib/authCopy";
+import { authFailureMessage, providerLabelForMethod, signInFailureMessage } from "@/lib/authCopy";
 import { EmailField, ErrorBanner, PasswordField } from "./formFields";
 
 export interface CollisionInfo {
@@ -65,7 +65,7 @@ export function AccountLinkingPanel({
       await linkWithCredential(result.user, info.pendingCredential);
       onLinked();
     } catch (err) {
-      setError(toAuthFailure(err).message || "We couldn't link that account. Please try again.");
+      setError(authFailureMessage(toAuthFailure(err)));
     } finally {
       setLinking(false);
     }
@@ -80,7 +80,7 @@ export function AccountLinkingPanel({
       await linkWithCredential(result.user, info.pendingCredential);
       onLinked();
     } catch (err) {
-      setError(toAuthFailure(err).message || "We couldn't sign you in. Please try again.");
+      setError(signInFailureMessage(toAuthFailure(err)));
     } finally {
       setLinking(false);
     }

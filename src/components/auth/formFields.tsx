@@ -25,9 +25,12 @@ export function ErrorBanner({ message }: { message: string }) {
   );
 }
 
-export function FieldError({ id, message }: { id: string; message: string }) {
+/** `live` adds role="alert" so an error that appears after submit is
+ * announced (WCAG 4.1.3), matching ErrorBanner. Opt-in: the auth fields below
+ * use it; the shared `forms/fields.tsx` callers keep their current behaviour. */
+export function FieldError({ id, message, live = false }: { id: string; message: string; live?: boolean }) {
   return (
-    <p id={id} className="mt-1 text-xs text-destructive">
+    <p id={id} role={live ? "alert" : undefined} className="mt-1 text-xs text-destructive">
       {message}
     </p>
   );
@@ -68,7 +71,7 @@ export function EmailField({
         aria-describedby={error ? errorId : undefined}
         className={`mt-1.5 ${INPUT_CLASS} ${error ? "border-destructive" : ""} ${readOnly ? "cursor-not-allowed bg-muted" : ""}`}
       />
-      {error ? <FieldError id={errorId} message={error} /> : null}
+      {error ? <FieldError id={errorId} message={error} live /> : null}
     </div>
   );
 }
@@ -121,7 +124,7 @@ export function PasswordField({
         </button>
       </div>
       {error ? (
-        <FieldError id={errorId} message={error} />
+        <FieldError id={errorId} message={error} live />
       ) : helperText ? (
         <p className="mt-1 text-xs text-muted-foreground">{helperText}</p>
       ) : null}

@@ -4,7 +4,6 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
-  EmailAuthProvider,
   GoogleAuthProvider,
   OAuthProvider,
   fetchSignInMethodsForEmail,
@@ -22,7 +21,13 @@ import { getFirebaseAuth } from "@/lib/firebase";
 import { ensureAccount } from "@/lib/ensureAccount";
 import { toEngineFailure } from "@/lib/engineErrors";
 import { resolveSafeRedirect } from "@/lib/safeRedirect";
-import { authFailureMessage, engineFailureMessage, providerLabel } from "@/lib/authCopy";
+import {
+  SIGN_IN_FAILED_MESSAGE,
+  authFailureMessage,
+  engineFailureMessage,
+  providerLabel,
+  signInFailureMessage,
+} from "@/lib/authCopy";
 import { ProviderButton } from "./ProviderButton";
 import { AccountLinkingPanel, LinkSuccessPanel, type CollisionInfo } from "./AccountLinkingPanel";
 import { EmailField, ErrorBanner, PasswordField } from "./formFields";
@@ -136,10 +141,10 @@ export function AuthCard({ mode }: { mode: "signin" | "signup" }) {
   }
 
   /** Opens the §5 collision panel given an ALREADY-FETCHED sign-in-methods
-   * list for `email` (never fetches itself — both call sites below already
-   * needed that list to decide whether this is a collision at all, and
-   * `fetchSignInMethodsForEmail` is a network round-trip worth not
-   * duplicating). Falls back to a generic banner when the existing method
+   * list for `email`. OAuth-popup path ONLY (WEB-AUTH-1 / WEB-H2): there the
+   * user has just proven they own the email via Google/Microsoft, so naming
+   * the existing method reveals nothing to a stranger. The email/password
+   * form must never reach this. Falls back to a generic banner when the existing method
    * isn't one of the three this client knows how to link against — notably
    * including the case where the project has Identity Platform's email
    * enumeration protection enabled, which makes `fetchSignInMethodsForEmail`
@@ -235,7 +240,9 @@ export function AuthCard({ mode }: { mode: "signin" | "signup" }) {
     const failure = outcome.failure;
     switch (failure.reason) {
       case "invalid-credential":
-        setPasswordFieldError("Check your email and password and try again.");
+        // Wrong password, unknown user and disabled account all land here
+        // (authErrors.ts) and get the same copy — never which one it was.
+        setPasswordFieldError(SIGN_IN_FAILED_MESSAGE);
         return;
       case "invalid-email":
         setEmailFieldError({ kind: "invalid" });
@@ -246,37 +253,15 @@ export function AuthCard({ mode }: { mode: "signin" | "signup" }) {
       case "too-many-requests":
         setPageError(authFailureMessage(failure));
         return;
-      case "email-already-in-use": {
-        const methods = await fetchSignInMethodsForEmail(getFirebaseAuth(), email).catch(() => []);
-        if (methods.length === 1 && methods[0] === "password") {
-          // Same-provider collision — field-level error, not the full
-          // collision screen (spec §4.4).
-          setEmailFieldError({ kind: "in-use" });
-          return;
-        }
-        const existingMethod = methods[0];
-        if (existingMethod === "google.com" || existingMethod === "microsoft.com") {
-          // Cross-provider collision reached via the email/password FORM
-          // rather than an OAuth popup — Firebase reports this as plain
-          // `auth/email-already-in-use`, not
-          // `account-exists-with-different-credential` (that code is
-          // popup-specific). Still a genuine one-account-per-email
-          // collision, so route into the same §5 panel: synthesize the
-          // credential the user just typed and let them link it once they
-          // prove ownership of the existing (OAuth) account.
-          openCollisionPanel(
-            email,
-            existingMethod,
-            EmailAuthProvider.credential(email, password),
-            providerLabel("email"),
-          );
-          return;
-        }
+      case "email-already-in-use":
+        // WEB-AUTH-1 / WEB-H2 (N-15): never confirm that an account exists
+        // for a typed email, and never look up its sign-in methods — anyone
+        // could type a colleague's address here. Neutral copy with routes to
+        // sign in or reset; the OAuth popup path keeps account linking.
         setEmailFieldError({ kind: "in-use" });
         return;
-      }
       default:
-        setPageError(authFailureMessage(failure));
+        setPageError(mode === "signin" ? signInFailureMessage(failure) : authFailureMessage(failure));
     }
   }
 
@@ -361,11 +346,17 @@ export function AuthCard({ mode }: { mode: "signin" | "signup" }) {
           disabled={anyLoading}
         />
         {emailFieldError?.kind === "in-use" ? (
-          <p className="-mt-2 text-xs text-destructive">
-            An account already exists for this email.{" "}
+          <p role="alert" className="-mt-2 text-xs text-destructive">
+            {/* Same words as SIGN_UP_COLLISION_MESSAGE, with the two actions as links. */}
+            We couldn&apos;t create that account. If you already have one,{" "}
             <Link href={withRedirectParam("/login", { email })} className="font-semibold underline">
-              Sign in instead →
+              sign in
+            </Link>{" "}
+            or{" "}
+            <Link href="/reset-password" className="font-semibold underline">
+              reset your password
             </Link>
+            .
           </p>
         ) : null}
 
