@@ -19,9 +19,9 @@
  * same thing anyway must see the identical sentence either way.
  */
 
-/** Interim cap on competition length. Paul is still confirming 90 as the
- * right number as of this ticket — it may change; this is the ONE place
- * that matters when it does. */
+/** Cap on competition length: 90 days, confirmed by Paul 22 Oct 2026.
+ * Mirrors the engine's MAX_COMPETITION_DAYS (functions/src/config/
+ * constants.ts), which is the real boundary; change both together. */
 export const MAX_COMPETITION_DAYS = 90;
 
 /** The engine has never accepted anything below this; named here mainly so
