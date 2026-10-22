@@ -1,15 +1,24 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
-import { ErrorBanner } from "@/components/auth/formFields";
+import { ErrorBanner, FieldError } from "@/components/auth/formFields";
 import { NumberField, SelectField, TextAreaField, TextField } from "@/components/forms/fields";
 import { ArtworkUploadField } from "./ArtworkUploadField";
 import { CompetitionHero } from "./CompetitionHero";
 import { createDraftCompetitionId } from "@/lib/competitionArtwork";
 import { createCompetition } from "@/lib/createCompetition";
 import { createCompetitionFailureMessage } from "@/lib/createCompetitionErrors";
+import {
+  DURATION_OUT_OF_RANGE_MESSAGE,
+  START_TIME_IN_PAST_MESSAGE,
+  VISIBILITY_CONFIRM_LABEL,
+  VISIBILITY_CONFIRM_REQUIRED_MESSAGE,
+  VISIBILITY_NOTICE,
+  isDurationDaysInRange,
+  isStartTimeInPast,
+} from "@/lib/createCompetitionGuard";
 import {
   detectBrowserTimeZone,
   getTimeZoneOptions,
@@ -25,6 +34,7 @@ interface FieldErrors {
   startTime?: string;
   durationDays?: string;
   timeZone?: string;
+  confirm?: string;
 }
 
 /**
@@ -48,6 +58,17 @@ interface FieldErrors {
  * `src/lib/createCompetition.ts`'s header comment). Client validation
  * failing closed here is a UX nicety, not a security or correctness
  * guarantee.
+ *
+ * WEB-CREATE-GUARD (22 Oct 2026, Paul-approved interim fix for audit
+ * findings WEB-H5/WEB-M6): every competition created here is PUBLIC —
+ * private competitions are a separate, unbuilt, gated rollout — so this
+ * form (a) always shows `VISIBILITY_NOTICE` above the submit button, (b)
+ * requires an explicit, unticked-by-default confirmation checkbox before
+ * the submit button even becomes clickable (never a `window.confirm`),
+ * and (c) refuses a past start time / an out-of-range duration itself,
+ * re-checked fresh at submit time (not just on change — the page can sit
+ * open past the chosen start time). See `src/lib/createCompetitionGuard.ts`
+ * for the shared constants/checks and why they're centralised there.
  */
 export function CreateCompetitionForm() {
   const router = useRouter();
@@ -59,6 +80,12 @@ export function CreateCompetitionForm() {
   const [description, setDescription] = useState("");
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [backgroundImageUrl, setBackgroundImageUrl] = useState<string | null>(null);
+
+  // WEB-CREATE-GUARD: unticked by default, every time — this is a per-
+  // submission confirmation, not a one-off "don't show this again" setting.
+  const [confirmed, setConfirmed] = useState(false);
+  const confirmCheckboxId = useId();
+  const confirmErrorId = `${confirmCheckboxId}-error`;
 
   /**
    * The folder competition artwork is uploaded into while this form is
@@ -80,7 +107,15 @@ export function CreateCompetitionForm() {
   // be computed once, on mount.
   const [timeZoneOptions] = useState(() => getTimeZoneOptions());
 
-  function validate(): FieldErrors {
+  /**
+   * Always re-run fresh (never memoised against a stale "now"/"is the zone
+   * still valid" snapshot) — in particular, called again inside
+   * `handleSubmit` right before the callable fires, per WEB-CREATE-GUARD's
+   * "re-check at submit, not only on change" requirement: a form left open
+   * past its chosen start time must be caught at the moment of submission,
+   * not only while the user was actively typing.
+   */
+  function validate(now: Date = new Date()): FieldErrors {
     const errors: FieldErrors = {};
 
     const trimmedName = name.trim();
@@ -91,17 +126,31 @@ export function CreateCompetitionForm() {
     }
 
     const parts = parseDateTimeLocalValue(startTimeValue);
+    const zoneIsValid = Boolean(timeZone) && isValidTimeZone(timeZone);
     if (!parts) {
       errors.startTime = "Choose when this competition starts.";
+    } else if (zoneIsValid) {
+      // Converted IN the chosen time zone, not the browser's own — the same
+      // conversion `handleSubmit` sends to the callable, so "is this in the
+      // past" is always answered about the real instant, never the typed
+      // wall-clock digits compared naively against `now`.
+      const startInstant = zonedWallTimeToDate(parts, timeZone);
+      if (isStartTimeInPast(startInstant, now)) {
+        errors.startTime = START_TIME_IN_PAST_MESSAGE;
+      }
     }
 
     const durationDays = Number(durationDaysValue);
-    if (!Number.isInteger(durationDays) || durationDays <= 0) {
-      errors.durationDays = "Enter a whole number of days, at least 1.";
+    if (!isDurationDaysInRange(durationDays)) {
+      errors.durationDays = DURATION_OUT_OF_RANGE_MESSAGE;
     }
 
-    if (!timeZone || !isValidTimeZone(timeZone)) {
+    if (!zoneIsValid) {
       errors.timeZone = "Choose a valid time zone.";
+    }
+
+    if (!confirmed) {
+      errors.confirm = VISIBILITY_CONFIRM_REQUIRED_MESSAGE;
     }
 
     return errors;
@@ -237,9 +286,35 @@ export function CreateCompetitionForm() {
           timeZone={timeZone}
         />
 
+        {/* WEB-CREATE-GUARD (WEB-H5): plain visible text, not a tooltip —
+            every competition created here is public today. */}
+        <div className="rounded-2xl border border-border bg-muted/40 p-4">
+          <p className="text-sm font-medium text-foreground">{VISIBILITY_NOTICE}</p>
+
+          <label
+            htmlFor={confirmCheckboxId}
+            className="mt-3 flex items-start gap-3 text-sm text-foreground"
+          >
+            <input
+              id={confirmCheckboxId}
+              type="checkbox"
+              checked={confirmed}
+              onChange={(e) => setConfirmed(e.target.checked)}
+              disabled={submitting}
+              required
+              aria-describedby={fieldErrors.confirm ? confirmErrorId : undefined}
+              className="mt-0.5 size-4 shrink-0 accent-primary"
+            />
+            <span>{VISIBILITY_CONFIRM_LABEL}</span>
+          </label>
+          {fieldErrors.confirm ? (
+            <FieldError id={confirmErrorId} message={fieldErrors.confirm} live />
+          ) : null}
+        </div>
+
         <button
           type="submit"
-          disabled={submitting}
+          disabled={submitting || !confirmed}
           className="mt-2 inline-flex h-12 w-full items-center justify-center gap-2 rounded-full border border-[rgba(25,47,95,0.15)] bg-brand-gold text-base font-bold text-brand-navy transition-colors hover:bg-brand-gold/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-navy disabled:cursor-not-allowed disabled:border-transparent disabled:bg-cta-disabled disabled:text-cta-disabled-foreground"
         >
           {submitting ? (

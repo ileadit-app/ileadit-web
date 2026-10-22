@@ -1,4 +1,9 @@
 import type { FunctionsError } from "firebase/functions";
+import {
+  DURATION_OUT_OF_RANGE_MESSAGE,
+  ENGINE_INVALID_ARGUMENT_FALLBACK_MESSAGE,
+  START_TIME_IN_PAST_MESSAGE,
+} from "./createCompetitionGuard";
 
 /**
  * Failure surface for the `createCompetition` callable (P1.3, Ivor, branch
@@ -64,26 +69,50 @@ export function toCreateCompetitionFailure(error: unknown): CreateCompetitionFai
 }
 
 /**
+ * Maps an engine `invalid-argument` rejection to ONE of the same two
+ * friendly, inline messages `CreateCompetitionForm`'s own client-side
+ * `validate()` already shows for a past start time / an out-of-range
+ * duration (WEB-CREATE-GUARD, WEB-M6) — never the raw `code`/`reason`/
+ * `message` the Functions SDK attaches to the thrown error.
+ *
+ * Nobody has read (or can read — it isn't merged, see this file's own
+ * header comment) the callable's actual `details.reason` strings, so this
+ * matches defensively on substrings of whatever `reason`/`message` IS
+ * present rather than assuming a closed enum. Anything that doesn't match
+ * either known shape — including a bare `invalid-argument` with no
+ * identifying detail at all — gets the neutral fallback, never a guess.
+ */
+function invalidArgumentFailureMessage(failure: CreateCompetitionFailure): string {
+  const haystack = `${failure.reason ?? ""} ${failure.message}`.toLowerCase();
+  if (haystack.includes("start") || haystack.includes("past")) {
+    return START_TIME_IN_PAST_MESSAGE;
+  }
+  if (haystack.includes("duration") || haystack.includes("days")) {
+    return DURATION_OUT_OF_RANGE_MESSAGE;
+  }
+  return ENGINE_INVALID_ARGUMENT_FALLBACK_MESSAGE;
+}
+
+/**
  * Page-level copy for a `CreateCompetitionFailure`. `code` drives copy for
  * the handful of outcomes worth explaining specifically (permission,
- * validation, session expiry); everything else falls back to a generic
- * message that still SHOWS `code`/`reason` rather than hiding them, so a
- * refusal this module doesn't have bespoke copy for is still legible and
- * distinct from every other refusal, not folded into one flat sentence.
+ * validation, session expiry); everything else falls back to a generic,
+ * fixed message. Per WEB-CREATE-GUARD: never interpolate the raw
+ * `code`/`reason` string into anything shown on screen — that's real
+ * Firebase/Functions SDK text (e.g. literally `"functions/invalid-
+ * argument"`), not a message written for a user.
  */
 export function createCompetitionFailureMessage(failure: CreateCompetitionFailure): string {
-  const detail = [failure.code, failure.reason].filter(Boolean).join(": ");
-
   switch (failure.code) {
     case "functions/permission-denied":
       return "You don't have permission to create competitions. If you think this is wrong, email hello@ileadit.co.uk.";
     case "functions/invalid-argument":
-      return `Something about this competition isn't valid${detail ? ` (${detail})` : ""}. Check the fields above and try again.`;
+      return invalidArgumentFailureMessage(failure);
     case "functions/unauthenticated":
       return "You've been signed out. Sign in again and try creating this competition once more.";
     case "functions/resource-exhausted":
       return "You've hit a limit on your plan. Contact hello@ileadit.co.uk if you need more room.";
     default:
-      return `We couldn't create that competition${detail ? ` (${detail})` : ""}. Please try again, or email hello@ileadit.co.uk if it keeps happening.`;
+      return "We couldn't create that competition. Please try again, or email hello@ileadit.co.uk if it keeps happening.";
   }
 }
