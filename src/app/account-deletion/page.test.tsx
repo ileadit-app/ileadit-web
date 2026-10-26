@@ -3,27 +3,21 @@ import { render, screen } from "@testing-library/react";
 import AccountDeletion from "./page";
 
 /**
- * Pins the W3-DELETION-AUDIT fixes to `/account-deletion`, against
- * `automation-hub/docs/ileadit-account-deletion-spec-20260920.md`. Each test
- * below corresponds to one row of the audit's fix list — see the ticket
- * report for the full spec-requirement -> page-behaviour mapping. MUT-*
- * ids are referenced in the findings report as the mutation each test was
- * proven against (mutate source, RED, revert, GREEN).
+ * WEB-LEGAL-1. Pins the approved copy
+ * (.ticket-refs/account-deletion-APPROVED-20261026.md, Paul, 26 Oct 2026)
+ * now live on `/account-deletion`. Supersedes the previous W3-DELETION-AUDIT
+ * test file, which pinned an earlier draft of this page's wording (e.g.
+ * "Deleted Player" instead of the now-approved "A former player", and a
+ * Microsoft-sign-in hedge that the approved copy deliberately drops).
  *
  * `next/link` is stubbed to a plain anchor — routing context isn't under
- * test here. `@/context/AuthContext`'s `useUser` and `@/lib/auth`'s
- * `isMicrosoftSignInEnabled` are the two things this page actually reads
- * that need controlling per-test.
+ * test here. `@/context/AuthContext`'s `useUser` is the one thing the page
+ * actually reads that needs controlling per-test.
  */
 
 const useUserMock = vi.fn();
 vi.mock("@/context/AuthContext", () => ({
   useUser: () => useUserMock(),
-}));
-
-const isMicrosoftSignInEnabledMock = vi.fn();
-vi.mock("@/lib/auth", () => ({
-  isMicrosoftSignInEnabled: () => isMicrosoftSignInEnabledMock(),
 }));
 
 vi.mock("next/link", () => ({
@@ -37,111 +31,167 @@ vi.mock("next/link", () => ({
 beforeEach(() => {
   useUserMock.mockReset();
   useUserMock.mockReturnValue({ status: "signed-out", user: null });
-  isMicrosoftSignInEnabledMock.mockReset();
-  isMicrosoftSignInEnabledMock.mockReturnValue(false);
 });
 
-describe("/account-deletion — W3-DELETION-AUDIT fixes", () => {
-  // MUT-D1: reverted the "finished competition" bullet's anonymisation
-  // clause back to a bare "Payment and invoice records..." bullet (i.e.
-  // deleted the added list item) -> RED, restored -> GREEN.
-  it("promises anonymised retention (\"Deleted Player\") for FINISHED competitions, not removal", () => {
+describe("/account-deletion — approved copy (WEB-LEGAL-1)", () => {
+  // MUT: reverted the "in the app" section's heading text -> RED, restored
+  // -> GREEN.
+  it("explains the quickest way is in the app, via Settings", () => {
     render(<AccountDeletion />);
 
-    expect(screen.getByText(/shown to other players as "Deleted Player"/i)).toBeInTheDocument();
+    const heading = screen.getByRole("heading", { name: /the quickest way: in the app/i });
+    const section = heading.closest("div");
+    expect(section).not.toBeNull();
+    expect(section).toHaveTextContent(/settings/i);
   });
 
-  // MUT-D2: changed "any competition that hasn't finished yet" back to the
-  // old unqualified "any competitions you're currently playing... removed
-  // from every leaderboard" wording -> RED (the un-scoped claim reappears
-  // alongside the scoped one, so the two get inconsistent), restored -> GREEN.
-  it("scopes full row removal to competitions that HAVEN'T finished yet, not every leaderboard", () => {
+  // MUT: deleted "within one month" and restored the old "30 days"/
+  // "provisional" wording -> RED, restored -> GREEN. Also proves the old
+  // "best-effort... needs sign-off from Paul and legal counsel" hedge and
+  // the standalone "How long it takes" section are gone.
+  it("states the without-app deletion timing as \"within one month\", with no provisional/SLA hedging", () => {
     render(<AccountDeletion />);
 
-    expect(
-      screen.getByText(/your place in any competition that hasn't finished yet/i),
-    ).toBeInTheDocument();
-    expect(screen.queryByText(/removed from every leaderboard/i)).not.toBeInTheDocument();
+    expect(screen.getByText(/delete the account within one month/i)).toBeInTheDocument();
+    expect(screen.queryByText(/30 days/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/provisional/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/legal counsel/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/official sla/i)).not.toBeInTheDocument();
   });
 
-  // MUT-D3: deleted the welcome-grant retention bullet entirely -> RED,
+  // MUT: reverted "and you appear as \"A former player\"" back to the
+  // earlier draft's "Deleted Player" wording -> RED, restored -> GREEN.
+  it('promises anonymised retention ("A former player") for FINISHED competitions, not removal', () => {
+    render(<AccountDeletion />);
+
+    expect(screen.getByText(/appear as "A former player"/i)).toBeInTheDocument();
+    expect(screen.queryByText(/deleted player/i)).not.toBeInTheDocument();
+  });
+
+  // MUT: deleted the welcome-bonus retention bullet entirely -> RED,
   // restored -> GREEN.
-  it("discloses the welcome-grant retention record by name, not just a generic fraud-record bullet", () => {
+  it("discloses the welcome-bonus retention record by name", () => {
     render(<AccountDeletion />);
 
-    expect(
-      screen.getByText(/stops the same email from claiming a second welcome bonus/i),
-    ).toBeInTheDocument();
+    expect(screen.getByText(/can't claim the welcome coins twice/i)).toBeInTheDocument();
   });
 
-  // MUT-D4: removed "profile photo" from the "what gets deleted" bullet ->
-  // RED, restored -> GREEN.
-  it("names the profile photo explicitly among what gets deleted, not just \"avatar\"", () => {
+  // MUT: deleted "Competitions you organised carry on for the players in
+  // them." -> RED, restored -> GREEN.
+  it("says a deleted organiser's competitions carry on for their players", () => {
     render(<AccountDeletion />);
 
-    expect(screen.getByText(/display name, avatar, profile photo, city/i)).toBeInTheDocument();
+    expect(document.body).toHaveTextContent(/competitions you organised.*carry on for the players in them/i);
   });
 
-  // FDOB1-WEB M-W1: ileadit does not collect or retain date of birth or
-  // gender (product rule ILR-30, Procedure A confirmed 0 production
-  // accounts held either field as of 25 Sep 2026). The "what gets deleted"
-  // personal-details bullet must not mention either. Mutation-proven:
-  // temporarily restored "date of birth, gender" on this bullet -> RED,
-  // reverted -> GREEN.
-  it("does not mention date of birth or gender anywhere on the page", () => {
+  // MUT: deleted "Never kept: your step counts..." -> RED, restored -> GREEN.
+  it("states step counts are never kept", () => {
+    render(<AccountDeletion />);
+
+    expect(screen.getByText(/never kept: your step counts/i)).toBeInTheDocument();
+  });
+
+  // MUT: restored "display name, avatar, profile photo, city" (dropping
+  // "town or city" and the Oxford "and") -> RED, restored -> GREEN.
+  it("names the profile photo and town-or-city explicitly among what gets deleted", () => {
+    render(<AccountDeletion />);
+
+    expect(screen.getByText(/display name, avatar, profile photo, and town or city/i)).toBeInTheDocument();
+  });
+
+  // Carried over from the earlier audit: still no date of birth, gender or
+  // country anywhere (product rule confirmed neither field is collected).
+  it("does not mention date of birth, gender or country anywhere on the page", () => {
     render(<AccountDeletion />);
 
     expect(screen.queryByText(/date of birth/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/gender/i)).not.toBeInTheDocument();
-    expect(screen.getByText(/your name details/i)).toBeInTheDocument();
-    // OV-1 / C-24: no Country anywhere.
     expect(screen.queryByText(/country/i)).not.toBeInTheDocument();
+    expect(screen.getByText(/your first name and surname/i)).toBeInTheDocument();
   });
 
-  // MUT-D5: deleted the entire "What can't be undone" <Section> -> RED,
-  // restored -> GREEN.
-  it('has an explicit, standalone "what can\'t be undone" irreversibility statement', () => {
+  // No more Stripe/payments/invoices anywhere on this page (ileadit takes no
+  // payments via this account-deletion flow and the approved copy removes
+  // every mention).
+  it("never mentions Stripe, payments or invoices", () => {
+    render(<AccountDeletion />);
+
+    expect(screen.queryByText(/stripe/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/invoice/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/payment/i)).not.toBeInTheDocument();
+  });
+
+  // The old "If you created a competition... We'll email you first" section
+  // is gone — organiser handling is now covered only by the one-line "carry
+  // on for the players in them" bullet above.
+  it("does not have the old 'we'll email you first' organiser section", () => {
+    render(<AccountDeletion />);
+
+    expect(screen.queryByText(/we'll email you first/i)).not.toBeInTheDocument();
+  });
+
+  // The approved copy drops the Microsoft-sign-in hedge entirely — the
+  // sign-in bullet is now a flat, unconditional sentence regardless of the
+  // isMicrosoftSignInEnabled() flag (which this view no longer reads at
+  // all).
+  it("names the sign-in bullet as email/password or Google, unconditionally", () => {
+    render(<AccountDeletion />);
+
+    expect(screen.getByText(/your ileadit sign-in \(email and password, or google\)/i)).toBeInTheDocument();
+  });
+
+  it("has an explicit, standalone \"what can't be undone\" irreversibility statement", () => {
+    render(<AccountDeletion />);
+
+    expect(screen.getByRole("heading", { name: /what can't be undone/i })).toBeInTheDocument();
+    expect(
+      screen.getByText(/your game progress, coins and competition history can't be recovered/i),
+    ).toBeInTheDocument();
+  });
+
+  it("keeps the mailto request box, defaulting to a fill-in placeholder with no email typed yet", () => {
+    render(<AccountDeletion />);
+
+    screen.getByLabelText(/your account email/i);
+    const link = screen.getByRole("link", { name: /email us to request deletion/i });
+    expect(link).toHaveAttribute("href", expect.stringContaining("mailto:hello@ileadit.co.uk"));
+    const href = link.getAttribute("href") ?? "";
+    expect(decodeURIComponent(href)).toContain("(please fill in)");
+  });
+
+  it("builds the mailto from the typed email once one is entered", async () => {
+    const { fireEvent } = await import("@testing-library/react");
+    render(<AccountDeletion />);
+
+    const emailInput = screen.getByLabelText(/your account email/i);
+    fireEvent.change(emailInput, { target: { value: "player@example.com" } });
+
+    const link = screen.getByRole("link", { name: /email us to request deletion/i });
+    expect(link).toHaveAttribute("href", expect.stringContaining(encodeURIComponent("player@example.com")));
+  });
+
+  it("links to the privacy policy in the footer line", () => {
+    render(<AccountDeletion />);
+
+    const link = screen.getByRole("link", { name: /privacy policy/i });
+    expect(link).toHaveAttribute("href", "/privacy");
+  });
+
+  it("writes Kranthews Ltd's postal address instead of a plain-text email repeat", () => {
     render(<AccountDeletion />);
 
     expect(
-      screen.getByRole("heading", { name: /what can't be undone/i }),
+      screen.getByText(/write to us at kranthews ltd, 1 westbrook avenue, hampton, england, tw12 2re/i),
     ).toBeInTheDocument();
-    expect(
-      screen.getByText(/game progress, coins, and competition\s+history can.t be recovered/i),
-    ).toBeInTheDocument();
-  });
-
-  // MUT-D6: hard-coded signInDeletionBullet() to always return the
-  // Microsoft-inclusive string (ignoring isMicrosoftSignInEnabled()) -> RED
-  // (this test's "false" case then sees "Microsoft" and fails), restored ->
-  // GREEN.
-  it("does not claim Microsoft sign-in is deleted when Microsoft sign-in isn't switched on", () => {
-    isMicrosoftSignInEnabledMock.mockReturnValue(false);
-    render(<AccountDeletion />);
-
-    expect(screen.getByText(/email\/password, plus Google if you've linked it/i)).toBeInTheDocument();
-    expect(screen.queryByText(/across email, Google and Microsoft/i)).not.toBeInTheDocument();
-  });
-
-  it("names Microsoft once Microsoft sign-in IS switched on", () => {
-    isMicrosoftSignInEnabledMock.mockReturnValue(true);
-    render(<AccountDeletion />);
-
-    expect(screen.getByText(/across email, Google and Microsoft/i)).toBeInTheDocument();
   });
 
   /**
    * W9-A11Y. Tailwind preflight's `list-style: none` strips native list
    * semantics from `<ul>`s in REAL browsers unless `role="list"` is
-   * explicitly restored — see the equivalent fix/test on
-   * `CompetitionLeaderboard.tsx`. jsdom does NOT model this CSS-driven
-   * demotion, so `getByRole("list")` would pass whether or not the
-   * attribute is present; this asserts the attribute directly instead, the
-   * only way to actually pin the fix. `/account-deletion` renders this
-   * page's bullet lists via the single `BulletList` component, so one
-   * assertion covers every bulleted section on the page. Mutation-proven:
-   * removed `role="list"` from `BulletList`'s `<ul>`, confirmed RED,
-   * reverted, confirmed GREEN.
+   * explicitly restored. jsdom does NOT model this CSS-driven demotion, so
+   * `getByRole("list")` would pass whether or not the attribute is present;
+   * this asserts the attribute directly instead, the only way to actually
+   * pin the fix.
    */
   it("MUT-A11Y-BULLET-LIST-ROLE: bullet lists carry an explicit role=\"list\" attribute", () => {
     const { container } = render(<AccountDeletion />);
@@ -151,5 +201,14 @@ describe("/account-deletion — W3-DELETION-AUDIT fixes", () => {
     lists.forEach((list) => {
       expect(list).toHaveAttribute("role", "list");
     });
+  });
+
+  it("has no placeholder/legal-review disclaimer language anywhere", () => {
+    render(<AccountDeletion />);
+
+    const bodyText = document.body.textContent ?? "";
+    expect(bodyText.toLowerCase()).not.toContain("placeholder");
+    expect(bodyText.toLowerCase()).not.toContain("not for production");
+    expect(bodyText.toLowerCase()).not.toContain("legal counsel");
   });
 });
