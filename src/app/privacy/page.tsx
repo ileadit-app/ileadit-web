@@ -376,7 +376,7 @@ function ScrollTable({
 }) {
   return (
     <div className="overflow-x-auto rounded-xl border border-border">
-      <table className="w-full min-w-[32rem] border-collapse text-left text-sm">
+      <table className="w-full border-collapse text-left text-sm">
         <caption className="sr-only">{caption}</caption>
         <thead>
           <tr className="border-b border-border bg-card">
