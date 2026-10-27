@@ -115,7 +115,11 @@ describe("PrizeTerms", () => {
     expect(screen.getByRole("heading", { level: 2, name: "Eligibility" })).toBeInTheDocument();
     expect(screen.getByText("UK").tagName).toBe("STRONG");
     expect(screen.getByText("below").tagName).toBe("EM");
-    expect(screen.getByRole("list")).toBeInTheDocument();
+    // Two lists now legitimately exist on the page: the content's own <ul>
+    // and the "On this page" TOC sidebar's <ol> (built from this same <h2>,
+    // see PrizeTerms.tsx's porting-note comment) — scope to the content
+    // list specifically rather than asserting a single list exists.
+    expect(screen.getByText("One").closest("ul")).toBeInTheDocument();
     const link = screen.getByRole("link", { name: "full terms" });
     expect(link).toHaveAttribute("href", "https://ileadit.app/terms");
   });

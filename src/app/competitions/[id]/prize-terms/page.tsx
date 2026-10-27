@@ -11,7 +11,11 @@ import { PrizeTerms } from "@/components/competitions/PrizeTerms";
  * winner's family member, anyone) before/without ever signing in — same
  * reasoning `/invite/[code]/page.tsx` already documents for its own
  * deliberately-public route. See `PrizeTerms.tsx` for how the terms HTML
- * itself is rendered safely (sandboxed iframe, not `dangerouslySetInnerHTML`).
+ * itself is rendered safely: sanitised with DOMPurify's strict allow-list,
+ * then rendered as normal page content (via `dangerouslySetInnerHTML`) in
+ * the site's own typography — the approved v0 design requires real
+ * typography inheritance, which an opaque-origin sandboxed `<iframe>` (the
+ * original PRZ-W1 approach) cannot provide.
  */
 export default function PrizeTermsPage({
   params,

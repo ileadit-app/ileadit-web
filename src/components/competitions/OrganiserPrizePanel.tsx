@@ -99,6 +99,11 @@ export function OrganiserPrizePanelView({
   const [confirmingUid, setConfirmingUid] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const [pageError, setPageError] = useState<string | null>(null);
+  // Must run before the `!prize` early return below — React hooks can never
+  // be called conditionally (rules-of-hooks). Pre-existing bug, caught by
+  // `npm run lint` while verifying this ticket's other changes, unrelated to
+  // the `@container` fix above.
+  const headingId = useId();
 
   if (!prize) return null;
 
@@ -122,7 +127,6 @@ export function OrganiserPrizePanelView({
   }
 
   const confirmingWinner = prizeWinners.find((winner) => winner.uid === confirmingUid) ?? null;
-  const headingId = useId();
   const kindIcon: LucideIcon = prize.kind === "forfeit" ? Smile : Sun;
   const kindLabel = prize.kind === "forfeit" ? "Bragging rights" : "A perk";
   const title = prize.items.find((item) => item.place === 1)?.title ?? "Prize";
@@ -130,7 +134,19 @@ export function OrganiserPrizePanelView({
   return (
     <section
       aria-labelledby={headingId}
-      className="mt-4 rounded-3xl border border-border bg-card p-6"
+      // `@container`: the `@min-[Npx]:` classes below (and throughout this
+      // component) are Tailwind v4 CONTAINER query variants, ported
+      // verbatim from the v0 source — but v0's own preview frame
+      // (`FrameCanvas.tsx`) is itself wrapped in `@container`, which this
+      // app has no equivalent of. Without an explicit `@container`
+      // ancestor, a `@min-*` variant has no containment context to query
+      // against and silently never matches, at any real browser width —
+      // caught via PRZ-W1-FIX1's screenshot verification (the 3-step
+      // progress row rendered as a single column at 1280px instead of the
+      // intended `@min-[640px]:grid-cols-3`). Establishing containment
+      // here, scoped to just this card, is what makes those variants
+      // actually activate against the card's own real rendered width.
+      className="@container mt-4 rounded-3xl border border-border bg-card p-6"
     >
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
