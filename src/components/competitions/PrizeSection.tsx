@@ -108,15 +108,20 @@ export function PrizeSection({
   const namePlaceholder = value.kind === "forfeit" ? "Last place buys the first round" : "An extra day off";
 
   return (
-    // `@container`: the top-3 name/description grids below use a Tailwind v4
-    // CONTAINER query (`@min-[640px]:grid-cols-3`), matching the approved v0
-    // design verbatim (PRZ-W1-FIX2) — this section must stack to one column
-    // whenever the SURROUNDING CARD is narrow, even on a wide viewport,
-    // rather than the plain `sm:` viewport breakpoint this used to use
-    // (which ignored how much room the create-form card actually had). See
-    // the matching `@container` gotcha already documented for
-    // `OrganiserPrizePanel.tsx`/`PrizeTermsView`.
-    <section aria-labelledby={headingId} className="@container space-y-5 border-t border-border pt-6">
+    // PRZ-W1-FIX3: the top-3 name/description fields (below) are stacked in
+    // ONE column at every width, full stop — no `sm:`/`@min-[...]` breakpoint
+    // at all. FIX2 used a Tailwind v4 CONTAINER query
+    // (`@min-[640px]:grid-cols-3`, needing the `@container` class on this
+    // `<section>`) on the theory that three columns were fine once the
+    // SURROUNDING CARD (not the viewport) had the room. In practice, inside
+    // the real create-competition form's card width, three name fields plus
+    // three description fields side-by-side read as genuinely cramped even
+    // at 1280px — see the visual-gate finding and
+    // `.ticket-refs/shots/prizes/r3/crop-names-1280.png`. Each place's name
+    // field and description field are now grouped together, one place per
+    // row, matching the single-winner field style. Don't reintroduce a
+    // multi-column grid here without a fresh design sign-off.
+    <section aria-labelledby={headingId} className="space-y-5 border-t border-border pt-6">
       <div>
         <h2 id={headingId} className="text-sm font-bold uppercase tracking-wide text-brand-coral">
           Prize
@@ -170,23 +175,36 @@ export function PrizeSection({
               disabled={disabled}
             />
           ) : (
-            <div className="grid gap-5 @min-[640px]:grid-cols-3">
+            <div className="space-y-5">
               {([1, 2, 3] as const).map((place) => {
                 const item = value.items.find((candidate) => candidate.place === place);
                 const title = item?.title ?? "";
+                const description = item?.description ?? "";
                 return (
-                  <TextField
-                    key={place}
-                    label={`${place === 1 ? "1st" : place === 2 ? "2nd" : "3rd"} place prize name`}
-                    value={title}
-                    onChange={(text) => setItemField(place, "title", text.slice(0, PRIZE_TITLE_MAX_LENGTH))}
-                    error={errors.items?.[place]?.title}
-                    required={place === 1}
-                    maxLength={PRIZE_TITLE_MAX_LENGTH}
-                    helperText={`${title.length}/${PRIZE_TITLE_MAX_LENGTH} · ${PRIZE_NAME_SHOWN_HINT}`}
-                    placeholder={place === 1 ? namePlaceholder : "Optional"}
-                    disabled={disabled}
-                  />
+                  <div key={place} className="space-y-5">
+                    <TextField
+                      label={`${place === 1 ? "1st" : place === 2 ? "2nd" : "3rd"} place prize name`}
+                      value={title}
+                      onChange={(text) => setItemField(place, "title", text.slice(0, PRIZE_TITLE_MAX_LENGTH))}
+                      error={errors.items?.[place]?.title}
+                      required={place === 1}
+                      maxLength={PRIZE_TITLE_MAX_LENGTH}
+                      helperText={`${title.length}/${PRIZE_TITLE_MAX_LENGTH} · ${PRIZE_NAME_SHOWN_HINT}`}
+                      placeholder={place === 1 ? namePlaceholder : "Optional"}
+                      disabled={disabled}
+                    />
+                    <TextAreaField
+                      label="Description (optional)"
+                      value={description}
+                      onChange={(text) =>
+                        setItemField(place, "description", text.slice(0, PRIZE_DESCRIPTION_MAX_LENGTH))
+                      }
+                      error={errors.items?.[place]?.description}
+                      helperText={`${description.length}/${PRIZE_DESCRIPTION_MAX_LENGTH}`}
+                      disabled={disabled}
+                      rows={2}
+                    />
+                  </div>
                 );
               })}
             </div>
@@ -201,28 +219,7 @@ export function PrizeSection({
               placeholder="What does the winner get?"
               disabled={disabled}
             />
-          ) : (
-            <div className="grid gap-5 @min-[640px]:grid-cols-3">
-              {([1, 2, 3] as const).map((place) => {
-                const item = value.items.find((candidate) => candidate.place === place);
-                const description = item?.description ?? "";
-                return (
-                  <TextAreaField
-                    key={place}
-                    label="Description (optional)"
-                    value={description}
-                    onChange={(text) =>
-                      setItemField(place, "description", text.slice(0, PRIZE_DESCRIPTION_MAX_LENGTH))
-                    }
-                    error={errors.items?.[place]?.description}
-                    helperText={`${description.length}/${PRIZE_DESCRIPTION_MAX_LENGTH}`}
-                    disabled={disabled}
-                    rows={2}
-                  />
-                );
-              })}
-            </div>
-          )}
+          ) : null}
 
           <OptionCards
             legend="Who wins it?"

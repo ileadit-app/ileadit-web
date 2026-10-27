@@ -20,6 +20,12 @@ import type { CompetitionTermsDoc } from "@/lib/competitionTerms";
  * (`.ticket-refs/prizes/v0-web/components/competitions/{PrizeSection,
  * PrizeTerms}.tsx`) — the trigger becomes a `<button>` instead of an `<a>`
  * since it triggers a callable call and a local view swap, not navigation.
+ *
+ * PRZ-W1-FIX3 — the trigger's two lines (the button itself, then the muted
+ * "Written for you..." helper line) are forced onto separate lines with a
+ * fixed `flex-col`, not `flex flex-wrap` (the FIX2 shape, which only wrapped
+ * once the viewport got narrow — the design always shows two lines, even at
+ * 1280px, so wrapping must not be conditional on available width here).
  */
 export function PrizeTermsPreviewTrigger({
   onPreview,
@@ -36,7 +42,7 @@ export function PrizeTermsPreviewTrigger({
   pending: boolean;
 }) {
   return (
-    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-2xl border border-border bg-card px-4 py-1">
+    <div className="flex flex-col gap-1 rounded-2xl border border-border bg-card px-4 py-3">
       <button
         type="button"
         onClick={onPreview}
