@@ -82,6 +82,12 @@ export const PRIZE_TITLE_MAX_LENGTH = 60;
 export const PRIZE_DESCRIPTION_MAX_LENGTH = 200;
 export const FORFEIT_LOSER_TEXT_MAX_LENGTH = 80;
 
+/** The approved design's counter suffix on every prize-name field (PRZ-W1-FIX2,
+ * `.ticket-refs/prizes/v0-web/components/competitions/PrizeSection.tsx:137`)
+ * — one shared string so the single-winner field and all three top-3 fields
+ * can never drift to different wording. */
+export const PRIZE_NAME_SHOWN_HINT = "shown to players on the competition page";
+
 export const FREE_TO_ENTER_LINE = "Free to enter. Always.";
 
 /* ------------------------------------------------------------------ *

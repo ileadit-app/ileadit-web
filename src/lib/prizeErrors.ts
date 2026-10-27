@@ -61,6 +61,15 @@ export function toMarkPrizeGivenFailure(error: unknown): PrizeCallableFailure {
   return toPrizeCallableFailure(error, "Something went wrong marking this prize as given.");
 }
 
+/** PRZ-W1-FIX2 — the `previewPrizeTerms` callable (built in parallel by the
+ * engine side, source unreadable at the time this was written; same
+ * "unverified, flagged not hidden" discipline as every other callable
+ * wrapper in this file). Shares `PrizeCallableFailure`'s shape — nothing
+ * about this failure surface is specific to preview vs. save. */
+export function toPreviewPrizeTermsFailure(error: unknown): PrizeCallableFailure {
+  return toPrizeCallableFailure(error, "Something went wrong generating a preview of these terms.");
+}
+
 /**
  * Page-level copy for a failed `updateCompetitionPrize` call. Includes a
  * bespoke `failed-precondition` case for the one rejection the spec names
@@ -88,6 +97,25 @@ export function updateCompetitionPrizeFailureMessage(failure: PrizeCallableFailu
       return "You've been signed out. Sign in again and try saving your prize changes once more.";
     default:
       return `We couldn't save your prize changes${detail ? ` (${detail})` : ""}. Please try again, or email hello@ileadit.co.uk if it keeps happening.`;
+  }
+}
+
+/** Page-level copy for a failed `previewPrizeTerms` call. Shown next to the
+ * "Preview prize terms" trigger, not the page-level `pageError` banner used
+ * for a failed competition submission — the two failures are unrelated
+ * actions and must never share one message slot. */
+export function previewPrizeTermsFailureMessage(failure: PrizeCallableFailure): string {
+  const detail = [failure.code, failure.reason].filter(Boolean).join(": ");
+
+  switch (failure.code) {
+    case "functions/permission-denied":
+      return "You don't have permission to preview these terms. If you think this is wrong, email hello@ileadit.co.uk.";
+    case "functions/invalid-argument":
+      return `Something about this prize isn't valid${detail ? ` (${detail})` : ""}. Check the fields above and try again.`;
+    case "functions/unauthenticated":
+      return "You've been signed out. Sign in again and try previewing the terms once more.";
+    default:
+      return `We couldn't generate a preview of these terms${detail ? ` (${detail})` : ""}. Please try again, or email hello@ileadit.co.uk if it keeps happening.`;
   }
 }
 

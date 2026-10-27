@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor, act } from "@testing-library/react";
 import { CreateCompetitionForm } from "./CreateCompetitionForm";
 
 /**
@@ -122,5 +122,177 @@ describe("CreateCompetitionForm — prize section", () => {
     expect(screen.queryByText(/digital code/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/physical/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/sponsor/i)).not.toBeInTheDocument();
+  });
+
+  // PRZ-W1-FIX2 — every prize-name counter must carry the design's
+  // "shown to players on the competition page" hint, not just the
+  // single-winner field.
+  describe("prize name hint", () => {
+    it("the single-winner title field's counter includes the hint", () => {
+      render(<CreateCompetitionForm />);
+      fireEvent.click(screen.getByLabelText(/add a prize for the winner/i));
+      fireEvent.click(screen.getByLabelText(/^a perk/i));
+
+      expect(screen.getByText(/0\/60 · shown to players on the competition page/i)).toBeInTheDocument();
+    });
+
+    it("all three top-3 title fields' counters include the hint", () => {
+      render(<CreateCompetitionForm />);
+      fireEvent.click(screen.getByLabelText(/add a prize for the winner/i));
+      fireEvent.click(screen.getByLabelText(/^a perk/i));
+      fireEvent.click(screen.getByLabelText(/^the top 3/i));
+
+      const hints = screen.getAllByText(/0\/60 · shown to players on the competition page/i);
+      expect(hints).toHaveLength(3);
+    });
+  });
+
+  // PRZ-W1-FIX2 — the "Preview prize terms" card. `httpsCallable` is mocked
+  // at module scope above (`() => mockCallable`), ignoring the callable
+  // name — safe here because every test below triggers at most one of
+  // `createCompetition`/`previewPrizeTerms`, never both.
+  describe("preview prize terms", () => {
+    function enablePerkPrize() {
+      fireEvent.click(screen.getByLabelText(/add a prize for the winner/i));
+      fireEvent.click(screen.getByLabelText(/^a perk/i));
+      fireEvent.change(screen.getByLabelText(/^prize name/i), {
+        target: { value: "£100 voucher" },
+      });
+    }
+
+    it("the trigger is disabled until the form has enough to preview", () => {
+      render(<CreateCompetitionForm />);
+
+      // No prize enabled yet at all.
+      expect(screen.queryByRole("button", { name: /preview prize terms/i })).not.toBeInTheDocument();
+
+      fireEvent.click(screen.getByLabelText(/add a prize for the winner/i));
+      fireEvent.click(screen.getByLabelText(/^a perk/i));
+
+      // Prize enabled, but no place-1 title yet, and the competition's own
+      // name/start fields are still empty too.
+      expect(screen.getByRole("button", { name: /preview prize terms/i })).toBeDisabled();
+
+      fillRequiredFields();
+      expect(screen.getByRole("button", { name: /preview prize terms/i })).toBeDisabled();
+
+      fireEvent.change(screen.getByLabelText(/^prize name/i), {
+        target: { value: "£100 voucher" },
+      });
+      expect(screen.getByRole("button", { name: /preview prize terms/i })).toBeEnabled();
+    });
+
+    it("clicking the trigger calls previewPrizeTerms with the exact payload shape", async () => {
+      mockCallable.mockResolvedValue({
+        data: { html: "<p>Terms</p>", approvedTemplateVersion: "v1" },
+      });
+      render(<CreateCompetitionForm />);
+      fillRequiredFields();
+      enablePerkPrize();
+
+      await act(async () => {
+        fireEvent.click(screen.getByRole("button", { name: /preview prize terms/i }));
+      });
+
+      await waitFor(() => expect(mockCallable).toHaveBeenCalledTimes(1));
+      const body = mockCallable.mock.calls[0][0];
+      expect(Object.keys(body).sort()).toEqual(
+        ["durationDays", "name", "prize", "startTime", "timeZone"].sort(),
+      );
+      expect(body.name).toBe("Marketing team step-off");
+      expect(body.durationDays).toBe(7);
+      expect(typeof body.startTime).toBe("string"); // ISO string — see previewPrizeTerms.ts's header comment.
+      expect(body.prize).toEqual({
+        kind: "perk",
+        places: 1,
+        items: [{ place: 1, title: "£100 voucher", description: "" }],
+        forfeitLoserText: null,
+        adultOnly: false,
+      });
+    });
+
+    it("renders the returned html, sanitised, via PrizeTermsView", async () => {
+      mockCallable.mockResolvedValue({
+        data: {
+          html: "<p>Be nice. <script>alert(1)</script></p>",
+          approvedTemplateVersion: "v1",
+        },
+      });
+      render(<CreateCompetitionForm />);
+      fillRequiredFields();
+      enablePerkPrize();
+
+      await act(async () => {
+        fireEvent.click(screen.getByRole("button", { name: /preview prize terms/i }));
+      });
+
+      await waitFor(() => expect(mockCallable).toHaveBeenCalledTimes(1));
+      expect(await screen.findByText(/be nice\./i)).toBeInTheDocument();
+      // The "back to the form" bar confirms the preview pane replaced the form.
+      expect(screen.getByRole("button", { name: /back to the form/i })).toBeInTheDocument();
+      // The form itself is no longer rendered while the preview is shown.
+      expect(screen.queryByRole("button", { name: /create competition/i })).not.toBeInTheDocument();
+      // The sanitiser must have stripped the script tag's content out of the DOM entirely.
+      expect(document.querySelector("script")).not.toBeInTheDocument();
+    });
+
+    it("shows the draft notice when approvedTemplateVersion is DRAFT-NOT-APPROVED", async () => {
+      mockCallable.mockResolvedValue({
+        data: { html: "<p>Draft wording</p>", approvedTemplateVersion: "DRAFT-NOT-APPROVED" },
+      });
+      render(<CreateCompetitionForm />);
+      fillRequiredFields();
+      enablePerkPrize();
+
+      await act(async () => {
+        fireEvent.click(screen.getByRole("button", { name: /preview prize terms/i }));
+      });
+
+      // Both the html's own words AND the shared draft-notice banner contain
+      // "draft" — match the banner's exact, distinctive sentence instead of
+      // a loose substring so this doesn't collide with the preview's own
+      // generated wording.
+      expect(
+        await screen.findByText(/draft terms — not yet approved/i),
+      ).toBeInTheDocument();
+      expect(screen.getByText(/draft wording/i)).toBeInTheDocument();
+    });
+
+    it("clicking 'Back to the form' returns to the editable form", async () => {
+      mockCallable.mockResolvedValue({
+        data: { html: "<p>Terms</p>", approvedTemplateVersion: "v1" },
+      });
+      render(<CreateCompetitionForm />);
+      fillRequiredFields();
+      enablePerkPrize();
+
+      await act(async () => {
+        fireEvent.click(screen.getByRole("button", { name: /preview prize terms/i }));
+      });
+      await screen.findByRole("button", { name: /back to the form/i });
+
+      fireEvent.click(screen.getByRole("button", { name: /back to the form/i }));
+
+      expect(screen.getByRole("button", { name: /create competition/i })).toBeInTheDocument();
+    });
+
+    it("a failed preview call shows the mapped error message, not the raw failure", async () => {
+      mockCallable.mockRejectedValue({
+        code: "functions/invalid-argument",
+        message: "bad",
+        details: { reason: "prize-title-too-long" },
+      });
+      render(<CreateCompetitionForm />);
+      fillRequiredFields();
+      enablePerkPrize();
+
+      await act(async () => {
+        fireEvent.click(screen.getByRole("button", { name: /preview prize terms/i }));
+      });
+
+      expect(await screen.findByText(/something about this prize isn't valid/i)).toBeInTheDocument();
+      // Still on the form, not swapped into the preview pane.
+      expect(screen.getByRole("button", { name: /create competition/i })).toBeInTheDocument();
+    });
   });
 });

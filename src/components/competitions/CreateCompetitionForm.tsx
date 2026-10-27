@@ -8,9 +8,11 @@ import { NumberField, SelectField, TextAreaField, TextField } from "@/components
 import { ArtworkUploadField } from "./ArtworkUploadField";
 import { CompetitionHero } from "./CompetitionHero";
 import { PrizeSection } from "./PrizeSection";
+import { PrizeTermsPreviewPane, PrizeTermsPreviewTrigger } from "./PrizeTermsPreviewCard";
 import { createDraftCompetitionId } from "@/lib/competitionArtwork";
 import { createCompetition } from "@/lib/createCompetition";
 import { createCompetitionFailureMessage } from "@/lib/createCompetitionErrors";
+import type { CompetitionTermsDoc } from "@/lib/competitionTerms";
 import {
   EMPTY_PRIZE_FORM_STATE,
   prizeFormHasErrors,
@@ -19,6 +21,8 @@ import {
   type PrizeFieldErrors,
   type PrizeFormState,
 } from "@/lib/prize";
+import { previewPrizeTerms } from "@/lib/previewPrizeTerms";
+import { previewPrizeTermsFailureMessage } from "@/lib/prizeErrors";
 import {
   detectBrowserTimeZone,
   getTimeZoneOptions,
@@ -26,6 +30,21 @@ import {
   parseDateTimeLocalValue,
   zonedWallTimeToDate,
 } from "@/lib/timeZones";
+
+/**
+ * PRZ-W1-FIX2 — state for the "Preview prize terms" card. `"hidden"` is the
+ * normal form state (card not shown, or shown-but-not-yet-clicked is
+ * actually represented entirely by the trigger button's own disabled prop —
+ * see `previewReady` below — there is no separate "ready but not clicked"
+ * member here because the trigger IS the form in that state). `"shown"`
+ * REPLACES the form with `PrizeTermsPreviewPane` (ticket requirement: the
+ * preview swaps in, it doesn't appear alongside the form).
+ */
+type PrizeTermsPreviewState =
+  | { mode: "hidden" }
+  | { mode: "loading" }
+  | { mode: "shown"; terms: CompetitionTermsDoc }
+  | { mode: "error"; message: string };
 
 const NAME_MAX_LENGTH = 80; // firestore.rules:243 — mirrored, not invented.
 
@@ -75,6 +94,12 @@ export function CreateCompetitionForm() {
   const [prize, setPrize] = useState<PrizeFormState>(EMPTY_PRIZE_FORM_STATE);
   const [prizeErrors, setPrizeErrors] = useState<PrizeFieldErrors>({});
 
+  // PRZ-W1-FIX2 — the "Preview prize terms" card. See `PrizeTermsPreviewState`
+  // above for the shape; `setState` calls only ever happen inside
+  // `handlePreviewPrizeTerms`'s event-handler body (never synchronously in
+  // an effect), so this needs no lazy-initializer trick.
+  const [prizeTermsPreview, setPrizeTermsPreview] = useState<PrizeTermsPreviewState>({ mode: "hidden" });
+
   /**
    * The folder competition artwork is uploaded into while this form is
    * open. Client-minted, once per mounted form, because the engine mints
@@ -120,6 +145,65 @@ export function CreateCompetitionForm() {
     }
 
     return errors;
+  }
+
+  /**
+   * PRZ-W1-FIX2 — "the trigger must be disabled until the form has enough
+   * to preview (name, start, duration, time zone, and a valid enabled
+   * prize)." Deliberately recomputed on every render from the form's own
+   * live state (not cached in a ref/effect) — it's cheap, pure, and this
+   * way it can never go stale relative to a field the user just edited.
+   */
+  const previewReady =
+    prize.enabled &&
+    !prizeFormHasErrors(validatePrizeForm(prize)) &&
+    name.trim().length > 0 &&
+    parseDateTimeLocalValue(startTimeValue) !== null &&
+    Number.isInteger(Number(durationDaysValue)) &&
+    Number(durationDaysValue) > 0 &&
+    isValidTimeZone(timeZone);
+
+  async function handlePreviewPrizeTerms() {
+    if (!previewReady) return; // Unreachable via the UI — the trigger is disabled — but keep this honest.
+
+    const parts = parseDateTimeLocalValue(startTimeValue);
+    if (!parts) return; // Unreachable — `previewReady` already checked this.
+
+    const prizeInput = prizeInputFromFormState(prize);
+    if (!prizeInput) return; // Unreachable — `previewReady` already checked `prize.enabled`.
+
+    setPrizeTermsPreview({ mode: "loading" });
+
+    const outcome = await previewPrizeTerms({
+      name: name.trim(),
+      startTime: zonedWallTimeToDate(parts, timeZone),
+      durationDays: Number(durationDaysValue),
+      timeZone,
+      prize: prizeInput,
+    });
+
+    if (outcome.status === "failure") {
+      setPrizeTermsPreview({ mode: "error", message: previewPrizeTermsFailureMessage(outcome.failure) });
+      return;
+    }
+
+    setPrizeTermsPreview({
+      mode: "shown",
+      terms: {
+        // This is a one-off generated preview, not a stored doc — these two
+        // fields have no real value yet, and `PrizeTermsView` never reads
+        // either of them (only `html`/`approvedTemplateVersion` drive its
+        // render), so `null` is correct here, not a placeholder guess.
+        version: null,
+        html: outcome.html,
+        generatedAt: null,
+        approvedTemplateVersion: outcome.approvedTemplateVersion,
+      },
+    });
+  }
+
+  function handleBackToForm() {
+    setPrizeTermsPreview({ mode: "hidden" });
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -168,6 +252,14 @@ export function CreateCompetitionForm() {
     // (CreatedCompetitions.tsx already renders a "Setting up…" badge for
     // exactly that transient state).
     router.push("/dashboard");
+  }
+
+  if (prizeTermsPreview.mode === "shown") {
+    return (
+      <div className="rounded-3xl border border-border bg-card p-6 sm:p-8">
+        <PrizeTermsPreviewPane terms={prizeTermsPreview.terms} onBack={handleBackToForm} />
+      </div>
+    );
   }
 
   return (
@@ -258,6 +350,19 @@ export function CreateCompetitionForm() {
         />
 
         <PrizeSection value={prize} onChange={setPrize} errors={prizeErrors} disabled={submitting} />
+
+        {prize.enabled ? (
+          <>
+            <PrizeTermsPreviewTrigger
+              onPreview={handlePreviewPrizeTerms}
+              disabled={!previewReady || prizeTermsPreview.mode === "loading" || submitting}
+              pending={prizeTermsPreview.mode === "loading"}
+            />
+            {prizeTermsPreview.mode === "error" ? (
+              <ErrorBanner message={prizeTermsPreview.message} />
+            ) : null}
+          </>
+        ) : null}
 
         <button
           type="submit"

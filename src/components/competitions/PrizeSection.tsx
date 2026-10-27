@@ -6,6 +6,7 @@ import Link from "next/link";
 import { TextField, TextAreaField, ToggleField } from "@/components/forms/fields";
 import {
   PRIZE_DESCRIPTION_MAX_LENGTH,
+  PRIZE_NAME_SHOWN_HINT,
   PRIZE_TITLE_MAX_LENGTH,
   resizePrizeItems,
   type PrizeFieldErrors,
@@ -107,7 +108,15 @@ export function PrizeSection({
   const namePlaceholder = value.kind === "forfeit" ? "Last place buys the first round" : "An extra day off";
 
   return (
-    <section aria-labelledby={headingId} className="space-y-5 border-t border-border pt-6">
+    // `@container`: the top-3 name/description grids below use a Tailwind v4
+    // CONTAINER query (`@min-[640px]:grid-cols-3`), matching the approved v0
+    // design verbatim (PRZ-W1-FIX2) — this section must stack to one column
+    // whenever the SURROUNDING CARD is narrow, even on a wide viewport,
+    // rather than the plain `sm:` viewport breakpoint this used to use
+    // (which ignored how much room the create-form card actually had). See
+    // the matching `@container` gotcha already documented for
+    // `OrganiserPrizePanel.tsx`/`PrizeTermsView`.
+    <section aria-labelledby={headingId} className="@container space-y-5 border-t border-border pt-6">
       <div>
         <h2 id={headingId} className="text-sm font-bold uppercase tracking-wide text-brand-coral">
           Prize
@@ -156,12 +165,12 @@ export function PrizeSection({
               error={errors.items?.[1]?.title}
               required
               maxLength={PRIZE_TITLE_MAX_LENGTH}
-              helperText={`${(value.items[0]?.title ?? "").length}/${PRIZE_TITLE_MAX_LENGTH} · shown to players on the competition page`}
+              helperText={`${(value.items[0]?.title ?? "").length}/${PRIZE_TITLE_MAX_LENGTH} · ${PRIZE_NAME_SHOWN_HINT}`}
               placeholder={namePlaceholder}
               disabled={disabled}
             />
           ) : (
-            <div className="grid gap-5 sm:grid-cols-3">
+            <div className="grid gap-5 @min-[640px]:grid-cols-3">
               {([1, 2, 3] as const).map((place) => {
                 const item = value.items.find((candidate) => candidate.place === place);
                 const title = item?.title ?? "";
@@ -174,7 +183,7 @@ export function PrizeSection({
                     error={errors.items?.[place]?.title}
                     required={place === 1}
                     maxLength={PRIZE_TITLE_MAX_LENGTH}
-                    helperText={`${title.length}/${PRIZE_TITLE_MAX_LENGTH}`}
+                    helperText={`${title.length}/${PRIZE_TITLE_MAX_LENGTH} · ${PRIZE_NAME_SHOWN_HINT}`}
                     placeholder={place === 1 ? namePlaceholder : "Optional"}
                     disabled={disabled}
                   />
@@ -193,7 +202,7 @@ export function PrizeSection({
               disabled={disabled}
             />
           ) : (
-            <div className="grid gap-5 sm:grid-cols-3">
+            <div className="grid gap-5 @min-[640px]:grid-cols-3">
               {([1, 2, 3] as const).map((place) => {
                 const item = value.items.find((candidate) => candidate.place === place);
                 const description = item?.description ?? "";
