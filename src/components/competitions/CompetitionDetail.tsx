@@ -21,6 +21,8 @@ import { CompetitionLeaderboard } from "./CompetitionLeaderboard";
 import { TodayCard } from "./TodayCard";
 import { useIsCompetitionOrganiser } from "@/lib/useIsCompetitionOrganiser";
 import { InvitePanel } from "./InvitePanel";
+import { PrizeEditPanel } from "./PrizeEditPanel";
+import { OrganiserPrizePanel } from "./OrganiserPrizePanel";
 
 /**
  * `/competitions/[id]` — detail + leaderboard (P2.1). ONE route serves both
@@ -170,6 +172,24 @@ function CompetitionDetailContent({ competitionId, uid }: { competitionId: strin
           <div className="mt-4">
             <InvitePanel competitionId={competitionId} />
           </div>
+        ) : null}
+
+        {/* PRZ-W1 deliverable 2/4: the prize story is organiser-only and
+            status-shaped — a scheduled/active/finalising competition gets
+            the editable (while scheduled)/read-only summary panel;
+            a finished one gets the "hand out the prize" panel instead.
+            Never both at once — they're mutually exclusive by `status`. */}
+        {organiserCapability === "organiser" && status && status !== "finished" ? (
+          <PrizeEditPanel competitionId={competitionId} status={status} prize={competition.prize} />
+        ) : null}
+
+        {organiserCapability === "organiser" && status === "finished" ? (
+          <OrganiserPrizePanel
+            competitionId={competitionId}
+            prize={competition.prize}
+            prizeWinners={competition.prizeWinners}
+            leaderboardState={leaderboardState}
+          />
         ) : null}
       </div>
     </div>
