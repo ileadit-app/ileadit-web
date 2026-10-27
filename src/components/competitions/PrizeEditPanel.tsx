@@ -100,7 +100,13 @@ export function PrizeEditPanel({
     return (
       <div className="mt-4">
         {pageError ? <ErrorBanner message={pageError} /> : null}
-        <PrizeSection value={formState} onChange={setFormState} errors={fieldErrors} disabled={saving} />
+        <PrizeSection
+          value={formState}
+          onChange={setFormState}
+          errors={fieldErrors}
+          disabled={saving}
+          previewTermsHref={`/competitions/${competitionId}/prize-terms`}
+        />
         <div className="mt-3 flex flex-wrap gap-2">
           <button
             type="button"
@@ -182,10 +188,6 @@ export function PrizeEditPanel({
           </li>
         ))}
       </ul>
-
-      {prize.kind === "forfeit" && prize.forfeitLoserText ? (
-        <p className="mt-3 text-sm text-muted-foreground">&ldquo;{prize.forfeitLoserText}&rdquo;</p>
-      ) : null}
 
       {prize.adultOnly ? (
         <p className="mt-3 text-xs font-medium text-muted-foreground">Winner must be 18 or over.</p>

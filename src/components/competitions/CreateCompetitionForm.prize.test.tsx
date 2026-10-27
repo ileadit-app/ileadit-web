@@ -54,11 +54,11 @@ describe("CreateCompetitionForm — prize section", () => {
     render(<CreateCompetitionForm />);
     fillRequiredFields();
 
-    fireEvent.click(screen.getByLabelText(/offer a prize for this competition/i));
-    fireEvent.click(screen.getByLabelText(/^perk/i));
-    fireEvent.click(screen.getByLabelText(/^top 3/i));
+    fireEvent.click(screen.getByLabelText(/add a prize for the winner/i));
+    fireEvent.click(screen.getByLabelText(/^a perk/i));
+    fireEvent.click(screen.getByLabelText(/^the top 3/i));
 
-    const titleFields = screen.getAllByLabelText(/^prize title/i);
+    const titleFields = screen.getAllByLabelText(/place prize name/i);
     fireEvent.change(titleFields[0], { target: { value: "£100 voucher" } });
     fireEvent.change(titleFields[1], { target: { value: "£50 voucher" } });
     fireEvent.change(titleFields[2], { target: { value: "£25 voucher" } });
@@ -90,7 +90,7 @@ describe("CreateCompetitionForm — prize section", () => {
   it("validation: empty place-1 title blocks submission with the right message", async () => {
     render(<CreateCompetitionForm />);
     fillRequiredFields();
-    fireEvent.click(screen.getByLabelText(/offer a prize for this competition/i));
+    fireEvent.click(screen.getByLabelText(/add a prize for the winner/i));
 
     fireEvent.click(screen.getByRole("button", { name: /create competition/i }));
 
@@ -101,11 +101,11 @@ describe("CreateCompetitionForm — prize section", () => {
   it("validation: a title over 60 characters is rejected with the length message", async () => {
     render(<CreateCompetitionForm />);
     fillRequiredFields();
-    fireEvent.click(screen.getByLabelText(/offer a prize for this competition/i));
-    fireEvent.click(screen.getByLabelText(/^perk/i));
+    fireEvent.click(screen.getByLabelText(/add a prize for the winner/i));
+    fireEvent.click(screen.getByLabelText(/^a perk/i));
 
     const longTitle = "x".repeat(61);
-    const titleField = screen.getByLabelText(/^prize title/i) as HTMLInputElement;
+    const titleField = screen.getByLabelText(/^prize name/i) as HTMLInputElement;
     fireEvent.change(titleField, {
       target: { value: longTitle },
     });
@@ -117,7 +117,7 @@ describe("CreateCompetitionForm — prize section", () => {
 
   it("digital codes and physical/sponsored prize options are never rendered (Phase 2, not built)", () => {
     render(<CreateCompetitionForm />);
-    fireEvent.click(screen.getByLabelText(/offer a prize for this competition/i));
+    fireEvent.click(screen.getByLabelText(/add a prize for the winner/i));
 
     expect(screen.queryByText(/digital code/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/physical/i)).not.toBeInTheDocument();

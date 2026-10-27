@@ -165,7 +165,11 @@ export function validatePrizeForm(state: PrizeFormState): PrizeFieldErrors {
   for (const item of state.items.slice(0, state.places)) {
     const itemError: PrizeItemFieldErrors = {};
     const title = item.title.trim();
-    if (!title) {
+    // Only place 1 is required (approved design, PRZ-W1-FIX1: the 2nd/3rd
+    // place name fields in the top-3 layout are explicitly optional,
+    // placeholder "Optional") — a place-2/3 title is only checked for
+    // length, never required.
+    if (item.place === 1 && !title) {
       itemError.title = "Give this place a prize title.";
     } else if (title.length > PRIZE_TITLE_MAX_LENGTH) {
       itemError.title = `Keep it under ${PRIZE_TITLE_MAX_LENGTH} characters.`;
@@ -182,9 +186,13 @@ export function validatePrizeForm(state: PrizeFormState): PrizeFieldErrors {
     errors.items = itemErrors;
   }
 
-  if (state.kind === "forfeit" && state.forfeitLoserText.trim().length > FORFEIT_LOSER_TEXT_MAX_LENGTH) {
-    errors.forfeitLoserText = `Keep it under ${FORFEIT_LOSER_TEXT_MAX_LENGTH} characters.`;
-  }
+  // forfeitLoserText is no longer a directly-edited field (PRZ-W1-FIX1 —
+  // see PrizeSection.tsx's header comment); it is derived from the place-1
+  // title, which is already validated for length above via
+  // PRIZE_TITLE_MAX_LENGTH (60, stricter than FORFEIT_LOSER_TEXT_MAX_LENGTH's
+  // 80), so no separate check is needed here. The constant stays exported
+  // for `prizeFormStateFromPrize`'s round-trip of a prize loaded from an
+  // older record that may still carry a distinct value.
 
   return errors;
 }
@@ -207,12 +215,17 @@ export function prizeInputFromFormState(state: PrizeFormState): Prize | undefine
     description: item.description.trim(),
   }));
 
+  // forfeitLoserText has no field of its own in the approved design
+  // (PRZ-W1-FIX1) — the place-1 "Prize name" field doubles as the forfeit's
+  // description for a bragging-rights prize, so it's derived from that
+  // item's title rather than edited separately.
+  const place1Title = items.find((item) => item.place === 1)?.title ?? "";
+
   return {
     kind: state.kind,
     places: state.places,
     items,
-    forfeitLoserText:
-      state.kind === "forfeit" && state.forfeitLoserText.trim() ? state.forfeitLoserText.trim() : null,
+    forfeitLoserText: state.kind === "forfeit" && place1Title ? place1Title : null,
     adultOnly: state.adultOnly,
   };
 }
