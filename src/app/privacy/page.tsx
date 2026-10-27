@@ -18,8 +18,7 @@ export const metadata: Metadata = {
  * new approval, per this ticket's instructions.
  *
  * Replaces the placeholder skeleton (LegalPagePlaceholder-based) that
- * previously lived at this route. `/terms` still uses that placeholder
- * component — it is NOT part of this ticket and was left untouched.
+ * previously lived at this route. `/terms` now has the approved Terms of Use.
  */
 export default function Privacy() {
   return (

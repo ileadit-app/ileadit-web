@@ -31,6 +31,7 @@ const EMAIL = /[\w.+-]+@ileadit\.co\.uk/;
 const BARE_LINKS: Record<string, string> = {
   "ico.org.uk/make-a-complaint": "https://ico.org.uk/make-a-complaint",
   "ileadit.co.uk/account-deletion": "/account-deletion",
+  "ileadit.co.uk/privacy": "/privacy",
 };
 
 function renderInline(text: string, keyPrefix: string): ReactNode[] {
