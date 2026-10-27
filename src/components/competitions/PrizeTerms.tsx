@@ -1,59 +1,53 @@
 "use client";
 
+import DOMPurify from "dompurify";
 import { AlertCircle } from "lucide-react";
 import { isDraftNotApproved, useCompetitionTerms, type CompetitionTermsDoc } from "@/lib/competitionTerms";
 
 /**
- * PRZ-W1 deliverable 3 (W4) — public `/competitions/[id]/prize-terms` page
- * body. Deliberately NOT wrapped in `<ProtectedRoute>` (see that route
+ * PRZ-W1-FIX1 deliverable 3 (W4) — public `/competitions/[id]/prize-terms`
+ * page body. Deliberately NOT wrapped in `<ProtectedRoute>` (see that route
  * file's own comment) — anyone with the link, signed in or not, must be
  * able to read a competition's prize terms.
  *
- * **How `terms/current.html` is rendered safely — the decision and why.**
- * `competitions/{cid}/terms/current.html` is engine-generated HTML (spec
- * §3.3) that this portal has never produced and cannot fully trust at
- * render time — it must never be interpolated as `dangerouslySetInnerHTML`
- * directly into this page's own DOM, since that would let ANY markup it
- * contains (a `<script>`, an `onerror=` handler, a form posting elsewhere)
- * execute with this page's own origin, cookies and Firebase session.
+ * **How `terms/current.html` is rendered safely — the decision and why
+ * this changed from the original PRZ-W1 build.** `competitions/{cid}/
+ * terms/current.html` is engine-generated HTML (spec §3.3) that this portal
+ * has never produced and cannot fully trust at render time. The original
+ * PRZ-W1 build rendered it inside a sandboxed `<iframe sandbox="">`
+ * specifically to avoid adding a sanitiser dependency — but the approved
+ * v0 design renders terms as normal page content in the site's own
+ * typography, which an opaque-origin iframe structurally cannot do (it has
+ * no access to this document's stylesheet). PRZ-W1-FIX1 switches to
+ * **DOMPurify**, sanitising `terms.html` with a strict, explicit allow-list
+ * before `dangerouslySetInnerHTML` — this is what `sanitizeTermsHtml` below
+ * does, and it is the ONLY place in this file HTML is ever interpolated.
  *
- * Two real options exist: (a) pull in an HTML-sanitiser dependency (e.g.
- * DOMPurify) and sanitise before `dangerouslySetInnerHTML`, or (b) render it
- * inside a sandboxed `<iframe sandbox="">` via `srcDoc`, which is a
- * zero-dependency, purely native browser primitive. This file uses **(b)**:
- * an empty `sandbox=""` attribute is the browser's STRICTEST setting — it
- * disables script execution, form submission, popups, top-level navigation,
- * and (critically) same-origin treatment, so even if the HTML smuggled in a
- * `<script>` tag, it would run (if at all) in a unique, opaque origin with
- * no access to this page's cookies, Firebase session, or DOM. This was
- * chosen over a sanitiser library specifically because it adds no new
- * dependency and needs no allow-list of "safe" tags/attributes to maintain
- * and keep correct — the browser's own sandbox model does the containment
- * instead of a maintained list of rules this codebase would otherwise own.
- * The trade-off, stated plainly: the iframe's content cannot inherit this
- * site's Tailwind theme (a separate browsing context has no access to the
- * parent document's stylesheet), so a small, hand-written inline `<style>`
- * block using hardcoded hex values (not Tailwind tokens) is included in the
- * `srcDoc` document itself to keep the terms text legible and on-brand.
+ * Allow-listed tags: `p, h2, h3, ul, ol, li, strong, em, a`. Allow-listed
+ * attributes: `href` only, and only on `a` (enforced further by DOMPurify's
+ * `ALLOWED_URI_REGEXP`, restricted to `http:`/`https:`/`mailto:` schemes —
+ * blocks `javascript:`/`data:` link injection). No `class`/`id`/`style`/
+ * `on*` attribute survives on anything. `FORBID_TAGS`/`FORBID_ATTR` are kept
+ * as an explicit, documented belt-and-braces layer on top of the allow-list
+ * rather than relying on the allow-list alone, since a future edit widening
+ * `ALLOWED_TAGS` should not silently also re-admit `<script>`/`on*` unless
+ * someone deliberately also removes the forbid list.
  *
  * `terms.html`'s actual content/shape is unverified against engine source
  * (PRZ-E1/E2 not deployed/readable as of 2026-10-27, per `competitionTerms.ts`'s
  * own header comment) — this is built strictly from the spec's field list.
  */
-const SANDBOXED_TERMS_STYLE = `
-  body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    color: #12172A;
-    background: #FAFBFB;
-    margin: 0;
-    padding: 24px;
-    line-height: 1.6;
-    font-size: 15px;
-  }
-  h1, h2, h3 { color: #192F5F; }
-  a { color: #192F5F; text-decoration: underline; }
-  p { margin: 0 0 1em; }
-`;
+const TERMS_SANITIZE_CONFIG = {
+  ALLOWED_TAGS: ["p", "h2", "h3", "ul", "ol", "li", "strong", "em", "a"],
+  ALLOWED_ATTR: ["href"],
+  ALLOWED_URI_REGEXP: /^(?:https?:|mailto:)/i,
+  FORBID_TAGS: ["script", "style", "iframe", "object", "embed", "form"],
+  FORBID_ATTR: ["style", "class", "id", "onerror", "onclick", "onload"],
+};
+
+function sanitizeTermsHtml(html: string): string {
+  return DOMPurify.sanitize(html, TERMS_SANITIZE_CONFIG);
+}
 
 export function PrizeTerms({ competitionId }: { competitionId: string }) {
   const state = useCompetitionTerms(competitionId);
@@ -118,11 +112,12 @@ export function PrizeTermsView({ terms }: { terms: CompetitionTermsDoc }) {
       ) : null}
 
       {terms.html ? (
-        <iframe
-          title="Prize terms"
-          sandbox=""
-          srcDoc={`<!doctype html><html><head><meta charset="utf-8" /><style>${SANDBOXED_TERMS_STYLE}</style></head><body>${terms.html}</body></html>`}
-          className="mt-5 h-[70vh] w-full rounded-2xl border border-border bg-background"
+        <div
+          className="mt-5 text-sm leading-relaxed text-foreground [&_a]:text-brand-navy [&_a]:underline [&_h2]:mt-6 [&_h2]:text-lg [&_h2]:font-extrabold [&_h2]:text-brand-navy [&_h3]:mt-4 [&_h3]:text-base [&_h3]:font-bold [&_h3]:text-brand-navy [&_li]:mt-1 [&_ol]:mt-3 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:mt-3 [&_strong]:font-semibold [&_ul]:mt-3 [&_ul]:list-disc [&_ul]:pl-5"
+          // Sanitised above with a strict allow-list — see this file's
+          // header comment. This is the ONLY `dangerouslySetInnerHTML` in
+          // this component.
+          dangerouslySetInnerHTML={{ __html: sanitizeTermsHtml(terms.html) }}
         />
       ) : (
         <p className="mt-5 text-sm text-muted-foreground">No terms text is available yet.</p>

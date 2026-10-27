@@ -3,13 +3,17 @@ import { render, screen } from "@testing-library/react";
 import { PrizeTerms } from "./PrizeTerms";
 
 /**
- * PRZ-W1 (W4) — pins the public prize-terms page's four states: loading,
- * not-found ("No prize terms for this competition"), the draft-not-approved
- * notice, and a normal approved-terms render (iframe with `sandbox=""`,
- * never `dangerouslySetInnerHTML`). Mocks `@/lib/competitionTerms` directly
- * (the hook + the `DRAFT-NOT-APPROVED` sentinel check) rather than Firestore
- * itself — same "mock the module boundary the component actually reads"
- * discipline `InviteLanding.test.tsx` already uses.
+ * PRZ-W1-FIX1 (W4) — pins the public prize-terms page's four states:
+ * loading, not-found ("No prize terms for this competition"), the
+ * draft-not-approved notice, and a normal approved-terms render (sanitised
+ * inline HTML in the site's own typography — see `PrizeTerms.tsx`'s header
+ * comment for why this replaced the original sandboxed-iframe approach).
+ * Mocks `@/lib/competitionTerms` directly (the hook + the
+ * `DRAFT-NOT-APPROVED` sentinel check) rather than Firestore itself — same
+ * "mock the module boundary the component actually reads" discipline
+ * `InviteLanding.test.tsx` already uses. DOMPurify itself is NOT mocked —
+ * the sanitisation tests below exercise the real library, since that's the
+ * actual thing this file needs proven.
  */
 
 const useCompetitionTermsMock = vi.fn();
@@ -59,7 +63,7 @@ describe("PrizeTerms", () => {
     expect(screen.getByText(/not yet approved/i)).toBeInTheDocument();
   });
 
-  it("approved terms: renders the html inside a sandboxed iframe, no draft notice", () => {
+  it("approved terms: renders the html as real page content, no draft notice", () => {
     useCompetitionTermsMock.mockReturnValue({
       status: "success",
       terms: {
@@ -71,10 +75,63 @@ describe("PrizeTerms", () => {
     });
     render(<PrizeTerms competitionId="comp-1" />);
     expect(screen.queryByText(/not yet approved/i)).not.toBeInTheDocument();
+    expect(screen.getByText("Final terms text")).toBeInTheDocument();
+  });
 
-    const iframe = screen.getByTitle(/prize terms/i) as HTMLIFrameElement;
-    expect(iframe).toBeInTheDocument();
-    expect(iframe.getAttribute("sandbox")).toBe("");
-    expect(iframe.getAttribute("srcdoc")).toContain("Final terms text");
+  it("sanitisation: a <script> tag and an onerror= attribute are stripped", () => {
+    useCompetitionTermsMock.mockReturnValue({
+      status: "success",
+      terms: {
+        version: "v2",
+        html:
+          '<p>Safe text</p><script>window.hacked = true;</script>' +
+          '<img src="x" onerror="window.hacked = true" />',
+        generatedAt: null,
+        approvedTemplateVersion: "v2",
+      },
+    });
+    const { container } = render(<PrizeTerms competitionId="comp-1" />);
+    expect(screen.getByText("Safe text")).toBeInTheDocument();
+    expect(container.querySelector("script")).not.toBeInTheDocument();
+    expect(container.innerHTML).not.toContain("onerror");
+    expect(container.innerHTML).not.toContain("hacked");
+  });
+
+  it("sanitisation: allowed tags (headings, lists, strong, em, a[href]) survive", () => {
+    useCompetitionTermsMock.mockReturnValue({
+      status: "success",
+      terms: {
+        version: "v2",
+        html:
+          "<h2>Eligibility</h2>" +
+          "<p>Open to <strong>UK</strong> residents only, see <em>below</em>.</p>" +
+          "<ul><li>One</li><li>Two</li></ul>" +
+          '<a href="https://ileadit.app/terms">full terms</a>',
+        generatedAt: null,
+        approvedTemplateVersion: "v2",
+      },
+    });
+    render(<PrizeTerms competitionId="comp-1" />);
+    expect(screen.getByRole("heading", { level: 2, name: "Eligibility" })).toBeInTheDocument();
+    expect(screen.getByText("UK").tagName).toBe("STRONG");
+    expect(screen.getByText("below").tagName).toBe("EM");
+    expect(screen.getByRole("list")).toBeInTheDocument();
+    const link = screen.getByRole("link", { name: "full terms" });
+    expect(link).toHaveAttribute("href", "https://ileadit.app/terms");
+  });
+
+  it("sanitisation: a javascript: link href is stripped (no href survives)", () => {
+    useCompetitionTermsMock.mockReturnValue({
+      status: "success",
+      terms: {
+        version: "v2",
+        html: '<a href="javascript:alert(1)">click me</a>',
+        generatedAt: null,
+        approvedTemplateVersion: "v2",
+      },
+    });
+    render(<PrizeTerms competitionId="comp-1" />);
+    const link = screen.getByText("click me");
+    expect(link).not.toHaveAttribute("href");
   });
 });

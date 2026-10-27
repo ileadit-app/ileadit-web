@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { Gift, CheckCircle2 } from "lucide-react";
+import { useId, useState } from "react";
+import { Check, CheckCircle2, Smile, Sun, type LucideIcon } from "lucide-react";
 import { ErrorBanner } from "@/components/auth/formFields";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { PlayerAvatar } from "./PlayerAvatar";
@@ -12,12 +12,27 @@ import { markPrizeGiven } from "@/lib/markPrizeGiven";
 import { markPrizeGivenFailureMessage } from "@/lib/prizeErrors";
 
 /**
- * PRZ-W1 deliverable 4 (W5) — organiser-only "hand out the prize" panel,
- * shown on a FINISHED competition's own page. Caller (`CompetitionDetail.tsx`)
- * must only mount this once BOTH `status === "finished"` AND
- * `organiserCapability === "organiser"` are true — an ordinary player, even
- * a winner, never sees this (spec: organiser marks prizes given, not the
- * winner themselves).
+ * PRZ-W1-FIX1 deliverable 4 (W5) — organiser-only "hand out the prize"
+ * panel, shown on a FINISHED competition's own page. Caller
+ * (`CompetitionDetail.tsx`) must only mount this once BOTH
+ * `status === "finished"` AND `organiserCapability === "organiser"` are
+ * true — an ordinary player, even a winner, never sees this (spec:
+ * organiser marks prizes given, not the winner themselves).
+ *
+ * **Card chrome ported from the approved v0 design's `PerkPrizePanel`**
+ * (`.ticket-refs/prizes/v0-web/components/competitions/PrizePanel.tsx`):
+ * `rounded-3xl` card, coral uppercase "Prize" kicker + bold title + a
+ * `KindChip`, a 3-step `Steps` progress row, then a winner block + status
+ * pill + action per winner. **Two deliberate, flagged deviations from that
+ * source**, both because the mockup only ever shows ONE winner while this
+ * ticket's real engine contract supports up to three (`PrizePlaces = 1|3`):
+ * (1) the winner/status/action block is looped per `prizeWinners` entry
+ * instead of rendered once; (2) `Steps`' three dates ("Sun 29 Nov" etc.) are
+ * the mockup's own hardcoded placeholder strings — this ticket has no real
+ * per-competition "when did it end / when was it checked" timestamp wired
+ * in yet, so `Steps` here renders generically ("done"/"done"/"current",
+ * hardcoded) rather than inventing specific dates. Revisit once a real
+ * finalisation-timestamp field is confirmed against engine source.
  *
  * **The points gap this panel works around**: the engine's `prizeWinners`
  * array (spec §3.1) has NO `points` field — only `place`/`uid`/`displayName`/
@@ -107,54 +122,71 @@ export function OrganiserPrizePanelView({
   }
 
   const confirmingWinner = prizeWinners.find((winner) => winner.uid === confirmingUid) ?? null;
+  const headingId = useId();
+  const kindIcon: LucideIcon = prize.kind === "forfeit" ? Smile : Sun;
+  const kindLabel = prize.kind === "forfeit" ? "Bragging rights" : "A perk";
+  const title = prize.items.find((item) => item.place === 1)?.title ?? "Prize";
 
   return (
-    <div className="mt-4 rounded-2xl border border-border bg-card p-5">
-      <p className="flex items-center gap-2 text-sm font-semibold text-foreground">
-        <Gift className="size-4 text-brand-gold" aria-hidden="true" />
-        {prize.kind === "forfeit" ? "Forfeit to carry out" : "Prize to hand out"}
-      </p>
+    <section
+      aria-labelledby={headingId}
+      className="mt-4 rounded-3xl border border-border bg-card p-6"
+    >
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div>
+          <p className="text-sm font-bold uppercase tracking-wide text-brand-coral">Prize</p>
+          <h2 id={headingId} className="mt-1 text-xl font-extrabold text-foreground">
+            {title}
+          </h2>
+        </div>
+        <KindChip icon={kindIcon} label={kindLabel} />
+      </div>
+
+      <div className="mt-5">
+        <Steps />
+      </div>
 
       {pageError ? (
-        <div className="mt-3">
+        <div className="mt-6">
           <ErrorBanner message={pageError} />
         </div>
       ) : null}
 
       {prizeWinners.length === 0 ? (
-        <p className="mt-3 text-sm text-muted-foreground">
+        <p className="mt-6 border-t border-border pt-6 text-sm text-muted-foreground">
           Winners haven&apos;t been recorded for this competition yet. Check back shortly.
         </p>
       ) : (
-        <ul role="list" className="mt-3 space-y-2">
+        <ul role="list" className="mt-6 space-y-6 border-t border-border pt-6">
           {prizeWinners.map((winner) => {
             const item = prize.items.find((candidate) => candidate.place === winner.place);
             const claim = findClaimForUid(claims, winner.uid);
             const points = pointsByUid?.get(winner.uid) ?? null;
 
             return (
-              <li key={winner.uid} className="rounded-xl border border-border bg-background p-3">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div className="flex items-center gap-2.5">
-                    <PlayerAvatar displayName={winner.displayName} avatarIndex={null} size={36} />
-                    <div>
-                      <p className="text-sm font-semibold text-foreground">
-                        {winner.displayName ?? "A former player"}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {item ? `${placeLabel(winner.place)} — ${item.title}` : placeLabel(winner.place)}
-                        {" · "}
-                        {points !== null ? `${points} points` : "points not shown here"}
-                      </p>
-                    </div>
+              <li
+                key={winner.uid}
+                className="grid gap-4 @min-[768px]:grid-cols-[1fr_auto] @min-[768px]:items-center"
+              >
+                <div className="flex items-center gap-3">
+                  <PlayerAvatar displayName={winner.displayName} avatarIndex={null} size={44} />
+                  <div>
+                    <p className="text-sm text-muted-foreground">{winnerRoleLabel(winner.place)}</p>
+                    <p className="text-base font-bold text-foreground">
+                      {winner.displayName ?? "A former player"}
+                    </p>
+                    <p className="text-sm tabular-nums text-muted-foreground">
+                      {item?.title ? `${placeLabel(winner.place)} — ${item.title} · ` : `${placeLabel(winner.place)} · `}
+                      {points !== null ? `${points} points` : "points not shown here"}
+                    </p>
                   </div>
-
-                  <ClaimStatusAndAction
-                    status={claim?.status ?? null}
-                    givenAt={claim?.givenAt ?? null}
-                    onMarkGiven={() => setConfirmingUid(winner.uid)}
-                  />
                 </div>
+
+                <ClaimStatusAndAction
+                  status={claim?.status ?? null}
+                  givenAt={claim?.givenAt ?? null}
+                  onMarkGiven={() => setConfirmingUid(winner.uid)}
+                />
               </li>
             );
           })}
@@ -181,14 +213,70 @@ export function OrganiserPrizePanelView({
         onCancel={() => setConfirmingUid(null)}
         onConfirm={handleConfirmGiven}
       />
-    </div>
+    </section>
   );
 }
 
+/** Ported verbatim from the v0 design's own `Steps` component (static
+ * labels/dates — see this file's header comment on why the dates are
+ * generic rather than wired to a real timestamp). */
+function Steps() {
+  const steps: { label: string; detail: string; state: "done" | "current" }[] = [
+    { label: "Competition ended", detail: "Result is in", state: "done" },
+    { label: "Result checked", detail: "Winners confirmed", state: "done" },
+    { label: "Ready", detail: "Prize can be handed out", state: "current" },
+  ];
+  return (
+    <ol className="grid gap-4 @min-[640px]:grid-cols-3" role="list" aria-label="Prize progress">
+      {steps.map((step, index) => (
+        <li
+          key={step.label}
+          aria-current={step.state === "current" ? "step" : undefined}
+          className="flex items-start gap-3"
+        >
+          <span
+            className={`flex size-8 shrink-0 items-center justify-center rounded-full text-sm font-bold ${
+              step.state === "done"
+                ? "bg-brand-navy text-on-navy-foreground"
+                : "bg-brand-gold text-brand-navy ring-4 ring-brand-gold/25"
+            }`}
+          >
+            {step.state === "done" ? (
+              <Check className="size-4" aria-hidden="true" />
+            ) : (
+              <span aria-hidden="true">{index + 1}</span>
+            )}
+          </span>
+          <span>
+            <span className="block text-sm font-bold text-foreground">{step.label}</span>
+            <span className="block text-xs text-muted-foreground">{step.detail}</span>
+            <span className="sr-only">{step.state === "done" ? "Complete" : "Current step"}</span>
+          </span>
+        </li>
+      ))}
+    </ol>
+  );
+}
+
+function KindChip({ icon: Icon, label }: { icon: LucideIcon; label: string }) {
+  return (
+    <span className="inline-flex h-7 items-center gap-1.5 rounded-full bg-secondary px-3 text-xs font-bold text-secondary-foreground">
+      <Icon className="size-3.5" aria-hidden="true" />
+      {label}
+    </span>
+  );
+}
+
+function winnerRoleLabel(place: number): string {
+  if (place === 1) return "Winner";
+  if (place === 2) return "Runner-up";
+  return "Third place";
+}
+
 function placeLabel(place: number): string {
-  if (place === 1) return "1st place";
-  if (place === 2) return "2nd place";
-  if (place === 3) return "3rd place";
+  if (place === 1) return "1st";
+  if (place === 2) return "2nd";
+  if (place === 3) return "3rd";
   return `Place ${place}`;
 }
 
@@ -222,12 +310,16 @@ function ClaimStatusAndAction({
   }
 
   return (
-    <div className="flex items-center gap-2">
-      {status ? <span className="text-xs font-medium text-muted-foreground">{claimStatusLabel(status)}</span> : null}
+    <div className="flex flex-col items-start gap-2 @min-[768px]:items-end">
+      {/* Dot-and-text pill, ported from the v0 design's `StatusPill`. */}
+      <span className="inline-flex h-7 items-center gap-2 rounded-full bg-muted px-3 text-xs font-bold text-muted-foreground">
+        <span className="size-2 rounded-full bg-brand-coral" aria-hidden="true" />
+        {status ? claimStatusLabel(status) : "Not given yet"}
+      </span>
       <button
         type="button"
         onClick={onMarkGiven}
-        className="inline-flex h-9 items-center justify-center rounded-full border border-[rgba(25,47,95,0.15)] bg-brand-gold px-4 text-xs font-bold text-brand-navy transition-colors hover:bg-brand-gold/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-navy"
+        className="inline-flex h-10 items-center justify-center rounded-full border border-[rgba(25,47,95,0.15)] bg-brand-gold px-5 text-sm font-bold text-brand-navy transition-colors hover:bg-brand-gold/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-navy"
       >
         Mark as given
       </button>

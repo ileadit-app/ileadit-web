@@ -186,8 +186,8 @@ export function CompetitionCard({ competition }: { competition: CreatedCompetiti
       </p>
 
       {line ? (
-        <p className="mt-2 flex items-center gap-1.5 text-sm font-semibold text-brand-navy">
-          <Gift className="size-4 text-brand-gold" aria-hidden="true" />
+        <p className="mt-3 flex items-start gap-2 self-start rounded-xl bg-brand-gold/15 px-3 py-2 text-sm font-bold text-brand-navy">
+          <Trophy className="mt-0.5 size-4 shrink-0 text-brand-gold" aria-hidden="true" />
           {line}
         </p>
       ) : null}
@@ -195,9 +195,9 @@ export function CompetitionCard({ competition }: { competition: CreatedCompetiti
       {prizeReadyToHandOut ? (
         <Link
           href={`/competitions/${competition.id}`}
-          className="mt-3 inline-flex items-center gap-1.5 self-start rounded-full bg-brand-coral/15 px-3 py-1 text-xs font-bold text-brand-coral transition-colors hover:bg-brand-coral/25 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-navy"
+          className="mt-3 inline-flex min-h-11 items-center justify-center gap-2 self-start rounded-full border border-[rgba(25,47,95,0.15)] bg-brand-gold px-4 text-sm font-bold text-brand-navy transition-colors hover:bg-brand-gold/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-navy"
         >
-          <Gift className="size-3.5" aria-hidden="true" />
+          <Gift className="size-4" aria-hidden="true" />
           Prize to hand out
         </Link>
       ) : null}
