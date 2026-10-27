@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { collection, onSnapshot, query, where, type FirestoreError } from "firebase/firestore";
 import { getFirebaseDb } from "./firebase";
+import { parsePrizeField, parsePrizeState, type Prize, type PrizeState } from "./prize";
 
 /**
  * The engine's four lifecycle states (`functions/src/services/competitions.ts`
@@ -53,6 +54,15 @@ export interface CreatedCompetitionSummary {
    * a viewer in a different zone. `null` before the engine trigger has
    * populated it; callers fall back to `DEFAULT_COMPETITION_ZONE`. */
   timeZone: string | null;
+  /** PRZ-W1 (spec §3.1, 2026-10-27) — `null` means no prize set. Drives the
+   * gold "prize line" chip on this card (W7) — see `prizeLine()` in
+   * `src/lib/prize.ts`. */
+  prize: Prize | null;
+  /** Engine-written only. The "Prize to hand out" badge (W7) shows exactly
+   * when this is `"ready"` — see `CreatedCompetitions.tsx`'s header comment
+   * for why that's used as the hand-out signal instead of reading the
+   * `prizeClaims` subcollection for every card. */
+  prizeState: PrizeState | null;
 }
 
 export type CreatedCompetitionsState =
@@ -114,6 +124,8 @@ export function useCreatedCompetitions(uid: string | null): CreatedCompetitionsS
             endDate: typeof data.endDate === "string" ? data.endDate : null,
             playerCount: typeof data.playerCount === "number" ? data.playerCount : null,
             timeZone: typeof data.timeZone === "string" ? data.timeZone : null,
+            prize: parsePrizeField(data.prize),
+            prizeState: parsePrizeState(data.prizeState),
           };
         });
         setState({ status: "success", competitions });

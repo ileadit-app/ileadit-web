@@ -7,9 +7,18 @@ import { ErrorBanner } from "@/components/auth/formFields";
 import { NumberField, SelectField, TextAreaField, TextField } from "@/components/forms/fields";
 import { ArtworkUploadField } from "./ArtworkUploadField";
 import { CompetitionHero } from "./CompetitionHero";
+import { PrizeSection } from "./PrizeSection";
 import { createDraftCompetitionId } from "@/lib/competitionArtwork";
 import { createCompetition } from "@/lib/createCompetition";
 import { createCompetitionFailureMessage } from "@/lib/createCompetitionErrors";
+import {
+  EMPTY_PRIZE_FORM_STATE,
+  prizeFormHasErrors,
+  prizeInputFromFormState,
+  validatePrizeForm,
+  type PrizeFieldErrors,
+  type PrizeFormState,
+} from "@/lib/prize";
 import {
   detectBrowserTimeZone,
   getTimeZoneOptions,
@@ -59,6 +68,12 @@ export function CreateCompetitionForm() {
   const [description, setDescription] = useState("");
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [backgroundImageUrl, setBackgroundImageUrl] = useState<string | null>(null);
+
+  // PRZ-W1 — mirrors every other optional section here: lives entirely in
+  // this form's own state, only ever reaches the callable via
+  // `prizeInputFromFormState` (never sent at all when the toggle is off).
+  const [prize, setPrize] = useState<PrizeFormState>(EMPTY_PRIZE_FORM_STATE);
+  const [prizeErrors, setPrizeErrors] = useState<PrizeFieldErrors>({});
 
   /**
    * The folder competition artwork is uploaded into while this form is
@@ -113,7 +128,11 @@ export function CreateCompetitionForm() {
 
     const errors = validate();
     setFieldErrors(errors);
-    if (Object.keys(errors).length > 0) return;
+
+    const prizeValidationErrors = validatePrizeForm(prize);
+    setPrizeErrors(prizeValidationErrors);
+
+    if (Object.keys(errors).length > 0 || prizeFormHasErrors(prizeValidationErrors)) return;
 
     const parts = parseDateTimeLocalValue(startTimeValue);
     if (!parts) return; // Unreachable — validate() above already caught this.
@@ -133,6 +152,7 @@ export function CreateCompetitionForm() {
       // (`imageUrl: z.string().url().max(2048).optional()`).
       imageUrl: imageUrl ?? undefined,
       backgroundImageUrl: backgroundImageUrl ?? undefined,
+      prize: prizeInputFromFormState(prize),
     });
     setSubmitting(false);
 
@@ -236,6 +256,8 @@ export function CreateCompetitionForm() {
           durationDays={Number(durationDaysValue)}
           timeZone={timeZone}
         />
+
+        <PrizeSection value={prize} onChange={setPrize} errors={prizeErrors} disabled={submitting} />
 
         <button
           type="submit"

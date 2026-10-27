@@ -12,6 +12,10 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Untracked, gitignored ticket reference material (design specs, v0
+    // scaffolding) — never shipped, never part of this app's own code, and
+    // not meant to pass this repo's lint rules.
+    ".ticket-refs/**",
   ]),
 ]);
 
