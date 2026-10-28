@@ -54,7 +54,25 @@ const nextConfig: NextConfig = {
               // instead). https://www.google.com + https://www.gstatic.com
               // are reCAPTCHA v3's own script host, dynamically injected by
               // Firebase App Check's ReCaptchaV3Provider (src/lib/appCheck.ts).
-              "script-src 'self' 'unsafe-inline' https://www.google.com https://www.gstatic.com",
+              // https://apis.google.com is required by EVERY
+              // signInWithPopup() call (src/lib/auth.ts's signInWithGoogle/
+              // signInWithMicrosoft, src/components/auth/AccountLinkingPanel.tsx's
+              // linkViaProvider) regardless of which OAuth provider is used
+              // — confirmed by reading @firebase/auth's own bundled source
+              // (node_modules/@firebase/auth/dist/esm/index-*.js,
+              // `_setExternalJSProvider`): the popup/redirect resolver
+              // injects a real `<script src="https://apis.google.com/js/api.js">`
+              // tag into THIS page (not the popup window) to load
+              // `gapi.iframes`, the cross-window postMessage relay Firebase
+              // Auth uses to learn the popup's sign-in result. Without this
+              // host, `gapi.load` never resolves and every popup sign-in
+              // (Google today; Microsoft once isMicrosoftSignInEnabled()
+              // flips on) hangs/fails — the provider's own IdP page the
+              // popup navigates to (accounts.google.com,
+              // login.microsoftonline.com) is a separate top-level browsing
+              // context and is NOT subject to this page's CSP at all, so it
+              // needs no entry here.
+              "script-src 'self' 'unsafe-inline' https://www.google.com https://www.gstatic.com https://apis.google.com",
               // Tailwind's utility classes compile to a real stylesheet
               // (<link>, already covered by 'self'), but several components
               // in this codebase set inline style={{...}} attributes
