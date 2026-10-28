@@ -116,7 +116,16 @@ const nextConfig: NextConfig = {
               // callable endpoint (src/lib/functions.ts — the ONE file
               // allowed to name this region). www.google.com/www.gstatic.com
               // are reCAPTCHA v3's own verification hosts (src/lib/appCheck.ts).
-              "connect-src 'self' https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://firestore.googleapis.com https://firebasestorage.googleapis.com https://firebaseinstallations.googleapis.com https://content-firebaseappcheck.googleapis.com https://europe-west2-ileadit-app.cloudfunctions.net https://www.google.com https://www.gstatic.com",
+              // https://apis.google.com (WEB-TIDY-1): the SAME gapi helper
+              // loaded via script-src above (_setExternalJSProvider) also
+              // fires an XHR telemetry beacon to
+              // https://apis.google.com/js/gen_204?... during a
+              // signInWithPopup() flow — observed live on /login as a
+              // console CSP violation even though sign-in itself succeeds
+              // (the beacon is fire-and-forget, not load-bearing for the
+              // auth result). Added so the console is clean; not required
+              // for sign-in to function.
+              "connect-src 'self' https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://firestore.googleapis.com https://firebasestorage.googleapis.com https://firebaseinstallations.googleapis.com https://content-firebaseappcheck.googleapis.com https://europe-west2-ileadit-app.cloudfunctions.net https://www.google.com https://www.gstatic.com https://apis.google.com",
               // reCAPTCHA v3's invisible-challenge iframe, and Firebase
               // Auth's hidden iframe helper at the project's authDomain
               // (used for persistence/redirect-result handling even though
