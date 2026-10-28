@@ -53,7 +53,7 @@ export function TextField({
     <div>
       <label htmlFor={id} className="text-sm font-semibold text-foreground">
         {label}
-        {required ? <span className="text-brand-coral" aria-hidden="true"> *</span> : null}
+        {required ? <span className="text-coral-text" aria-hidden="true"> *</span> : null}
       </label>
       <input
         ref={inputRef}
@@ -100,7 +100,7 @@ export function NumberField({
     <div>
       <label htmlFor={id} className="text-sm font-semibold text-foreground">
         {label}
-        {required ? <span className="text-brand-coral" aria-hidden="true"> *</span> : null}
+        {required ? <span className="text-coral-text" aria-hidden="true"> *</span> : null}
       </label>
       <input
         id={id}
@@ -145,7 +145,7 @@ export function SelectField({
     <div>
       <label htmlFor={id} className="text-sm font-semibold text-foreground">
         {label}
-        {required ? <span className="text-brand-coral" aria-hidden="true"> *</span> : null}
+        {required ? <span className="text-coral-text" aria-hidden="true"> *</span> : null}
       </label>
       <select
         id={id}
@@ -194,7 +194,7 @@ export function TextAreaField({
     <div>
       <label htmlFor={id} className="text-sm font-semibold text-foreground">
         {label}
-        {required ? <span className="text-brand-coral" aria-hidden="true"> *</span> : null}
+        {required ? <span className="text-coral-text" aria-hidden="true"> *</span> : null}
       </label>
       <textarea
         id={id}

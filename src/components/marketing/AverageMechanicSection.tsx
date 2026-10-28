@@ -28,7 +28,7 @@ const TIERS = [
 ];
 
 const TONE_CLASSES: Record<string, string> = {
-  coral: "border-brand-coral/30 bg-brand-coral/10 text-brand-coral",
+  coral: "border-brand-coral/30 bg-brand-coral/10 text-coral-text",
   muted: "border-border bg-muted text-foreground",
   gold: "border-brand-gold/40 bg-brand-gold/15 text-brand-navy",
   goldStrong: "border-brand-gold bg-brand-gold text-brand-navy",
@@ -39,7 +39,7 @@ export function AverageMechanicSection() {
     <section id="average" className="bg-secondary py-20 sm:py-28">
       <div className="mx-auto max-w-6xl px-5 sm:px-6">
         <div className="max-w-2xl">
-          <p className="text-sm font-bold uppercase tracking-wide text-brand-coral">
+          <p className="text-sm font-bold uppercase tracking-wide text-coral-text">
             Why an ordinary walker can win
           </p>
           <h2 className="mt-3 text-balance text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl">

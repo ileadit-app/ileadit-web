@@ -402,7 +402,7 @@ function JoinableInvite({
         {pending ? "Joining…" : "Join competition"}
       </button>
       {error ? (
-        <p className="text-sm text-destructive" role="alert">
+        <p className="text-sm text-coral-text" role="alert">
           {error}
         </p>
       ) : null}

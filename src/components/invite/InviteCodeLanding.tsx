@@ -188,7 +188,7 @@ function GetTheAppBlock() {
   const PLAY_STORE_URL: string | null = null;
   return (
     <div className="mt-8 rounded-3xl border border-dashed border-border bg-muted/40 p-5 text-left">
-      <p className="text-xs font-bold uppercase tracking-wide text-brand-coral">Get the app</p>
+      <p className="text-xs font-bold uppercase tracking-wide text-coral-text">Get the app</p>
       <p className="mt-1 text-sm text-muted-foreground">
         Free to download. Available on Android today — walking is the whole game, and nobody but
         you ever sees your step count.
@@ -205,7 +205,7 @@ function GetTheAppBlock() {
         <div
           role="note"
           aria-label="Placeholder — Play Store link not yet available"
-          className="mt-3 inline-flex h-11 cursor-not-allowed items-center gap-2 rounded-full border-2 border-dashed border-brand-coral/50 bg-brand-coral/5 px-5 text-sm font-bold text-brand-coral"
+          className="mt-3 inline-flex h-11 cursor-not-allowed items-center gap-2 rounded-full border-2 border-dashed border-brand-coral/50 bg-brand-coral/5 px-5 text-sm font-bold text-coral-text"
         >
           <PlayCircle className="size-4" aria-hidden="true" />
           Get it on Google Play — PLACEHOLDER LINK
@@ -273,7 +273,7 @@ function InvitePreviewCard({
       <div className="mt-6 flex flex-col items-center gap-2">{children}</div>
 
       <div className="mt-8 rounded-3xl border border-border bg-card p-5">
-        <p className="text-xs font-bold uppercase tracking-wide text-brand-coral">Invite code</p>
+        <p className="text-xs font-bold uppercase tracking-wide text-coral-text">Invite code</p>
         <p className="mt-1 font-mono text-2xl font-extrabold tracking-[0.2em] text-foreground">
           {displayCode}
         </p>
@@ -439,7 +439,7 @@ function JoinInviteCode({
         {pending ? "Joining…" : "Join competition"}
       </button>
       {error ? (
-        <p className="text-sm text-destructive" role="alert">
+        <p className="text-sm text-coral-text" role="alert">
           {error}
         </p>
       ) : null}

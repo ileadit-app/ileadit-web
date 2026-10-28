@@ -56,7 +56,14 @@ export default function Header() {
           <span className="sr-only">ileadit home</span>
         </Link>
 
-        {/* Desktop nav */}
+        {/*
+          WEB-CR1: this and the mobile <nav> below render the same links in
+          two different layouts and are never both visible at once (this one
+          is CSS `hidden` below the `lg` breakpoint; the mobile one only
+          mounts into the DOM at all once the hamburger menu is open) — but
+          two <nav> landmarks sharing one aria-label is still ambiguous to
+          assistive tech/audits, so they're named distinctly.
+        */}
         <nav aria-label="Primary" className="hidden items-center gap-7 lg:flex">
           {NAV_LINKS.map((link) => (
             <Link
@@ -118,7 +125,7 @@ export default function Header() {
 
       {/* Mobile menu */}
       {menuOpen && (
-        <nav aria-label="Primary" className="border-t border-border px-5 pb-4 sm:hidden">
+        <nav aria-label="Primary mobile menu" className="border-t border-border px-5 pb-4 sm:hidden">
           {NAV_LINKS.map((link) => (
             <Link
               key={link.href}

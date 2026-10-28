@@ -165,7 +165,7 @@ const INVITE_STATUS_CONFIG: Record<InviteStatus, { label: string; className: str
   },
   revoked: {
     label: "Revoked",
-    className: "bg-destructive/10 text-destructive",
+    className: "bg-destructive/10 text-coral-text",
   },
   expired: {
     label: "Expired",
@@ -316,11 +316,11 @@ function RevokeInviteButton({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="inline-flex h-11 items-center justify-center rounded-full border border-destructive/40 px-4 text-sm font-bold text-destructive transition-colors hover:bg-destructive/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-navy"
+        className="inline-flex h-11 items-center justify-center rounded-full border border-destructive/40 px-4 text-sm font-bold text-coral-text transition-colors hover:bg-destructive/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-navy"
       >
         Revoke
       </button>
-      {error ? <p className="mt-2 text-xs text-destructive">{error}</p> : null}
+      {error ? <p className="mt-2 text-xs text-coral-text">{error}</p> : null}
       <ConfirmDialog
         open={open}
         title="Revoke this invite link?"

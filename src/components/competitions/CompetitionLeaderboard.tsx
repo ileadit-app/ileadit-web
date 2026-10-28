@@ -49,7 +49,7 @@ function LivesHearts({ livesRemaining, size = 12 }: { livesRemaining: number; si
 const RANK_BADGE_CLASSNAME: Record<number, string> = {
   1: "bg-brand-gold text-brand-navy",
   2: "bg-secondary text-brand-navy",
-  3: "bg-brand-coral/15 text-brand-coral",
+  3: "bg-brand-coral/15 text-coral-text",
 };
 
 function RankBadge({ rank, shimmer }: { rank: number; shimmer?: boolean }) {
@@ -305,7 +305,7 @@ export function CompetitionLeaderboard({
             // THIS client yet) gets the exact same honest copy rather than
             // a premature "Final results" banner.
             <div
-              className="mb-4 rounded-2xl bg-brand-coral/10 p-3 text-center text-sm font-semibold text-brand-coral"
+              className="mb-4 rounded-2xl bg-brand-coral/10 p-3 text-center text-sm font-semibold text-coral-text"
               role="status"
               aria-live="polite"
             >
@@ -434,7 +434,7 @@ function LeaderboardErrorState() {
     <div className="flex items-start gap-3 p-6" role="alert">
       <AlertCircle className="mt-0.5 size-5 shrink-0 text-destructive" aria-hidden="true" />
       <div>
-        <p className="text-base font-bold text-destructive">We couldn&apos;t load the leaderboard</p>
+        <p className="text-base font-bold text-coral-text">We couldn&apos;t load the leaderboard</p>
         <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
           Something went wrong talking to ileadit. Your place in this competition hasn&apos;t
           changed — try reloading the page.

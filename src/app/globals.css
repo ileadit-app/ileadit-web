@@ -53,6 +53,15 @@
   /* brand: coral — warnings / lives lost / destructive */
   --color-destructive: #d14451;
   --color-destructive-foreground: #ffffff;
+  /* WEB-CR1 (28 Oct 2026 code review): #d14451 AS BODY/LABEL TEXT on the
+     page/card background is 4.35:1 — below WCAG AA's 4.5:1 for normal-size
+     text. #b83a46 (same hue, darkened) is 5.43:1 on #fafbfb / 5.63:1 on
+     #ffffff — reuse via `text-coral-text`, never `text-destructive`/
+     `text-brand-coral`, for any readable coral TEXT sitting directly on the
+     page or card background (eyebrow labels, error copy, link text).
+     Backgrounds, borders, fills and icons keep using --color-destructive/
+     --color-brand-coral unchanged — this token exists for text only. */
+  --color-coral-text: #b83a46;
 
   --color-border: #dfe2ee;
   --color-input: #dfe2ee;

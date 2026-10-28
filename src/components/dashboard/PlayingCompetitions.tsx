@@ -81,10 +81,10 @@ function ErrorState() {
     >
       <AlertCircle className="mt-0.5 size-5 shrink-0 text-destructive" aria-hidden="true" />
       <div>
-        <p className="text-base font-bold text-destructive">
+        <p className="text-base font-bold text-coral-text">
           We couldn&apos;t load the competitions you&apos;re playing in
         </p>
-        <p className="mt-1 text-sm leading-relaxed text-destructive/90">
+        <p className="mt-1 text-sm leading-relaxed text-coral-text/90">
           Something went wrong talking to ileadit while checking this. You haven&apos;t lost your
           spot in anything — try reloading the page. If this keeps happening,{" "}
           <a href="mailto:hello@ileadit.co.uk" className="font-semibold underline">

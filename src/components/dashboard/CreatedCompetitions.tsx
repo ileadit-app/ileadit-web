@@ -85,10 +85,10 @@ function ErrorState() {
     >
       <AlertCircle className="mt-0.5 size-5 shrink-0 text-destructive" aria-hidden="true" />
       <div>
-        <p className="text-base font-bold text-destructive">
+        <p className="text-base font-bold text-coral-text">
           We couldn&apos;t load your competitions
         </p>
-        <p className="mt-1 text-sm leading-relaxed text-destructive/90">
+        <p className="mt-1 text-sm leading-relaxed text-coral-text/90">
           Something went wrong talking to ileadit while fetching this list. Your
           competitions are still there — try reloading the page. If this keeps
           happening,{" "}

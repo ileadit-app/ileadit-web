@@ -28,7 +28,7 @@ export function HowItWorksSection() {
     <section id="how-it-works" className="bg-background py-20 sm:py-28">
       <div className="mx-auto max-w-6xl px-5 sm:px-6">
         <div className="max-w-2xl">
-          <p className="text-sm font-bold uppercase tracking-wide text-brand-coral">
+          <p className="text-sm font-bold uppercase tracking-wide text-coral-text">
             How it works
           </p>
           <h2 className="mt-3 text-balance text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl">

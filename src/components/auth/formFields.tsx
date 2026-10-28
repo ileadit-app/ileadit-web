@@ -17,7 +17,7 @@ export function ErrorBanner({ message }: { message: string }) {
   return (
     <div
       role="alert"
-      className="mb-4 flex items-start gap-2 rounded-xl border border-destructive/30 bg-destructive/10 p-3 text-sm font-medium text-destructive"
+      className="mb-4 flex items-start gap-2 rounded-xl border border-destructive/30 bg-destructive/10 p-3 text-sm font-medium text-coral-text"
     >
       <AlertCircle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
       <span>{message}</span>
@@ -30,7 +30,7 @@ export function ErrorBanner({ message }: { message: string }) {
  * use it; the shared `forms/fields.tsx` callers keep their current behaviour. */
 export function FieldError({ id, message, live = false }: { id: string; message: string; live?: boolean }) {
   return (
-    <p id={id} role={live ? "alert" : undefined} className="mt-1 text-xs text-destructive">
+    <p id={id} role={live ? "alert" : undefined} className="mt-1 text-xs text-coral-text">
       {message}
     </p>
   );

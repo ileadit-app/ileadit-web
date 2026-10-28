@@ -12,7 +12,7 @@ export function TeamsSection() {
     <section id="teams" className="bg-background py-20 sm:py-28">
       <div className="mx-auto max-w-6xl px-5 sm:px-6">
         <div className="max-w-2xl">
-          <p className="text-sm font-bold uppercase tracking-wide text-brand-coral">
+          <p className="text-sm font-bold uppercase tracking-wide text-coral-text">
             Teams &amp; rivalries
           </p>
           <h2 className="mt-3 text-balance text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl">
@@ -53,7 +53,7 @@ export function TeamsSection() {
                   className="flex items-center justify-between rounded-xl bg-muted px-4 py-2.5"
                 >
                   <div className="flex items-center gap-3">
-                    <span className="text-xs font-extrabold text-brand-coral">
+                    <span className="text-xs font-extrabold text-coral-text">
                       {dept.place}
                     </span>
                     <span className="text-sm font-bold text-foreground">
