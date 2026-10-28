@@ -1,4 +1,10 @@
+import type { Metadata } from "next";
 import { AlertTriangle, PlayCircle, Smartphone } from "lucide-react";
+
+export const metadata: Metadata = {
+  title: "Get the app — ileadit",
+  description: "Download ileadit and start competing on points, not step counts. Free to download, available on Android today.",
+};
 
 /**
  * PLACEHOLDER STATE — read before editing.

@@ -1,5 +1,12 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRight, Check, Lock, X } from "lucide-react";
+
+export const metadata: Metadata = {
+  title: "About — ileadit",
+  description:
+    "ileadit is a game where walking is the input, not the point — inclusive, strategic, and fun first. Here's our story and what we're not.",
+};
 
 /**
  * Positioning on this page is not negotiable — see
