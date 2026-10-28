@@ -87,12 +87,36 @@ const nextConfig: NextConfig = {
               // (src/components/layout/Header.tsx's Avatar).
               "img-src 'self' data: blob: https://firebasestorage.googleapis.com https://ileadit-app.firebasestorage.app https://*.googleusercontent.com",
               "font-src 'self' data:",
-              // Firestore/Auth/Functions/Storage (all googleapis.com), the
-              // Functions callable endpoint itself (europe-west2, see
-              // src/lib/functions.ts — the ONE file allowed to name this
-              // region), and reCAPTCHA v3's own verify endpoint for App
-              // Check (src/lib/appCheck.ts).
-              "connect-src 'self' https://*.googleapis.com https://europe-west2-ileadit-app.cloudfunctions.net https://www.google.com https://www.gstatic.com",
+              // WEB-CR1-FIX2: narrowed from a bare https://*.googleapis.com
+              // wildcard to the EXACT hosts this app's Firebase client SDKs
+              // (firebase@12.11.0) actually call — confirmed by grepping
+              // node_modules/@firebase/{auth,firestore,storage,app-check,
+              // installations}/dist/*.js for every *.googleapis.com literal
+              // each package contains, then keeping only the ones this app
+              // actually exercises (re-run that grep and re-check this list
+              // after any Firebase SDK major-version bump):
+              //   - identitytoolkit.googleapis.com / securetoken.googleapis.com
+              //     — firebase/auth (sign-in, token refresh)
+              //   - firestore.googleapis.com — firebase/firestore (every
+              //     onSnapshot/query call in src/lib)
+              //   - firebasestorage.googleapis.com — firebase/storage
+              //     (artwork upload XHR itself; already present in img-src
+              //     for the resulting download URLs, but uploadBytesResumable's
+              //     own request needs it in connect-src too)
+              //   - firebaseinstallations.googleapis.com — firebase/installations
+              //     (the FID App Check's token exchange is keyed on)
+              //   - content-firebaseappcheck.googleapis.com — firebase/app-check
+              //     (the reCAPTCHA-token-to-App-Check-token exchange,
+              //     src/lib/appCheck.ts)
+              // storage.googleapis.com appears in @firebase/storage's source
+              // too, but only inside a regex that PARSES gs:// URLs — the
+              // SDK's real DEFAULT_HOST is firebasestorage.googleapis.com, so
+              // it's deliberately excluded here.
+              // europe-west2-ileadit-app.cloudfunctions.net is the Functions
+              // callable endpoint (src/lib/functions.ts — the ONE file
+              // allowed to name this region). www.google.com/www.gstatic.com
+              // are reCAPTCHA v3's own verification hosts (src/lib/appCheck.ts).
+              "connect-src 'self' https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://firestore.googleapis.com https://firebasestorage.googleapis.com https://firebaseinstallations.googleapis.com https://content-firebaseappcheck.googleapis.com https://europe-west2-ileadit-app.cloudfunctions.net https://www.google.com https://www.gstatic.com",
               // reCAPTCHA v3's invisible-challenge iframe, and Firebase
               // Auth's hidden iframe helper at the project's authDomain
               // (used for persistence/redirect-result handling even though
