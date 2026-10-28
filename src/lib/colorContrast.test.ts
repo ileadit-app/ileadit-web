@@ -90,6 +90,13 @@ const CASES: Case[] = [
     citation: "src/components/marketing/AverageMechanicSection.tsx:31 TONE_CLASSES.coral",
   },
   {
+    name: "text-muted-foreground (coral tier detail caption) on a bg-brand-coral/10 chip over bg-card",
+    fg: TOKEN.mutedForeground,
+    bg: compositeOver(TOKEN.brandCoral, TOKEN.card, 0.1),
+    citation:
+      "src/components/marketing/AverageMechanicSection.tsx DETAIL_TONE_CLASSES.coral — FIX: previously inherited text-coral-text at opacity-80 (3.54:1) from the shared heading above it",
+  },
+  {
     name: "text-coral-text on a bg-brand-coral/10 chip over bg-card (leaderboard 'wrapping up' banner)",
     fg: TOKEN.coralText,
     bg: compositeOver(TOKEN.brandCoral, TOKEN.card, 0.1),
@@ -133,6 +140,15 @@ describe("fixed regressions — these previously failed and must stay fixed", ()
   test("text-coral-on-navy, not text-brand-coral, on bg-brand-navy (was 2.89:1)", () => {
     expect(contrastRatio(TOKEN.brandCoral, TOKEN.navy)).toBeLessThan(AA_NORMAL_TEXT_MIN_CONTRAST);
     expect(contrastRatio(TOKEN.coralOnNavy, TOKEN.navy)).toBeGreaterThanOrEqual(AA_NORMAL_TEXT_MIN_CONTRAST);
+  });
+
+  test("text-coral-text/80 (average-mechanic tier detail) composited on its own bg-brand-coral/10 chip over bg-card measured 3.54:1 — fixed by swapping to text-muted-foreground, never ships the /80 composite on this background", () => {
+    const chipBackground = compositeOver(TOKEN.brandCoral, TOKEN.card, 0.1);
+    const opacityComposited = compositeOver(TOKEN.coralText, chipBackground, 0.8);
+    expect(contrastRatio(opacityComposited, chipBackground)).toBeLessThan(AA_NORMAL_TEXT_MIN_CONTRAST);
+    expect(contrastRatio(TOKEN.mutedForeground, chipBackground)).toBeGreaterThanOrEqual(
+      AA_NORMAL_TEXT_MIN_CONTRAST,
+    );
   });
 
   test("text-coral-text/90 composited on a bg-destructive/10 chip over bg-background measured 4.08:1 — the fix drops the opacity modifier or swaps to text-muted-foreground, never ships the /90 composite", () => {

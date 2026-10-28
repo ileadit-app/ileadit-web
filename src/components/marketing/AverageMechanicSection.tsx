@@ -34,6 +34,26 @@ const TONE_CLASSES: Record<string, string> = {
   goldStrong: "border-brand-gold bg-brand-gold text-brand-navy",
 };
 
+/**
+ * WEB-CR1-FIX3. The detail caption used to inherit each tone's text colour
+ * via one shared `opacity-80` class, composited over whatever background
+ * that tone's own chip happens to use. Measured against the REAL composited
+ * colour (see colorContrast.test.ts), the coral tone's detail text came out
+ * at ~3.54:1 on its own chip background (`text-coral-text` at 80% opacity
+ * over `bg-brand-coral/10` on `bg-card`) — below WCAG AA's 4.5:1 — even
+ * though the heading directly above it (same base colour, no opacity)
+ * passes fine on that same background. Each tone gets its own explicit,
+ * individually-checked detail colour instead, so a future new tone can't
+ * silently reuse an opacity value that happened to work for a DIFFERENT
+ * tone's background.
+ */
+const DETAIL_TONE_CLASSES: Record<string, string> = {
+  coral: "text-muted-foreground", // ~6.55:1 on this chip's bg-brand-coral/10-over-card
+  muted: "text-muted-foreground", // ~6.32:1 on bg-muted
+  gold: "text-brand-navy/80", // ~6.60:1 on bg-brand-gold/15-over-card
+  goldStrong: "text-brand-navy/80", // ~4.67:1 on the solid bg-brand-gold fill
+};
+
 export function AverageMechanicSection() {
   return (
     <section id="average" className="bg-secondary py-20 sm:py-28">
@@ -80,7 +100,7 @@ export function AverageMechanicSection() {
                 >
                   <div>
                     <p className="text-sm font-extrabold">{tier.label}</p>
-                    <p className="text-xs opacity-80">{tier.detail}</p>
+                    <p className={`text-xs ${DETAIL_TONE_CLASSES[tier.tone]}`}>{tier.detail}</p>
                   </div>
                   <div className="flex items-center gap-1.5 text-sm font-bold">
                     {tier.tone === "coral" && (
