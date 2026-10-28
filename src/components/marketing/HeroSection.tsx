@@ -345,7 +345,10 @@ function PlayerRow({
         >
           {percent}% of avg
         </p>
-        <p className="text-xs font-semibold text-brand-coral">{points}</p>
+        {/* text-coral-on-navy, not text-brand-coral — this whole hero
+            section is bg-brand-navy (see the <section> above), and
+            brand-coral only measures 2.89:1 there. See globals.css. */}
+        <p className="text-xs font-semibold text-coral-on-navy">{points}</p>
       </div>
     </div>
   );

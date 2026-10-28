@@ -64,7 +64,7 @@ function DashboardContent() {
 
   return (
     <div className="mx-auto max-w-6xl px-5 py-16 sm:px-6">
-      <p className="text-sm font-bold uppercase tracking-wide text-brand-coral">
+      <p className="text-sm font-bold uppercase tracking-wide text-coral-text">
         Dashboard
       </p>
       <h1 className="mt-3 text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl">

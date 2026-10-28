@@ -13,5 +13,13 @@
       "**/*.test.ts",
       "**/*.test.tsx"
     ]
+  },
+  "emulators": {
+    "hosting": { "port": 5150 },
+    "functions": { "port": 5151 },
+    "hub": { "port": 5152 },
+    "logging": { "port": 5153 },
+    "eventarc": { "port": 5154 },
+    "tasks": { "port": 5155 }
   }
 }

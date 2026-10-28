@@ -59,7 +59,7 @@ export function CreateCompetitionGate() {
 
   return (
     <div className="mx-auto max-w-3xl px-5 py-16 sm:px-6">
-      <p className="text-sm font-bold uppercase tracking-wide text-brand-coral">New competition</p>
+      <p className="text-sm font-bold uppercase tracking-wide text-coral-text">New competition</p>
       <h1 className="mt-3 text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl">
         Set up a competition
       </h1>

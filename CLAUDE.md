@@ -2,13 +2,13 @@
 
 ## What This Is
 
-Marketing website and competition creation portal for the ileadit mobile game. Hosted at `ileadit.app`.
+Marketing website and competition creation portal for the ileadit mobile game. Hosted at `ileadit.co.uk`.
 
 ileadit is a game where walking/steps is the input mechanic — "a game that requires movement, NOT a fitness app." Players compete on points, never on step counts. Step counts are private.
 
 ## Tech Stack
 
-- **Framework:** Next.js 14 (App Router) with TypeScript
+- **Framework:** Next.js 16 (App Router) with TypeScript
 - **Styling:** Tailwind CSS
 - **Auth:** Firebase Auth (shared with the Android app)
 - **Database:** Firestore (shared with the Android app — project `ileadit-app`)

@@ -234,7 +234,7 @@ function WhosInCard({
 
   return (
     <div className="rounded-3xl border border-border bg-card p-6">
-      <p className="text-sm font-bold uppercase tracking-wide text-brand-coral">Who&apos;s in it</p>
+      <p className="text-sm font-bold uppercase tracking-wide text-coral-text">Who&apos;s in it</p>
       <p className="mt-2 text-4xl font-extrabold text-foreground">{playerCount ?? "—"}</p>
       <p className="text-sm text-muted-foreground">
         {playerCount === 1 ? "player has joined" : "players have joined"}
@@ -279,7 +279,7 @@ function DatesCard({
 }) {
   return (
     <div className="rounded-3xl border border-border bg-card p-6">
-      <p className="text-sm font-bold uppercase tracking-wide text-brand-coral">Dates</p>
+      <p className="text-sm font-bold uppercase tracking-wide text-coral-text">Dates</p>
       <div className="mt-3 space-y-2 text-sm text-muted-foreground">
         <div className="flex items-center gap-2">
           <Calendar className="size-4 shrink-0" aria-hidden="true" />
@@ -304,7 +304,7 @@ function HowItWorksCard() {
   ];
   return (
     <div className="mt-4 rounded-3xl border border-border bg-card p-6">
-      <p className="text-sm font-bold uppercase tracking-wide text-brand-coral">How this works</p>
+      <p className="text-sm font-bold uppercase tracking-wide text-coral-text">How this works</p>
       <ul className="mt-3 space-y-3" role="list">
         {rows.map((row) => (
           <li key={row.text} className="flex items-start gap-3 text-sm text-muted-foreground">
@@ -380,7 +380,11 @@ function MembershipCta({
     return (
       <div className="mt-6 flex items-start gap-3 rounded-2xl border border-destructive/30 bg-destructive/10 p-4">
         <AlertCircle className="mt-0.5 size-5 shrink-0 text-destructive" aria-hidden="true" />
-        <p className="text-sm text-destructive/90">
+        {/* text-coral-text, not text-coral-text/90 — the 90% alpha
+            composited over this box's bg-destructive/10 fill measures only
+            4.08:1 (verified in src/lib/colorContrast.test.ts); full opacity
+            on the same fill is 4.76:1. */}
+        <p className="text-sm text-coral-text">
           We couldn&apos;t check whether you&apos;re in this competition. Reload to try again.
         </p>
       </div>
@@ -449,7 +453,7 @@ function MembershipCta({
           type="button"
           onClick={handleLeaveClick}
           disabled={pending !== null}
-          className="text-sm font-semibold text-muted-foreground underline-offset-2 hover:text-destructive hover:underline disabled:cursor-not-allowed disabled:text-muted-foreground disabled:hover:no-underline"
+          className="text-sm font-semibold text-muted-foreground underline-offset-2 hover:text-coral-text hover:underline disabled:cursor-not-allowed disabled:text-muted-foreground disabled:hover:no-underline"
         >
           {pending === "leave" ? "Leaving…" : "Leave competition"}
         </button>
@@ -485,7 +489,7 @@ function MembershipCta({
             type="button"
             onClick={handleLeaveClick}
             disabled={pending !== null}
-            className="text-sm font-semibold text-muted-foreground underline-offset-2 hover:text-destructive hover:underline disabled:cursor-not-allowed disabled:text-muted-foreground disabled:hover:no-underline"
+            className="text-sm font-semibold text-muted-foreground underline-offset-2 hover:text-coral-text hover:underline disabled:cursor-not-allowed disabled:text-muted-foreground disabled:hover:no-underline"
           >
             {pending === "leave" ? "Leaving…" : "Leave competition"}
           </button>
@@ -532,7 +536,7 @@ function MembershipCta({
     <div className="mt-6">
       {body}
       {actionError ? (
-        <p className="mt-2 text-center text-sm text-destructive" role="alert">
+        <p className="mt-2 text-center text-sm text-coral-text" role="alert">
           {actionError}
         </p>
       ) : null}

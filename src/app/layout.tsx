@@ -23,10 +23,45 @@ const fraunces = Fraunces({
   style: ["italic"],
 });
 
+const SITE_URL = "https://ileadit.co.uk";
+const SITE_NAME = "ileadit";
+const DEFAULT_TITLE = "ileadit — Are you an average winner?";
+const DEFAULT_DESCRIPTION =
+  "Beat yourself to beat the rest. ileadit is a game you play by walking — you compete against your own rolling average, not everyone else's step count. Anyone can win, and that's the whole point.";
+
 export const metadata: Metadata = {
-  title: "ileadit — Are you an average winner?",
-  description:
-    "Beat yourself to beat the rest. ileadit is a game you play by walking — you compete against your own rolling average, not everyone else's step count. Anyone can win, and that's the whole point.",
+  // WEB-CR1: required so every relative URL used below (and in any
+  // page-level `openGraph.images`/`alternates`) resolves to a real,
+  // absolute, crawlable link instead of a client-relative one — without
+  // this, link-preview scrapers (which don't run on ileadit.co.uk itself)
+  // can't resolve "/opengraph-image" at all.
+  metadataBase: new URL(SITE_URL),
+  // Deliberately a plain string, NOT `{ default, template }` — several
+  // existing pages (login/signup/reset-password/privacy/terms/
+  // account-deletion) already set their own full, self-contained `title`
+  // string (e.g. "Sign in — ileadit"). A `title.template` here would wrap
+  // every one of those in ANOTHER "%s — ileadit" suffix, double-branding
+  // them. Any new page that wants a shorter title can just write its own
+  // full string the same way those pages already do.
+  title: DEFAULT_TITLE,
+  description: DEFAULT_DESCRIPTION,
+  openGraph: {
+    type: "website",
+    siteName: SITE_NAME,
+    title: DEFAULT_TITLE,
+    description: DEFAULT_DESCRIPTION,
+    url: "/",
+    // No explicit `images` entry needed — Next.js's file-convention
+    // `src/app/opengraph-image.tsx` is picked up automatically for any
+    // route that doesn't define its own, and (per Next's docs) the same
+    // image is reused for `twitter.images` below when a route has no
+    // dedicated `twitter-image.tsx` either.
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: DEFAULT_TITLE,
+    description: DEFAULT_DESCRIPTION,
+  },
 };
 
 export const viewport: Viewport = {

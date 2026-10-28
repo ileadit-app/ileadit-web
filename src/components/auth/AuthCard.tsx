@@ -346,7 +346,7 @@ export function AuthCard({ mode }: { mode: "signin" | "signup" }) {
           disabled={anyLoading}
         />
         {emailFieldError?.kind === "in-use" ? (
-          <p role="alert" className="-mt-2 text-xs text-destructive">
+          <p role="alert" className="-mt-2 text-xs text-coral-text">
             {/* Same words as SIGN_UP_COLLISION_MESSAGE, with the two actions as links. */}
             We couldn&apos;t create that account. If you already have one,{" "}
             <Link href={withRedirectParam("/login", { email })} className="font-semibold underline">

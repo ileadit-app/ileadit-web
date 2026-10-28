@@ -1,4 +1,10 @@
+import type { Metadata } from "next";
 import { AlertTriangle, PlayCircle, Smartphone } from "lucide-react";
+
+export const metadata: Metadata = {
+  title: "Get the app — ileadit",
+  description: "Download ileadit and start competing on points, not step counts. Free to download, available on Android today.",
+};
 
 /**
  * PLACEHOLDER STATE — read before editing.
@@ -65,13 +71,13 @@ export default function Download() {
                 <div
                   role="note"
                   aria-label="Placeholder — Play Store link not yet available"
-                  className="mt-6 inline-flex h-12 cursor-not-allowed items-center gap-2 rounded-full border-2 border-dashed border-brand-coral/50 bg-brand-coral/5 px-6 text-sm font-bold text-brand-coral"
+                  className="mt-6 inline-flex h-12 cursor-not-allowed items-center gap-2 rounded-full border-2 border-dashed border-brand-coral/50 bg-brand-coral/5 px-6 text-sm font-bold text-coral-text"
                 >
                   <PlayCircle className="size-5" aria-hidden="true" />
                   Get it on Google Play — PLACEHOLDER LINK
                 </div>
               )}
-              <p className="mt-3 flex items-start gap-1.5 text-xs leading-relaxed text-brand-coral">
+              <p className="mt-3 flex items-start gap-1.5 text-xs leading-relaxed text-coral-text">
                 <AlertTriangle className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
                 Placeholder: the real Play Store listing URL must be swapped
                 in here before this page ships.

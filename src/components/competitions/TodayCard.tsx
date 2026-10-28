@@ -26,7 +26,10 @@ export function TodayCard({ uid, player }: { uid: string; player: OwnPlayerData 
   if (player.eliminated) {
     return (
       <div className="mt-6 rounded-3xl bg-brand-navy p-6 text-on-navy-foreground">
-        <p className="text-sm font-bold uppercase tracking-wide text-brand-coral">Today</p>
+        {/* text-coral-on-navy, not text-coral-text — this card's background
+            IS navy, and coral-text was only ever tuned for light backgrounds
+            (2.31:1 here vs. coral-on-navy's 5.77:1). See globals.css. */}
+        <p className="text-sm font-bold uppercase tracking-wide text-coral-on-navy">Today</p>
         <p className="mt-2 text-lg font-bold">Out — final score locked in.</p>
         <p className="mt-1 text-sm text-on-navy-muted">
           {player.points} points locked in. You&apos;re still on the team — cheer the rest home.
@@ -52,7 +55,7 @@ export function TodayCard({ uid, player }: { uid: string; player: OwnPlayerData 
   return (
     <div className="mt-6 rounded-3xl bg-brand-navy p-6 text-on-navy-foreground">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-sm font-bold uppercase tracking-wide text-brand-coral">Today</p>
+        <p className="text-sm font-bold uppercase tracking-wide text-coral-on-navy">Today</p>
         {warmup ? (
           <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-xs font-bold text-brand-gold">
             Warm-up · Day {warmup.dayOfWarmup} of {warmup.totalDays}
@@ -90,7 +93,7 @@ export function TodayCard({ uid, player }: { uid: string; player: OwnPlayerData 
               key={i}
               className={
                 i < player.livesRemaining
-                  ? "size-5 fill-brand-coral text-brand-coral"
+                  ? "size-5 fill-coral-on-navy text-coral-on-navy"
                   : "size-5 text-on-navy-muted"
               }
               aria-hidden="true"

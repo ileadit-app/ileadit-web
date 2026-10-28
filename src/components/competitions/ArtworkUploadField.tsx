@@ -313,7 +313,7 @@ export function ArtworkUploadField({
       </p>
 
       {error ? (
-        <p role="alert" className="mt-1.5 text-xs text-destructive">
+        <p role="alert" className="mt-1.5 text-xs text-coral-text">
           {error}
         </p>
       ) : null}
@@ -328,7 +328,7 @@ export function ArtworkUploadField({
         <button
           type="button"
           onClick={handleRemove}
-          className="mt-2 inline-flex items-center gap-1.5 text-xs font-semibold text-destructive underline-offset-2 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-navy"
+          className="mt-2 inline-flex items-center gap-1.5 text-xs font-semibold text-coral-text underline-offset-2 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-navy"
         >
           <Trash2 className="size-3.5" aria-hidden="true" />
           Remove {label.toLowerCase()}
