@@ -42,6 +42,12 @@ describe("PrizeTerms", () => {
     expect(screen.getByText(/no prize terms for this competition/i)).toBeInTheDocument();
   });
 
+  it("not-found: still links to the site's own Terms of Use", () => {
+    useCompetitionTermsMock.mockReturnValue({ status: "not-found" });
+    render(<PrizeTerms competitionId="comp-1" />);
+    expect(screen.getByRole("link", { name: "Terms of Use" })).toHaveAttribute("href", "/terms");
+  });
+
   it("error: shows a distinct error message, never the not-found copy", () => {
     useCompetitionTermsMock.mockReturnValue({ status: "error", error: new Error("boom") });
     render(<PrizeTerms competitionId="comp-1" />);
@@ -76,6 +82,15 @@ describe("PrizeTerms", () => {
     render(<PrizeTerms competitionId="comp-1" />);
     expect(screen.queryByText(/not yet approved/i)).not.toBeInTheDocument();
     expect(screen.getByText("Final terms text")).toBeInTheDocument();
+  });
+
+  it("approved terms: also links to the site's own Terms of Use", () => {
+    useCompetitionTermsMock.mockReturnValue({
+      status: "success",
+      terms: { version: "v2", html: "<p>Final terms text</p>", generatedAt: null, approvedTemplateVersion: "v2" },
+    });
+    render(<PrizeTerms competitionId="comp-1" />);
+    expect(screen.getByRole("link", { name: "Terms of Use" })).toHaveAttribute("href", "/terms");
   });
 
   it("sanitisation: a <script> tag and an onerror= attribute are stripped", () => {

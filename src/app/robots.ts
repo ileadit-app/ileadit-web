@@ -23,12 +23,29 @@ const SITE_URL = "https://ileadit.co.uk";
  * anchors to the exact path, and `/account/` separately covers the
  * protected page's own descendants (e.g. a future `/account/billing`, see
  * CLAUDE.md's page list) without recapturing `/account-deletion`.
+ *
+ * PRZ-W1-PR: `/competitions/*\/prize-terms$` is a SECOND exception inside
+ * the broad `/competitions/` disallow prefix, same shape as the
+ * `/account-deletion` exception above — `/competitions/[id]/prize-terms`
+ * (`src/app/competitions/[id]/prize-terms/page.tsx`) is deliberately public
+ * (anyone with a link from the app, signed in or not; see that file's own
+ * comment), unlike every other route under `/competitions/[id]`
+ * (`/competitions/[id]` itself, `/invite`, `/settings` — all
+ * `<ProtectedRoute>`-gated). Per Google's documented robots.txt precedence
+ * (https://developers.google.com/search/docs/crawling-indexing/robots/robots_txt#url-matching-based-on-path-values),
+ * a more specific `allow` rule beats a less specific `disallow` rule that
+ * also matches the same URL — this `allow` entry is longer/more specific
+ * than the bare `/competitions/` disallow, so it wins. Not listed in
+ * sitemap.ts (same reasoning as `/invite/[code]`: not enumerable up front),
+ * but unlike `/invite/[code]` it sits under an otherwise-disallowed prefix,
+ * so it needs this explicit carve-out rather than simply being left out of
+ * the disallow list.
  */
 export default function robots(): MetadataRoute.Robots {
   return {
     rules: {
       userAgent: "*",
-      allow: "/",
+      allow: ["/", "/competitions/*/prize-terms$"],
       disallow: ["/dashboard", "/account$", "/account/", "/competitions/new", "/competitions/"],
     },
     sitemap: `${SITE_URL}/sitemap.xml`,

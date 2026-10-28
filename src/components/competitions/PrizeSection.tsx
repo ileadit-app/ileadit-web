@@ -246,7 +246,7 @@ export function PrizeSection({
 
           <ToggleField
             label="Winner must be 18 or over"
-            description="We'll check this against the winner's own account before revealing the prize."
+            description="The winner confirms this themselves when they claim the prize — we don't check it against their account."
             checked={value.adultOnly}
             onChange={(adultOnly) => onChange({ ...value, adultOnly })}
             disabled={disabled}

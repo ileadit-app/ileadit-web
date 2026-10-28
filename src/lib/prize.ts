@@ -43,9 +43,14 @@ export interface Prize {
   /** Forfeit-only, optional (spec §3.1: "for forfeits that bind the last
    * place"). `null`/absent for every other kind. */
   forfeitLoserText: string | null;
-  /** D9: optional "winner must be 18 or over", enforced server-side against
-   * the player's age record — this checkbox is a request, not an
-   * enforcement mechanism in itself. */
+  /** D9: optional "winner must be 18 or over". PRZ-R3 Decision 2 (engine
+   * branch `engine/prizes-r3`, commit `925155eb`, read 2026-10-28): there is
+   * no stored age/DOB record this is checked against at all — the winner
+   * confirms it THEMSELVES at claim time via the `claimPrize` callable's
+   * `confirmedAdult:true` flag, and `adultConfirmedAt` (a timestamp, the
+   * ONLY thing ever stored about age) is written then. This checkbox is a
+   * request that gates the claim flow, not a lookup against any existing
+   * profile field. */
   adultOnly: boolean;
 }
 

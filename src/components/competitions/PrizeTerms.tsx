@@ -3,6 +3,7 @@
 import DOMPurify from "dompurify";
 import { useEffect, useRef, useState } from "react";
 import { AlertCircle } from "lucide-react";
+import Link from "next/link";
 import { isDraftNotApproved, useCompetitionTerms, type CompetitionTermsDoc } from "@/lib/competitionTerms";
 
 /**
@@ -186,7 +187,10 @@ export function PrizeTermsView({ terms }: { terms: CompetitionTermsDoc }) {
   useEffect(() => {
     const container = contentRef.current;
     if (!container || sanitizedHtml === null) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- see the justification comment above the two useState calls
+      // No eslint-disable needed here (unlike the setSanitizedHtml call
+      // above) — eslint-config-next 16.4.3's react-hooks/set-state-in-effect
+      // no longer flags this call, confirmed by removing the previously
+      // present disable comment and re-running `npm run lint` clean.
       setTocSections([]);
       return;
     }
@@ -272,7 +276,28 @@ export function PrizeTermsView({ terms }: { terms: CompetitionTermsDoc }) {
           )}
         </article>
       </div>
+
+      <TermsOfUseFooterLink />
     </div>
+  );
+}
+
+/**
+ * PRZ-W1-PR. These are a specific COMPETITION's prize terms — not ileadit's
+ * own site-wide Terms of Use (`/terms`). Every state of this page (success,
+ * not-found, error) links there so a visitor who lands here from a shared
+ * link always has a path to the general terms governing ileadit itself,
+ * not just this one prize.
+ */
+function TermsOfUseFooterLink() {
+  return (
+    <p className="mt-10 border-t border-border pt-6 text-sm text-muted-foreground">
+      This page covers only this competition&apos;s prize. For ileadit&apos;s general terms, see{" "}
+      <Link href="/terms" className="font-medium text-brand-navy underline hover:no-underline">
+        Terms of Use
+      </Link>
+      .
+    </p>
   );
 }
 
@@ -282,6 +307,7 @@ function StatusMessage({ title, body, isError }: { title: string; body: string; 
       {isError ? <AlertCircle className="mx-auto size-8 text-destructive" aria-hidden="true" /> : null}
       <h1 className="mt-3 text-2xl font-extrabold text-foreground">{title}</h1>
       <p className="mt-2 text-base text-muted-foreground">{body}</p>
+      <TermsOfUseFooterLink />
     </div>
   );
 }
