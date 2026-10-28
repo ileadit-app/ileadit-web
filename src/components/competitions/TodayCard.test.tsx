@@ -129,7 +129,10 @@ describe("TodayCard", () => {
 
     expect(screen.getByLabelText(/1 of 3 lives remaining/i)).toBeInTheDocument();
     const { container } = render(<TodayCard uid="u1" player={player({ livesRemaining: 1 })} />);
-    const filled = container.querySelectorAll(".fill-brand-coral");
+    // WEB-CR1-FIX2: TodayCard.tsx's heart icon now uses fill-coral-on-navy,
+    // not fill-brand-coral — this card is bg-brand-navy, and brand-coral only
+    // measures 2.89:1 there (see src/lib/colorContrast.test.ts).
+    const filled = container.querySelectorAll(".fill-coral-on-navy");
     expect(filled.length).toBe(1);
   });
 

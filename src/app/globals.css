@@ -53,6 +53,29 @@
   /* brand: coral — warnings / lives lost / destructive */
   --color-destructive: #d14451;
   --color-destructive-foreground: #ffffff;
+  /* WEB-CR1 (28 Oct 2026 code review): #d14451 AS BODY/LABEL TEXT on the
+     page/card background is 4.35:1 — below WCAG AA's 4.5:1 for normal-size
+     text. #b83a46 (same hue, darkened) is 5.43:1 on #fafbfb / 5.63:1 on
+     #ffffff — reuse via `text-coral-text`, never `text-destructive`/
+     `text-brand-coral`, for any readable coral TEXT sitting directly on the
+     page or card background (eyebrow labels, error copy, link text).
+     Backgrounds, borders, fills and icons keep using --color-destructive/
+     --color-brand-coral unchanged — this token exists for text only. */
+  --color-coral-text: #b83a46;
+
+  /* WEB-CR1-FIX2 (28 Oct 2026 independent review): --color-coral-text was
+     tuned ONLY against light backgrounds (#fafbfb/#ffffff) — on navy
+     (#192f5f) it measures 2.31:1, and the untouched --color-brand-coral
+     fares no better there (2.89:1), both well below WCAG AA. #ff8a93 (a
+     lighter, still-recognisably-coral/salmon tint) measures 5.77:1 against
+     --color-brand-navy. Use `text-coral-on-navy` (and `fill-coral-on-navy`
+     for the matching lives-heart icon) for ANY coral text or coral-as-
+     meaningful-icon sitting directly on a navy/brand-navy background —
+     never `text-coral-text`/`text-brand-coral` there. See
+     src/lib/colorContrast.test.ts, which enumerates every real coral text
+     use in the codebase against its actual background and fails under
+     4.5:1 — re-run it before reusing coral text on any new background. */
+  --color-coral-on-navy: #ff8a93;
 
   --color-border: #dfe2ee;
   --color-input: #dfe2ee;

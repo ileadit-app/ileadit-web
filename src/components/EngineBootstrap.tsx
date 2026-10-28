@@ -96,7 +96,7 @@ export default function EngineBootstrap() {
   return (
     <div
       role="alert"
-      className="flex flex-col items-center justify-center gap-2 border-b border-destructive/30 bg-destructive/10 px-4 py-2.5 text-sm text-destructive sm:flex-row sm:gap-3"
+      className="flex flex-col items-center justify-center gap-2 border-b border-destructive/30 bg-destructive/10 px-4 py-2.5 text-sm text-coral-text sm:flex-row sm:gap-3"
     >
       <span className="flex items-center gap-2 text-center sm:text-left">
         <AlertCircle className="size-4 shrink-0" aria-hidden="true" />

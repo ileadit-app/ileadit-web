@@ -86,10 +86,16 @@ function ErrorState() {
     >
       <AlertCircle className="mt-0.5 size-5 shrink-0 text-destructive" aria-hidden="true" />
       <div>
-        <p className="text-base font-bold text-destructive">
+        <p className="text-base font-bold text-coral-text">
           We couldn&apos;t load your competitions
         </p>
-        <p className="mt-1 text-sm leading-relaxed text-destructive/90">
+        {/* text-muted-foreground, not text-coral-text/90 — the 90% alpha
+            composited over this box's bg-destructive/10 fill measures only
+            4.08:1 (verified in src/lib/colorContrast.test.ts), and matches
+            the convention used elsewhere (e.g. CompetitionLeaderboard.tsx's
+            LeaderboardErrorState): coral for the bold heading only, muted
+            grey for the explanatory body line underneath. */}
+        <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
           Something went wrong talking to ileadit while fetching this list. Your
           competitions are still there — try reloading the page. If this keeps
           happening,{" "}

@@ -56,7 +56,14 @@ export default function Header() {
           <span className="sr-only">ileadit home</span>
         </Link>
 
-        {/* Desktop nav */}
+        {/*
+          WEB-CR1: this and the mobile <nav> below render the same links in
+          two different layouts and are never both visible at once (this one
+          is CSS `hidden` below the `lg` breakpoint; the mobile one only
+          mounts into the DOM at all once the hamburger menu is open) — but
+          two <nav> landmarks sharing one aria-label is still ambiguous to
+          assistive tech/audits, so they're named distinctly.
+        */}
         <nav aria-label="Primary" className="hidden items-center gap-7 lg:flex">
           {NAV_LINKS.map((link) => (
             <Link
@@ -69,7 +76,16 @@ export default function Header() {
           ))}
         </nav>
 
-        <div className="hidden items-center gap-2 sm:flex">
+        {/*
+          WEB-CR1-FIX2: this used to be `sm:flex` (shows from 640px) while
+          NAV_LINKS above and the mobile menu below both switch at `lg`
+          (1024px) — between 640-1023px (e.g. a 700px or 900px tablet) the
+          hamburger had already disappeared (it was `sm:hidden`) but
+          NAV_LINKS hadn't appeared yet, so the nav links were invisible in
+          BOTH places at once. Now every one of these three elements flips
+          at the same `lg` breakpoint.
+        */}
+        <div className="hidden items-center gap-2 lg:flex">
           {status === "loading" ? (
             // Neutral skeleton, same slot — avoids flashing "Sign in" then
             // swapping to the avatar a moment later (spec §6).
@@ -101,9 +117,10 @@ export default function Header() {
           )}
         </div>
 
-        {/* Mobile hamburger */}
+        {/* Mobile hamburger — lg:hidden, see the WEB-CR1-FIX2 comment above
+            on the desktop auth row for why this isn't sm:hidden any more. */}
         <button
-          className="flex h-11 w-11 items-center justify-center text-foreground sm:hidden"
+          className="flex h-11 w-11 items-center justify-center text-foreground lg:hidden"
           onClick={() => setMenuOpen(!menuOpen)}
           aria-label="Toggle menu"
           aria-expanded={menuOpen}
@@ -118,7 +135,7 @@ export default function Header() {
 
       {/* Mobile menu */}
       {menuOpen && (
-        <nav aria-label="Primary" className="border-t border-border px-5 pb-4 sm:hidden">
+        <nav aria-label="Primary mobile menu" className="border-t border-border px-5 pb-4 lg:hidden">
           {NAV_LINKS.map((link) => (
             <Link
               key={link.href}

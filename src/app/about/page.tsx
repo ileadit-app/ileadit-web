@@ -1,5 +1,12 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRight, Check, Lock, X } from "lucide-react";
+
+export const metadata: Metadata = {
+  title: "About — ileadit",
+  description:
+    "ileadit is a game where walking is the input, not the point — inclusive, strategic, and fun first. Here's our story and what we're not.",
+};
 
 /**
  * Positioning on this page is not negotiable — see
@@ -57,7 +64,7 @@ export default function About() {
       <section className="bg-background py-20 sm:py-28">
         <div className="mx-auto max-w-6xl px-5 sm:px-6">
           <div className="max-w-2xl">
-            <p className="text-sm font-bold uppercase tracking-wide text-brand-coral">
+            <p className="text-sm font-bold uppercase tracking-wide text-coral-text">
               Say it plainly
             </p>
             <h2 className="mt-3 text-balance text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl">
@@ -123,7 +130,7 @@ export default function About() {
       <section id="why-average" className="bg-secondary py-20 sm:py-28">
         <div className="mx-auto max-w-6xl px-5 sm:px-6">
           <div className="max-w-2xl">
-            <p className="text-sm font-bold uppercase tracking-wide text-brand-coral">
+            <p className="text-sm font-bold uppercase tracking-wide text-coral-text">
               Why an ordinary walker can win
             </p>
             <h2 className="mt-3 text-balance text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl">
@@ -153,7 +160,7 @@ export default function About() {
       <section className="bg-background py-20 sm:py-28">
         <div className="mx-auto max-w-6xl px-5 sm:px-6">
           <div className="max-w-2xl">
-            <p className="text-sm font-bold uppercase tracking-wide text-brand-coral">
+            <p className="text-sm font-bold uppercase tracking-wide text-coral-text">
               Privacy is the whole design, not a policy bolted on
             </p>
             <h2 className="mt-3 text-balance text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl">

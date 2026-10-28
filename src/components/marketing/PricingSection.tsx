@@ -15,7 +15,7 @@ export function PricingSection() {
         <div className="rounded-3xl border border-border bg-card p-8 sm:p-12">
           <div className="grid gap-10 lg:grid-cols-[1.2fr_1fr] lg:items-center">
             <div>
-              <p className="text-sm font-bold uppercase tracking-wide text-brand-coral">
+              <p className="text-sm font-bold uppercase tracking-wide text-coral-text">
                 Pricing
               </p>
               <h2 className="mt-3 text-balance text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl">

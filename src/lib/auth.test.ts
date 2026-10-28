@@ -30,8 +30,8 @@ describe("requestPasswordReset", () => {
     expect(sendPasswordResetEmailMock).toHaveBeenCalledWith({}, "a@b.co");
   });
 
-  it.each(["auth/user-not-found", "auth/user-disabled", "auth/too-many-requests", "auth/network-request-failed"])(
-    "still reports sent for %s",
+  it.each(["auth/user-not-found", "auth/user-disabled"])(
+    "still reports sent for %s (account-existence secrecy)",
     async (code) => {
       sendPasswordResetEmailMock.mockRejectedValue(authError(code));
       await expect(requestPasswordReset("a@b.co")).resolves.toEqual({ status: "sent" });
@@ -42,4 +42,37 @@ describe("requestPasswordReset", () => {
     sendPasswordResetEmailMock.mockRejectedValue(authError("auth/invalid-email"));
     await expect(requestPasswordReset("nope")).resolves.toEqual({ status: "invalid-email" });
   });
+
+  it("reports a real error for too-many-requests, not sent", async () => {
+    sendPasswordResetEmailMock.mockRejectedValue(authError("auth/too-many-requests"));
+    const outcome = await requestPasswordReset("a@b.co");
+    expect(outcome.status).toBe("error");
+    expect((outcome as { status: "error"; message: string }).message).toMatch(/too many attempts/i);
+  });
+
+  it("reports a real error for a network failure, not sent", async () => {
+    sendPasswordResetEmailMock.mockRejectedValue(authError("auth/network-request-failed"));
+    const outcome = await requestPasswordReset("a@b.co");
+    expect(outcome.status).toBe("error");
+    expect((outcome as { status: "error"; message: string }).message).toMatch(/couldn't reach ileadit/i);
+  });
+
+  // WEB-CR1-FIX3: before this ticket, ANY reason other than invalid-email/
+  // network-request-failed/too-many-requests fell through to a false "sent"
+  // — including config failures, internal errors, and any other unrecognised
+  // code, all of which map to toAuthFailure's "unknown" reason. None of
+  // those reveal account existence, so none may be reported as a successful
+  // send.
+  it.each(["auth/internal-error", "auth/configuration-not-found", "auth/something-nobody-has-seen-yet"])(
+    "reports a real, generic error for an unrecognised failure (%s), not sent",
+    async (code) => {
+      sendPasswordResetEmailMock.mockRejectedValue(authError(code));
+      const outcome = await requestPasswordReset("a@b.co");
+      expect(outcome.status).toBe("error");
+      const message = (outcome as { status: "error"; message: string }).message;
+      // Never the raw Firebase code, and never claims a link was sent.
+      expect(message).not.toMatch(new RegExp(code.replace(/[/-]/g, ".")));
+      expect(message.toLowerCase()).not.toMatch(/sent a reset link/);
+    },
+  );
 });

@@ -50,7 +50,7 @@ function AccountContent({ user }: { user: User }) {
 
   return (
     <div className="mx-auto max-w-3xl px-5 py-16 sm:px-6">
-      <p className="text-sm font-bold uppercase tracking-wide text-brand-coral">Account</p>
+      <p className="text-sm font-bold uppercase tracking-wide text-coral-text">Account</p>
       <h1 className="mt-3 text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl">
         Your account
       </h1>
@@ -74,7 +74,7 @@ function AccountContent({ user }: { user: User }) {
           <div className="flex items-start gap-3">
             <AlertCircle className="mt-0.5 size-5 shrink-0 text-destructive" aria-hidden="true" />
             <div>
-              <p className="text-base font-bold text-destructive">
+              <p className="text-base font-bold text-coral-text">
                 We couldn&apos;t load your account details
               </p>
               <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
@@ -111,7 +111,7 @@ function AccountContent({ user }: { user: User }) {
           </Link>
           <Link
             href="/account-deletion"
-            className="inline-flex h-10 items-center gap-1.5 rounded-full border border-destructive/40 px-4 text-sm font-semibold text-destructive transition-colors hover:bg-destructive/10"
+            className="inline-flex h-10 items-center gap-1.5 rounded-full border border-destructive/40 px-4 text-sm font-semibold text-coral-text transition-colors hover:bg-destructive/10"
           >
             Delete my account
             <ArrowRight className="size-4" aria-hidden="true" />
@@ -284,7 +284,7 @@ function PrivateProfileCard({ uid, initial }: { uid: string; initial: PrivatePro
           onChange={setNotificationsEnabled}
         />
         {initial.profileCompleted === false ? (
-          <p className="text-xs font-semibold text-brand-coral">
+          <p className="text-xs font-semibold text-coral-text">
             Your profile isn&apos;t marked complete yet — finish setup in the app.
           </p>
         ) : null}

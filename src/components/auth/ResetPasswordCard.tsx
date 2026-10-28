@@ -5,7 +5,7 @@ import Link from "next/link";
 import { MailCheck } from "lucide-react";
 import { requestPasswordReset } from "@/lib/auth";
 import { RESET_SENT_MESSAGE } from "@/lib/authCopy";
-import { EmailField } from "./formFields";
+import { EmailField, ErrorBanner } from "./formFields";
 
 /** Matches the Android app's ForgotPassword resend cooldown. */
 export const RESEND_COOLDOWN_SECONDS = 30;
@@ -29,6 +29,10 @@ export function ResetPasswordCard() {
   // live region and screen readers announce it again.
   const [sentAt, setSentAt] = useState<Date | null>(null);
   const sent = sentAt !== null;
+  // A real, non-account-existence-revealing failure (network/rate-limit) —
+  // see requestPasswordReset's "error" status in src/lib/auth.ts. Distinct
+  // from emailError (field-level) and from the neutral "sent" state.
+  const [pageError, setPageError] = useState<string | null>(null);
   const [cooldown, setCooldown] = useState(0);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -60,11 +64,23 @@ export function ResetPasswordCard() {
       return;
     }
     setEmailError(null);
+    setPageError(null);
+    // Clear any PRIOR confirmation the instant a new attempt starts, not
+    // just on a successful one. Without this, a stale "we've sent a reset
+    // link" from an earlier successful send for a DIFFERENT email stays on
+    // screen underneath/alongside a later failure's error banner — e.g.
+    // success -> cooldown expires -> change email -> network failure would
+    // otherwise still claim a link was sent for the email just submitted.
+    setSentAt(null);
     setSending(true);
     const outcome = await requestPasswordReset(trimmed);
     setSending(false);
     if (outcome.status === "invalid-email") {
       setEmailError("Enter a valid email address.");
+      return;
+    }
+    if (outcome.status === "error") {
+      setPageError(outcome.message);
       return;
     }
     setSentAt(new Date());
@@ -80,6 +96,12 @@ export function ResetPasswordCard() {
       <p className="mt-2 text-sm text-muted-foreground">
         Enter the email you use for ileadit and we&apos;ll send you a link to choose a new password.
       </p>
+
+      {pageError ? (
+        <div className="mt-6">
+          <ErrorBanner message={pageError} />
+        </div>
+      ) : null}
 
       <div aria-live="polite">
         {sentAt ? (
