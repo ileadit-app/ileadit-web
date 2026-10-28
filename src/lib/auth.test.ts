@@ -56,4 +56,23 @@ describe("requestPasswordReset", () => {
     expect(outcome.status).toBe("error");
     expect((outcome as { status: "error"; message: string }).message).toMatch(/couldn't reach ileadit/i);
   });
+
+  // WEB-CR1-FIX3: before this ticket, ANY reason other than invalid-email/
+  // network-request-failed/too-many-requests fell through to a false "sent"
+  // — including config failures, internal errors, and any other unrecognised
+  // code, all of which map to toAuthFailure's "unknown" reason. None of
+  // those reveal account existence, so none may be reported as a successful
+  // send.
+  it.each(["auth/internal-error", "auth/configuration-not-found", "auth/something-nobody-has-seen-yet"])(
+    "reports a real, generic error for an unrecognised failure (%s), not sent",
+    async (code) => {
+      sendPasswordResetEmailMock.mockRejectedValue(authError(code));
+      const outcome = await requestPasswordReset("a@b.co");
+      expect(outcome.status).toBe("error");
+      const message = (outcome as { status: "error"; message: string }).message;
+      // Never the raw Firebase code, and never claims a link was sent.
+      expect(message).not.toMatch(new RegExp(code.replace(/[/-]/g, ".")));
+      expect(message.toLowerCase()).not.toMatch(/sent a reset link/);
+    },
+  );
 });

@@ -85,19 +85,23 @@ export async function signInWithGoogle(): Promise<AuthOutcome> {
 
 /**
  * Outcome of a password-reset request (WEB-AUTH-1, revised 2026-10-28 code
- * review WEB-CR1). The account-existence secrecy rule (N-15 / WEB-H2) is
- * narrower than "collapse every error to sent": it only bans telling a
- * stranger whether THIS EMAIL has an account, which is exactly what
- * `auth/user-not-found`/`auth/user-disabled`/`auth/invalid-credential` would
- * reveal if shown distinctly. A transient infrastructure failure
- * (`network-request-failed`, `too-many-requests`) reveals nothing about the
- * email and showing it a generic "sent" message instead is actively unhelpful
- * — the user would wait for an email that was never sent and has no way to
- * know a retry might fix it. So there are three states, not two: `"sent"`
- * covers both real success AND every account-existence-revealing failure;
- * `"invalid-email"` is the pre-existing malformed-address field error;
- * `"error"` is new, for the two failure reasons above only, carrying a
- * ready-to-display message (never the raw Firebase error).
+ * review WEB-CR1, then WEB-CR1-FIX3). The account-existence secrecy rule
+ * (N-15 / WEB-H2) is narrower than "collapse every error to sent": it only
+ * bans telling a stranger whether THIS EMAIL has an account, which is
+ * exactly what `"invalid-credential"` reveals (authErrors.ts folds
+ * `user-not-found`/`user-disabled`/`wrong-password` into that one reason for
+ * this same secrecy purpose). Nothing else may be neutralised this way — a
+ * `"network-request-failed"`/`"too-many-requests"` failure, or any OTHER/
+ * unrecognised reason (`"unknown"`, covering config errors, internal errors,
+ * and unexpected exceptions), reveals nothing about the email, and silently
+ * reporting "sent" for it is actively unhelpful: the user waits for an email
+ * that was never sent with no signal a retry might help. So there are three
+ * states, not two: `"sent"` covers real success AND the one
+ * account-existence-revealing failure; `"invalid-email"` is the pre-existing
+ * malformed-address field error; `"error"` covers every other failure,
+ * carrying a ready-to-display message (never the raw Firebase error —
+ * `authFailureMessage`'s default case is `GENERIC_FAILURE_MESSAGE` for any
+ * reason it doesn't special-case, so "unknown" never leaks a Firebase code).
  */
 export type PasswordResetOutcome =
   | { status: "sent" }
@@ -110,12 +114,13 @@ export async function requestPasswordReset(email: string): Promise<PasswordReset
   } catch (error) {
     const failure = toAuthFailure(error);
     if (failure.reason === "invalid-email") return { status: "invalid-email" };
-    if (failure.reason === "network-request-failed" || failure.reason === "too-many-requests") {
-      return { status: "error", message: authFailureMessage(failure) };
+    if (failure.reason === "invalid-credential") {
+      // The ONLY reason that may be silently neutralised to "sent" — this
+      // is exactly the account-existence-revealing case the secrecy rule
+      // exists for. Every other reason falls through to "error" below.
+      return { status: "sent" };
     }
-    // Any other reason (invalid-credential/unknown, covering
-    // user-not-found/user-disabled) falls through to "sent" below —
-    // revealing account existence is the one thing this must never do.
+    return { status: "error", message: authFailureMessage(failure) };
   }
   return { status: "sent" };
 }
