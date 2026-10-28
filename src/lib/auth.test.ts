@@ -30,8 +30,8 @@ describe("requestPasswordReset", () => {
     expect(sendPasswordResetEmailMock).toHaveBeenCalledWith({}, "a@b.co");
   });
 
-  it.each(["auth/user-not-found", "auth/user-disabled", "auth/too-many-requests", "auth/network-request-failed"])(
-    "still reports sent for %s",
+  it.each(["auth/user-not-found", "auth/user-disabled"])(
+    "still reports sent for %s (account-existence secrecy)",
     async (code) => {
       sendPasswordResetEmailMock.mockRejectedValue(authError(code));
       await expect(requestPasswordReset("a@b.co")).resolves.toEqual({ status: "sent" });
@@ -41,5 +41,19 @@ describe("requestPasswordReset", () => {
   it("reports invalid-email only for a malformed address", async () => {
     sendPasswordResetEmailMock.mockRejectedValue(authError("auth/invalid-email"));
     await expect(requestPasswordReset("nope")).resolves.toEqual({ status: "invalid-email" });
+  });
+
+  it("reports a real error for too-many-requests, not sent", async () => {
+    sendPasswordResetEmailMock.mockRejectedValue(authError("auth/too-many-requests"));
+    const outcome = await requestPasswordReset("a@b.co");
+    expect(outcome.status).toBe("error");
+    expect((outcome as { status: "error"; message: string }).message).toMatch(/too many attempts/i);
+  });
+
+  it("reports a real error for a network failure, not sent", async () => {
+    sendPasswordResetEmailMock.mockRejectedValue(authError("auth/network-request-failed"));
+    const outcome = await requestPasswordReset("a@b.co");
+    expect(outcome.status).toBe("error");
+    expect((outcome as { status: "error"; message: string }).message).toMatch(/couldn't reach ileadit/i);
   });
 });

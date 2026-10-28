@@ -52,6 +52,19 @@ describe("ResetPasswordCard", () => {
     expect(screen.queryByText((text) => text.includes("we've sent a reset link"))).not.toBeInTheDocument();
   });
 
+  it("shows a real error banner for a network/rate-limit failure, not the neutral message", async () => {
+    requestPasswordResetMock.mockResolvedValue({
+      status: "error",
+      message: "We couldn't reach ileadit. Check your connection and try again.",
+    });
+    render(<ResetPasswordCard />);
+    submit("someone@example.com");
+    expect(await screen.findByRole("alert")).toHaveTextContent("We couldn't reach ileadit");
+    expect(screen.queryByText((text) => text.includes(NEUTRAL))).not.toBeInTheDocument();
+    // Not treated as "sent" — no cooldown, resend stays immediately available.
+    expect(screen.getByRole("button", { name: "Send reset link" })).toBeEnabled();
+  });
+
   it("disables resend for 30 seconds after each send", async () => {
     vi.useFakeTimers();
     requestPasswordResetMock.mockResolvedValue({ status: "sent" });

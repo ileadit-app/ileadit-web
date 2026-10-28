@@ -10,6 +10,7 @@ import {
 } from "firebase/auth";
 import { getFirebaseAuth } from "./firebase";
 import { toAuthFailure, type AuthFailure } from "./authErrors";
+import { authFailureMessage } from "./authCopy";
 
 /**
  * Sign-in/sign-up FUNCTIONS only — no screens. Lacey owns the sign-in and
@@ -83,18 +84,38 @@ export async function signInWithGoogle(): Promise<AuthOutcome> {
 }
 
 /**
- * Outcome of a password-reset request (WEB-AUTH-1). Deliberately only two
- * states: the reset screen must show the SAME neutral confirmation whether
- * or not an account exists for the email (N-15 / WEB-H2), so every Firebase
- * result other than a malformed email address collapses to `"sent"`.
+ * Outcome of a password-reset request (WEB-AUTH-1, revised 2026-10-28 code
+ * review WEB-CR1). The account-existence secrecy rule (N-15 / WEB-H2) is
+ * narrower than "collapse every error to sent": it only bans telling a
+ * stranger whether THIS EMAIL has an account, which is exactly what
+ * `auth/user-not-found`/`auth/user-disabled`/`auth/invalid-credential` would
+ * reveal if shown distinctly. A transient infrastructure failure
+ * (`network-request-failed`, `too-many-requests`) reveals nothing about the
+ * email and showing it a generic "sent" message instead is actively unhelpful
+ * — the user would wait for an email that was never sent and has no way to
+ * know a retry might fix it. So there are three states, not two: `"sent"`
+ * covers both real success AND every account-existence-revealing failure;
+ * `"invalid-email"` is the pre-existing malformed-address field error;
+ * `"error"` is new, for the two failure reasons above only, carrying a
+ * ready-to-display message (never the raw Firebase error).
  */
-export type PasswordResetOutcome = { status: "sent" } | { status: "invalid-email" };
+export type PasswordResetOutcome =
+  | { status: "sent" }
+  | { status: "invalid-email" }
+  | { status: "error"; message: string };
 
 export async function requestPasswordReset(email: string): Promise<PasswordResetOutcome> {
   try {
     await sendPasswordResetEmail(getFirebaseAuth(), email);
   } catch (error) {
-    if (toAuthFailure(error).reason === "invalid-email") return { status: "invalid-email" };
+    const failure = toAuthFailure(error);
+    if (failure.reason === "invalid-email") return { status: "invalid-email" };
+    if (failure.reason === "network-request-failed" || failure.reason === "too-many-requests") {
+      return { status: "error", message: authFailureMessage(failure) };
+    }
+    // Any other reason (invalid-credential/unknown, covering
+    // user-not-found/user-disabled) falls through to "sent" below —
+    // revealing account existence is the one thing this must never do.
   }
   return { status: "sent" };
 }
