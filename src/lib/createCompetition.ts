@@ -1,6 +1,7 @@
 import { httpsCallable } from "firebase/functions";
 import { getFunctionsClient } from "./functions";
 import { toCreateCompetitionFailure, type CreateCompetitionFailure } from "./createCompetitionErrors";
+import type { Prize } from "./prize";
 
 /**
  * Wrapper for the `createCompetition` callable (P1.3, Ivor — branch
@@ -62,6 +63,12 @@ export interface CreateCompetitionInput {
   description?: string;
   imageUrl?: string;
   backgroundImageUrl?: string;
+  /** PRZ-W1 (spec §3.1/§4.1, 2026-10-27) — `createCompetition` accepts an
+   * optional `prize` at create time, same shape `updateCompetitionPrize`
+   * uses later. Omitted entirely (not sent as `null`) when the organiser
+   * didn't turn the prize toggle on, matching every other optional field
+   * on this interface — see `CreateCompetitionForm.tsx`'s prize section. */
+  prize?: Prize;
 }
 
 export type CreateCompetitionOutcome =
@@ -80,9 +87,11 @@ export async function createCompetition(input: CreateCompetitionInput): Promise<
     ...(input.description ? { description: input.description } : {}),
     ...(input.imageUrl ? { imageUrl: input.imageUrl } : {}),
     ...(input.backgroundImageUrl ? { backgroundImageUrl: input.backgroundImageUrl } : {}),
+    ...(input.prize ? { prize: input.prize } : {}),
     // Deliberately absent: startDate, endDate, status, playerCount,
-    // configVersion, finalisedAt, winnerIds — all engine-derived, per this
-    // file's header comment. Do not add any of them here.
+    // configVersion, finalisedAt, winnerIds, prizeState, prizeReadyAt,
+    // prizeWinners — all engine-derived, per this file's header comment.
+    // Do not add any of them here.
   };
 
   try {

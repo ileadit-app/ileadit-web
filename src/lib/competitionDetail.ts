@@ -11,6 +11,14 @@ import {
 } from "firebase/firestore";
 import { getFirebaseDb } from "./firebase";
 import type { CompetitionStatus } from "./competitions";
+import {
+  parsePrizeField,
+  parsePrizeState,
+  parsePrizeWinners,
+  type Prize,
+  type PrizeState,
+  type PrizeWinner,
+} from "./prize";
 
 export type { CompetitionStatus } from "./competitions";
 
@@ -70,6 +78,22 @@ export interface CompetitionDetailDoc {
    * discipline this hook already applies uniformly, not a claim that this
    * field specifically has a known transient-null window. */
   creatorId: string | null;
+  /** PRZ-W1 (spec §3.1, 2026-10-27) — `null` means "no prize set", exactly
+   * as it does in the engine's own schema (spec: "`prize` (null or
+   * object...)"). Organiser-writable only while `scheduled`, via
+   * `updateCompetitionPrize` — see `PrizeEditPanel.tsx`. */
+  prize: Prize | null;
+  /** Engine-written only (spec §3.1). `null` before the engine's own
+   * trigger populates it, same transient-null window as `status` above. */
+  prizeState: PrizeState | null;
+  /** Engine-written only (spec §4.3: set when `prizeState` becomes
+   * `"checking"`). Not currently rendered by this portal (the 48-hour
+   * countdown is an app-side detail per spec §5 frame P4/P5), kept here so
+   * a future ticket doesn't need to touch this parser again to show it. */
+  prizeReadyAt: unknown;
+  /** Engine-written only (spec §3.1). Empty array before any prize place
+   * has been decided. */
+  prizeWinners: PrizeWinner[];
 }
 
 export type CompetitionDetailState =
@@ -114,6 +138,10 @@ export function useCompetitionDetail(competitionId: string): CompetitionDetailSt
             winnerIds: asStringArray(data.winnerIds),
             timeZone: typeof data.timeZone === "string" ? data.timeZone : null,
             creatorId: typeof data.creatorId === "string" ? data.creatorId : null,
+            prize: parsePrizeField(data.prize),
+            prizeState: parsePrizeState(data.prizeState),
+            prizeReadyAt: data.prizeReadyAt ?? null,
+            prizeWinners: parsePrizeWinners(data.prizeWinners),
           },
         });
       },

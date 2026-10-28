@@ -11,6 +11,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "dompurify": "^3.4.17",
     "firebase": "^12.11.0",
     "lucide-react": "^1.47.0",
     "next": "16.4.3",

@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { AlertCircle, PlusCircle, Trophy, Users } from "lucide-react";
+import { AlertCircle, Gift, PlusCircle, Trophy, Users } from "lucide-react";
 import { useCreatedCompetitions, type CreatedCompetitionSummary } from "@/lib/competitions";
 import { CompetitionStatusChip } from "@/components/status/CompetitionStatusChip";
+import { prizeLine } from "@/lib/prize";
 
 /**
  * "The competitions you created" (P1.5). Takes `uid` rather than calling
@@ -158,7 +159,22 @@ function formatDateRange(startDate: string | null, endDate: string | null): stri
   return `${format(startDate)} – ${format(endDate)}`;
 }
 
-function CompetitionCard({ competition }: { competition: CreatedCompetitionSummary }) {
+/** PRZ-W1 (W7): the gold prize-line chip and the "Prize to hand out" badge.
+ * The badge shows specifically when `prizeState === "ready"` — this is an
+ * UNVERIFIED assumption about an undeployed engine field's meaning (see
+ * `competitions.ts`'s own field comment and `prize.ts`'s header comment: no
+ * PRZ-E1/E2 source was readable while building this). `"ready"` is the one
+ * state name in the spec's `PrizeState` enum that reads, by name alone, like
+ * "the prize is ready to be handed over" — re-check this the moment the
+ * engine's own `finalise.ts`/prize-settlement code is readable, since a
+ * wrong guess here means the badge either never lights up or lights up too
+ * early. The badge links to this competition's own detail page, where
+ * `OrganiserPrizePanel.tsx` (W5) is the actual hand-out UI — not to a
+ * separate page of its own. */
+export function CompetitionCard({ competition }: { competition: CreatedCompetitionSummary }) {
+  const line = prizeLine(competition.prize);
+  const prizeReadyToHandOut = competition.status === "finished" && competition.prizeState === "ready";
+
   return (
     <div className="flex h-full flex-col rounded-3xl border border-border bg-card p-5">
       <div className="flex items-start justify-between gap-2">
@@ -174,6 +190,24 @@ function CompetitionCard({ competition }: { competition: CreatedCompetitionSumma
       <p className="mt-2 text-sm text-muted-foreground">
         {formatDateRange(competition.startDate, competition.endDate)}
       </p>
+
+      {line ? (
+        <p className="mt-3 flex items-start gap-2 self-start rounded-xl bg-brand-gold/15 px-3 py-2 text-sm font-bold text-brand-navy">
+          <Trophy className="mt-0.5 size-4 shrink-0 text-brand-gold" aria-hidden="true" />
+          {line}
+        </p>
+      ) : null}
+
+      {prizeReadyToHandOut ? (
+        <Link
+          href={`/competitions/${competition.id}`}
+          className="mt-3 inline-flex min-h-11 items-center justify-center gap-2 self-start rounded-full border border-[rgba(25,47,95,0.15)] bg-brand-gold px-4 text-sm font-bold text-brand-navy transition-colors hover:bg-brand-gold/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-navy"
+        >
+          <Gift className="size-4" aria-hidden="true" />
+          Prize to hand out
+        </Link>
+      ) : null}
+
       <div className="mt-auto flex items-center gap-2 pt-4 text-sm font-semibold text-foreground">
         <Users className="size-4 text-muted-foreground" aria-hidden="true" />
         {competition.playerCount === null
