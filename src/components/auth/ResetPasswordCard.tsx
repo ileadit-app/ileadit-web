@@ -65,6 +65,13 @@ export function ResetPasswordCard() {
     }
     setEmailError(null);
     setPageError(null);
+    // Clear any PRIOR confirmation the instant a new attempt starts, not
+    // just on a successful one. Without this, a stale "we've sent a reset
+    // link" from an earlier successful send for a DIFFERENT email stays on
+    // screen underneath/alongside a later failure's error banner — e.g.
+    // success -> cooldown expires -> change email -> network failure would
+    // otherwise still claim a link was sent for the email just submitted.
+    setSentAt(null);
     setSending(true);
     const outcome = await requestPasswordReset(trimmed);
     setSending(false);

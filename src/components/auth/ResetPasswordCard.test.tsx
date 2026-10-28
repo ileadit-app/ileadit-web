@@ -1,6 +1,6 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import { act, fireEvent, render, screen } from "@testing-library/react";
-import { ResetPasswordCard } from "./ResetPasswordCard";
+import { RESEND_COOLDOWN_SECONDS, ResetPasswordCard } from "./ResetPasswordCard";
 
 /**
  * WEB-AUTH-1 (reset surface). `@/lib/auth` is mocked at the module boundary;
@@ -97,5 +97,35 @@ describe("ResetPasswordCard", () => {
     const secondConfirmation = screen.getByText((t) => t.includes("we've sent a reset link"));
     expect(secondConfirmation).not.toBe(firstConfirmation);
     expect(screen.getByRole("button", { name: "Resend link" })).toBeDisabled();
+  });
+
+  // WEB-CR1-FIX3: success -> cooldown expires -> change email -> network
+  // failure used to leave the ORIGINAL "we've sent a reset link"
+  // confirmation on screen underneath the new error banner, misleadingly
+  // implying a link had just been sent for the NEW (not-yet-sent-for)
+  // address.
+  it("clears a prior success confirmation when a later resend for a different email fails", async () => {
+    vi.useFakeTimers();
+    requestPasswordResetMock.mockResolvedValueOnce({ status: "sent" });
+    render(<ResetPasswordCard />);
+
+    submit("first@example.com");
+    await act(async () => {});
+    expect(screen.getByText((t) => t.includes(NEUTRAL))).toBeInTheDocument();
+
+    act(() => {
+      vi.advanceTimersByTime(RESEND_COOLDOWN_SECONDS * 1000);
+    });
+    expect(screen.getByRole("button", { name: "Resend link" })).toBeEnabled();
+
+    requestPasswordResetMock.mockResolvedValueOnce({
+      status: "error",
+      message: "We couldn't reach ileadit. Check your connection and try again.",
+    });
+    submit("second@example.com");
+    await act(async () => {});
+
+    expect(screen.queryByText((t) => t.includes(NEUTRAL))).not.toBeInTheDocument();
+    expect(screen.getByRole("alert")).toHaveTextContent("We couldn't reach ileadit");
   });
 });
