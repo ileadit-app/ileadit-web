@@ -7,6 +7,10 @@ import Privacy from "./page";
  * (.ticket-refs/privacy-policy-APPROVED-20261026.md, Paul, 26 Oct 2026) now
  * live on `/privacy`, replacing the old LegalPagePlaceholder skeleton.
  *
+ * WEB-PRIV-3 (Paul, 28 Oct 2026) updated the "App integrity checks" wording
+ * to name Apple App Attest and the website's reCAPTCHA v3 use, added a new
+ * "Signing in on our website" item, and bumped the last-updated date.
+ *
  * `next/link` is stubbed to a plain anchor — routing context isn't under
  * test here.
  */
@@ -73,7 +77,21 @@ describe("/privacy — approved policy (WEB-LEGAL-1)", () => {
   it("shows the approved last-updated date", () => {
     render(<Privacy />);
 
-    expect(screen.getByText(/26 october 2026/i)).toBeInTheDocument();
+    expect(screen.getByText(/28 october 2026/i)).toBeInTheDocument();
+  });
+
+  it("describes app integrity checks across all three platforms (WEB-PRIV-3)", () => {
+    render(<Privacy />);
+
+    const bodyText = document.body.textContent ?? "";
+    expect(bodyText).toMatch(/reCAPTCHA/);
+    expect(bodyText).toMatch(/App Attest/);
+  });
+
+  it("describes the website's sign-in token storage (WEB-PRIV-3)", () => {
+    render(<Privacy />);
+
+    expect(screen.getByText(/signing in on our website/i)).toBeInTheDocument();
   });
 
   it("gives every numbered section a stable id for #anchor links", () => {
