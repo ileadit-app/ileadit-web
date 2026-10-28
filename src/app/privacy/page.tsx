@@ -35,7 +35,7 @@ export default function Privacy() {
       <section className="bg-background py-12 sm:py-16">
         <div className="mx-auto max-w-3xl px-5 sm:px-6">
           <p className="text-sm font-semibold text-muted-foreground">
-            <Rich text="**Last updated:** 26 October 2026" keyPrefix="last-updated" />
+            <Rich text="**Last updated:** 28 October 2026" keyPrefix="last-updated" />
           </p>
 
           <PolicySection id="short-version" title="The short version">
@@ -149,7 +149,8 @@ export default function Privacy() {
               keyPrefix="s2-security"
               items={[
                 "**Crash reports** (Firebase Crashlytics): what went wrong, your phone model and Android version, and an ID for your installation of the app. We use these only to fix faults.",
-                "**App integrity checks** (Firebase App Check with Google Play Integrity), which confirm that requests come from the genuine ileadit app.",
+                "**App integrity checks** (Firebase App Check), which confirm that requests come from the genuine ileadit app or website. On Android this uses Google Play Integrity, and on iPhone it uses Apple App Attest. On our website it uses Google reCAPTCHA v3, which looks at technical signals from your browser, such as your IP address and how the page is used, to tell people apart from automated bots. Google's privacy policy applies to reCAPTCHA, and it may set cookies in your browser for this purpose.",
+                "**Signing in on our website.** When you sign in on ileadit.co.uk, your browser stores a sign-in token so you stay signed in. We don't use advertising or analytics cookies on the website.",
                 `**Server logs.** Our servers record technical events, such as "player X's day was closed on date Y", so we can find and fix faults. These contain your account ID, never your step count.`,
               ]}
             />
@@ -211,7 +212,7 @@ export default function Privacy() {
                 ["Cloud Storage for Firebase", "Profile photos"],
                 ["Cloud Functions for Firebase", "Running the game engine"],
                 ["Firebase Cloud Messaging", "Sending notifications to your phone"],
-                ["Firebase App Check / Play Integrity", "Blocking fake apps"],
+                ["Firebase App Check (Play Integrity, App Attest, reCAPTCHA)", "Blocking fake apps and bots"],
                 ["Firebase Crashlytics", "Crash reports"],
                 ["Firebase Hosting", "The ileadit website"],
                 ["Cloud Logging", "Server logs"],
