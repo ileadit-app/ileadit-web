@@ -380,7 +380,11 @@ function MembershipCta({
     return (
       <div className="mt-6 flex items-start gap-3 rounded-2xl border border-destructive/30 bg-destructive/10 p-4">
         <AlertCircle className="mt-0.5 size-5 shrink-0 text-destructive" aria-hidden="true" />
-        <p className="text-sm text-coral-text/90">
+        {/* text-coral-text, not text-coral-text/90 — the 90% alpha
+            composited over this box's bg-destructive/10 fill measures only
+            4.08:1 (verified in src/lib/colorContrast.test.ts); full opacity
+            on the same fill is 4.76:1. */}
+        <p className="text-sm text-coral-text">
           We couldn&apos;t check whether you&apos;re in this competition. Reload to try again.
         </p>
       </div>

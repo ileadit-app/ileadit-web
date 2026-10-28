@@ -84,7 +84,9 @@ function ErrorState() {
         <p className="text-base font-bold text-coral-text">
           We couldn&apos;t load the competitions you&apos;re playing in
         </p>
-        <p className="mt-1 text-sm leading-relaxed text-coral-text/90">
+        {/* text-muted-foreground, not text-coral-text/90 — see the matching
+            comment in CreatedCompetitions.tsx's ErrorState for why. */}
+        <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
           Something went wrong talking to ileadit while checking this. You haven&apos;t lost your
           spot in anything — try reloading the page. If this keeps happening,{" "}
           <a href="mailto:hello@ileadit.co.uk" className="font-semibold underline">
