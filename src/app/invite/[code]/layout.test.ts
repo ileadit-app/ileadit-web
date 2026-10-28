@@ -15,4 +15,30 @@ describe("invite code route metadata", () => {
     expect(metadata.title).toBe("You're invited to an ileadit competition");
     expect(metadata.description).toMatch(/ileadit is a game you play by walking/);
   });
+
+  /**
+   * WEB-CR1-FIX3: before this fix, this file only overrode the plain
+   * `title`/`description` fields. Next's metadata resolver does NOT merge
+   * `openGraph`/`twitter` field-by-field with an ancestor layout — a
+   * segment that doesn't set its own `openGraph`/`twitter` object inherits
+   * the ROOT layout's in full, which names the homepage ("Are you an
+   * average winner?") and points `url` at "/". A shared invite link would
+   * therefore unfurl in Slack/WhatsApp/etc. advertising the homepage, not
+   * the invite. Pin that both objects are set here, independently of the
+   * homepage's own copy.
+   */
+  it("carries its own generic social (openGraph/twitter) metadata, not the homepage's", () => {
+    const metadata = generateMetadata();
+    const homepageTitle = "ileadit — Are you an average winner?";
+
+    expect(metadata.openGraph).toBeDefined();
+    expect(metadata.openGraph?.title).toBe("You're invited to an ileadit competition");
+    expect(metadata.openGraph?.title).not.toBe(homepageTitle);
+    expect(metadata.openGraph?.description).toMatch(/ileadit is a game you play by walking/);
+    expect(metadata.openGraph?.url).not.toBe("/");
+
+    expect(metadata.twitter).toBeDefined();
+    expect((metadata.twitter as { title?: string })?.title).toBe("You're invited to an ileadit competition");
+    expect((metadata.twitter as { title?: string })?.title).not.toBe(homepageTitle);
+  });
 });
