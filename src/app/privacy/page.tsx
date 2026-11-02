@@ -35,7 +35,7 @@ export default function Privacy() {
       <section className="bg-background py-12 sm:py-16">
         <div className="mx-auto max-w-3xl px-5 sm:px-6">
           <p className="text-sm font-semibold text-muted-foreground">
-            <Rich text="**Last updated:** 28 October 2026" keyPrefix="last-updated" />
+            <Rich text="**Last updated:** 2 November 2026" keyPrefix="last-updated" />
           </p>
 
           <PolicySection id="short-version" title="The short version">
@@ -43,7 +43,7 @@ export default function Privacy() {
               keyPrefix="short-version"
               items={[
                 "ileadit is a **game**. Your daily steps are how you play. It is not a fitness tracker.",
-                "We read **only your daily step count** from Health Connect, and only with your permission.",
+                "We read **only your daily step count** from Health Connect (Android) or Apple Health (iPhone), and only with your permission.",
                 "**Nobody else ever sees your step count**: not other players and not competition organisers. They see your **points**, **lives** and **leaderboard position**.",
                 "We don't sell your data, we don't show ads, and we don't use your data for advertising.",
                 "You must be **16 or over** to play.",
@@ -59,7 +59,7 @@ export default function Privacy() {
             />
             <RichP
               keyPrefix="s1-p2"
-              text="This policy covers the ileadit Android app and the ileadit website (ileadit.co.uk). When the iPhone app is released we will update this policy to cover it."
+              text="This policy covers the ileadit apps for Android and iPhone, and the ileadit website (ileadit.co.uk)."
             />
             <RichP keyPrefix="s1-p3" text="**Contact us about anything in this policy:** hello@ileadit.co.uk" />
           </PolicySection>
@@ -69,7 +69,7 @@ export default function Privacy() {
             <RichList
               keyPrefix="s2-account"
               items={[
-                "**Email address.** If you sign in with Google, Google gives us the email address and name on your Google account. We use your email address to sign you in and keep your account secure. It is never shown to other players.",
+                "**Email address.** If you sign in with Google, Google gives us the email address and name on your Google account. If you sign in with Apple, Apple gives us your email address, and your name if you choose to share it. If you use Apple's \"Hide My Email\", we receive a private relay address instead of your real one. We use your email address to sign you in and keep your account secure. It is never shown to other players.",
                 "**Password**, if you sign up with email. We never see it: our sign-in provider (Google Firebase) stores only a scrambled version.",
                 "**Confirmation that you are 16 or over.** We ask you to confirm this when you sign up. We don't ask for your date of birth.",
                 `**Your time zone**, taken from your phone, so that "today" in the game matches your own day.`,
@@ -99,7 +99,7 @@ export default function Privacy() {
             />
             <RichP
               keyPrefix="s2-steps-p2"
-              text="**What we read.** With your permission, the app reads from **Health Connect** on your phone:"
+              text="**What we read.** With your permission, the app reads from **Health Connect** on Android, or **Apple Health** (HealthKit) on iPhone:"
             />
             <RichList
               keyPrefix="s2-steps-read"
@@ -110,11 +110,11 @@ export default function Privacy() {
             />
             <RichP
               keyPrefix="s2-steps-p3"
-              text="We do **not** read distance, calories, heart rate, sleep, location or any other health information."
+              text="We do **not** read distance, calories, heart rate, sleep, location or any other health information. We never write anything to Health Connect or Apple Health. Data from Apple Health is never used for advertising or marketing, and never shared with or sold to anyone else."
             />
             <RichP
               keyPrefix="s2-steps-p4"
-              text={`**When we read it.** When you first set up, the app reads up to 30 days of your past daily step totals once, to work out your normal daily level. We keep only that single "normal" figure, not the individual days. After that, the app sends us your step total for today regularly through the day, **including when the app is closed**. That is why we ask for Health Connect's background permission: without it, a quiet day with the app shut would unfairly cost you points or a life.`}
+              text={`**When we read it.** When you first set up, the app reads up to 30 days of your past daily step totals once, to work out your normal daily level. We keep only that single "normal" figure, not the individual days. After that, the app sends us your step total for today regularly through the day, **including when the app is closed**. That is why we ask for Health Connect's background permission: without it, a quiet day with the app shut would unfairly cost you points or a life. On iPhone, Apple Health may also wake the app in the background, about once an hour, so your latest steps count even if you don't open it.`}
             />
             <RichP
               keyPrefix="s2-steps-p5"
@@ -126,11 +126,11 @@ export default function Privacy() {
             />
             <RichP
               keyPrefix="s2-steps-p7"
-              text="**Our legal basis.** We use your step data because it is needed to run the game you signed up for (UK GDPR Article 6(1)(b)), and because you give us your **explicit consent** when you allow ileadit to read your steps in Health Connect (Article 9(2)(a))."
+              text="**Our legal basis.** We use your step data because it is needed to run the game you signed up for (UK GDPR Article 6(1)(b)), and because you give us your **explicit consent** when you allow ileadit to read your steps in Health Connect or Apple Health (Article 9(2)(a))."
             />
             <RichP
               keyPrefix="s2-steps-p8"
-              text={`**Changing your mind.** You can withdraw consent at any time: open **Health Connect → App permissions → ileadit** and turn off step access, or uninstall the app. We stop reading your steps straight away. Without new steps you can't score points, and you will lose lives in any competition you're in. The daily step records we already hold are deleted automatically on the normal schedule (section 6). Your "normal" level and competition averages stay until you delete your account, which you can do at any time (section 7).`}
+              text={`**Changing your mind.** You can withdraw consent at any time. On Android, open **Health Connect → App permissions → ileadit**; on iPhone, open **Settings → Health → Data Access & Devices → ileadit**; and turn off step access. Or uninstall the app. We stop reading your steps straight away. Without new steps you can't score points, and you will lose lives in any competition you're in. The daily step records we already hold are deleted automatically on the normal schedule (section 6). Your "normal" level and competition averages stay until you delete your account, which you can do at any time (section 7).`}
             />
 
             <SubHeading>Playing the game</SubHeading>
@@ -148,7 +148,7 @@ export default function Privacy() {
             <RichList
               keyPrefix="s2-security"
               items={[
-                "**Crash reports** (Firebase Crashlytics): what went wrong, your phone model and Android version, and an ID for your installation of the app. We use these only to fix faults.",
+                "**Crash reports** (Firebase Crashlytics): what went wrong, your phone model and operating system version (Android or iOS), and an ID for your installation of the app. We use these only to fix faults.",
                 "**App integrity checks** (Firebase App Check), which confirm that requests come from the genuine ileadit app or website. On Android this uses Google Play Integrity, and on iPhone it uses Apple App Attest. On our website it uses Google reCAPTCHA v3, which looks at technical signals from your browser, such as your IP address and how the page is used, to tell people apart from automated bots. Google's privacy policy applies to reCAPTCHA, and it may set cookies in your browser for this purpose.",
                 "**Signing in on our website.** When you sign in on ileadit.co.uk, your browser stores a sign-in token so you stay signed in. We don't use advertising or analytics cookies on the website.",
                 `**Server logs.** Our servers record technical events, such as "player X's day was closed on date Y", so we can find and fix faults. These contain your account ID, never your step count.`,
@@ -207,7 +207,7 @@ export default function Privacy() {
               caption="Google services ileadit uses, and what each is for"
               head={["Google service", "What we use it for"]}
               rows={[
-                ["Firebase Authentication", "Signing you in (Google or email)"],
+                ["Firebase Authentication", "Signing you in (Google, Apple or email)"],
                 ["Cloud Firestore", "Storing your profile, game and step data"],
                 ["Cloud Storage for Firebase", "Profile photos"],
                 ["Cloud Functions for Firebase", "Running the game engine"],
@@ -220,7 +220,11 @@ export default function Privacy() {
             />
             <RichP
               keyPrefix="s4-p3"
-              text="**Health Connect** is part of Android on your phone. It is where your steps come from, and its own privacy terms apply to the data it holds."
+              text="**Health Connect** (Android) and **Apple Health** (iPhone) are part of your phone. They are where your steps come from, and their own privacy terms apply to the data they hold. Your step history stays in them; we only receive the daily totals described above."
+            />
+            <RichP
+              keyPrefix="s4-p3-apple"
+              text="**Apple.** If you use Sign in with Apple, Apple handles that sign-in under its own privacy policy. When you delete your account, we also tell Apple to end ileadit's access to your Apple sign-in."
             />
             <RichP
               keyPrefix="s4-p4"

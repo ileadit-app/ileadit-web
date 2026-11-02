@@ -77,7 +77,18 @@ describe("/privacy — approved policy (WEB-LEGAL-1)", () => {
   it("shows the approved last-updated date", () => {
     render(<Privacy />);
 
-    expect(screen.getByText(/28 october 2026/i)).toBeInTheDocument();
+    expect(screen.getByText(/2 november 2026/i)).toBeInTheDocument();
+  });
+
+  it("covers the iPhone app and Apple Health, and drops the Android-only scope line", () => {
+    const { container } = render(<Privacy />);
+    const text = container.textContent ?? "";
+
+    expect(text).toMatch(/apps for Android and iPhone/);
+    expect(text).toMatch(/Apple Health \(HealthKit\)/);
+    expect(text).toMatch(/never used for advertising or marketing/);
+    expect(text).toMatch(/Settings → Health → Data Access & Devices → ileadit/);
+    expect(text).not.toMatch(/When the iPhone app is released/);
   });
 
   it("describes app integrity checks across all three platforms (WEB-PRIV-3)", () => {
