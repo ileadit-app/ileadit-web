@@ -77,7 +77,7 @@ describe("/privacy — approved policy (WEB-LEGAL-1)", () => {
   it("shows the approved last-updated date", () => {
     render(<Privacy />);
 
-    expect(screen.getByText(/2 november 2026/i)).toBeInTheDocument();
+    expect(screen.getByText(/3 november 2026/i)).toBeInTheDocument();
   });
 
   it("covers the iPhone app and Apple Health, and drops the Android-only scope line", () => {
