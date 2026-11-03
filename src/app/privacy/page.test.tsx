@@ -8,7 +8,7 @@ import Privacy from "./page";
  * live on `/privacy`, replacing the old LegalPagePlaceholder skeleton.
  *
  * WEB-PRIV-3 (Paul, 28 Oct 2026) updated the "App integrity checks" wording
- * to name Apple App Attest and the website's reCAPTCHA v3 use, added a new
+ * to name Apple App Attest and the website's reCAPTCHA (Fraud Defense) use, added a new
  * "Signing in on our website" item, and bumped the last-updated date.
  *
  * `next/link` is stubbed to a plain anchor — routing context isn't under
