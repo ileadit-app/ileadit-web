@@ -8,7 +8,7 @@ import Privacy from "./page";
  * live on `/privacy`, replacing the old LegalPagePlaceholder skeleton.
  *
  * WEB-PRIV-3 (Paul, 28 Oct 2026) updated the "App integrity checks" wording
- * to name Apple App Attest and the website's reCAPTCHA v3 use, added a new
+ * to name Apple App Attest and the website's reCAPTCHA (Fraud Defense) use, added a new
  * "Signing in on our website" item, and bumped the last-updated date.
  *
  * `next/link` is stubbed to a plain anchor — routing context isn't under
@@ -77,7 +77,7 @@ describe("/privacy — approved policy (WEB-LEGAL-1)", () => {
   it("shows the approved last-updated date", () => {
     render(<Privacy />);
 
-    expect(screen.getByText(/2 november 2026/i)).toBeInTheDocument();
+    expect(screen.getByText(/3 november 2026/i)).toBeInTheDocument();
   });
 
   it("covers the iPhone app and Apple Health, and drops the Android-only scope line", () => {

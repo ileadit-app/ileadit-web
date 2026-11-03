@@ -1,6 +1,6 @@
 import {
   initializeAppCheck,
-  ReCaptchaV3Provider,
+  ReCaptchaEnterpriseProvider,
   type AppCheck,
 } from "firebase/app-check";
 import { getFirebaseApp } from "./firebase";
@@ -23,9 +23,11 @@ import { getFirebaseApp } from "./firebase";
  *
  * ---
  * ONE-TIME LOCAL DEV SETUP (do this once per machine):
- *   1. Set `NEXT_PUBLIC_RECAPTCHA_SITE_KEY` in `.env.local` to the reCAPTCHA
- *      v3 site key for the `ileadit-app` Firebase project's App Check
- *      registration (Firebase console → App Check → Web app → reCAPTCHA v3).
+ *   1. Set `NEXT_PUBLIC_RECAPTCHA_SITE_KEY` in `.env.local` to the Google
+ *      Cloud Fraud Defense (reCAPTCHA Enterprise) score-based website key
+ *      from the `ileadit-app` Google Cloud project, registered under
+ *      Firebase console → App Check → Web app → reCAPTCHA Enterprise.
+ *      Classic reCAPTCHA v3 is no longer accepted by App Check (Nov 2026).
  *   2. For `next dev` (localhost, no real reCAPTCHA attestation available),
  *      also set `NEXT_PUBLIC_FIREBASE_APPCHECK_DEBUG_TOKEN=true` in
  *      `.env.local`. On first run the browser console prints a generated
@@ -71,7 +73,7 @@ export function getAppCheckClient(): AppCheck | null {
   }
 
   appCheckInstance = initializeAppCheck(getFirebaseApp(), {
-    provider: new ReCaptchaV3Provider(siteKey),
+    provider: new ReCaptchaEnterpriseProvider(siteKey),
     isTokenAutoRefreshEnabled: true,
   });
   return appCheckInstance;
