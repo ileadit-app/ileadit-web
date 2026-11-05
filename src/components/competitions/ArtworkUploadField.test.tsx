@@ -33,15 +33,20 @@ vi.mock("react-easy-crop", async () => {
     // which it must be — it uses a hook.
     default: function MockCropper({
       onCropComplete,
+      onCropSizeChange,
     }: {
       onCropComplete?: (a: unknown, b: { x: number; y: number; width: number; height: number }) => void;
+      onCropSizeChange?: (size: { width: number; height: number }) => void;
     }) {
       // Reported once on mount, not on every render — the real library
       // emits on interaction, and an unconditional call during render
       // would be a mock-only render loop.
       useEffect(() => {
         onCropComplete?.({}, { x: 0, y: 0, width: 400, height: 400 });
-      }, [onCropComplete]);
+        // The real library reports the on-screen crop frame size; the
+        // banner guides are positioned inside a box of exactly this size.
+        onCropSizeChange?.({ width: 600, height: 200 });
+      }, [onCropComplete, onCropSizeChange]);
       return <div data-testid="cropper" />;
     },
   };
@@ -171,6 +176,53 @@ describe("ArtworkUploadField — low-resolution source, a soft warning that neve
 
     await screen.findByTestId("cropper");
     expect(screen.queryByText(/smaller than/i)).not.toBeInTheDocument();
+  });
+});
+
+describe("ArtworkUploadField — banner crop guides (COMP-BRAND-1)", () => {
+  function renderBannerField() {
+    render(
+      <ArtworkUploadField
+        kind="banner"
+        label="Background banner"
+        helperText="The banner."
+        draftId={DRAFT_ID}
+        value={null}
+        onChange={vi.fn()}
+      />,
+    );
+    return screen.getByLabelText(/drag an image here, or browse/i);
+  }
+
+  it("draws the dashed safe zone and the tinted logo-overlap corner", async () => {
+    pick(renderBannerField(), makeFile());
+
+    const safeZone = await screen.findByTestId("banner-safe-zone");
+    const overlap = screen.getByTestId("banner-logo-overlap");
+
+    // Insets: 80/1200 each side, 80/400 top and bottom.
+    expect(parseFloat(safeZone.style.left)).toBeCloseTo((80 / 1200) * 100, 4);
+    expect(parseFloat(safeZone.style.right)).toBeCloseTo((80 / 1200) * 100, 4);
+    expect(parseFloat(safeZone.style.top)).toBeCloseTo((80 / 400) * 100, 4);
+    expect(parseFloat(safeZone.style.bottom)).toBeCloseTo((80 / 400) * 100, 4);
+    expect(safeZone.className).toContain("border-dashed");
+
+    // Bottom-left 300x120 of a 1200x400 banner.
+    expect(overlap.className).toContain("bottom-0");
+    expect(overlap.className).toContain("left-0");
+    expect(parseFloat(overlap.style.width)).toBeCloseTo(25, 4);
+    expect(parseFloat(overlap.style.height)).toBeCloseTo(30, 4);
+
+    expect(screen.getByText(/round logo sits over the banner/i)).toBeInTheDocument();
+  });
+
+  it("draws no banner guides on the square logo crop", async () => {
+    const { input } = renderField();
+    pick(input, makeFile());
+
+    await screen.findByTestId("cropper");
+    expect(screen.queryByTestId("banner-safe-zone")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("banner-logo-overlap")).not.toBeInTheDocument();
   });
 });
 

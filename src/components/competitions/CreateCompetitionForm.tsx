@@ -328,13 +328,12 @@ function previewDates(
  * page the first time either changes, and then it is confidently wrong
  * about the one thing an admin is using it to decide.
  *
- * Two frames, because the banner has no fixed DISPLAY aspect ratio on
- * either platform — it is a full-bleed band of fixed height, so how much
- * of the (16:9-cropped) source survives depends entirely on how wide the
- * window is. A single preview would have to pick one width and silently
- * imply it was THE answer. See `BANNER_ASPECT` in
- * `src/lib/competitionArtwork.ts` for the measurements and the spec's
- * settled 16:9 source contract.
+ * Two frames, phone width and wide-screen width. The banner is the
+ * approved single 3:1 format (`BANNER_ASPECT` in
+ * `src/lib/competitionArtwork.ts`), so in both frames it renders as a 3:1
+ * strip, exactly what players see on the list card, with the round logo
+ * straddling its bottom-left corner as in the app. Only the width, and so
+ * the strip's size, differs between frames.
  *
  * `aria-hidden` on the frames, deliberately and narrowly: they are a
  * purely visual rendering of an image, they contain a duplicate `<h1>`
@@ -381,8 +380,8 @@ function ArtworkPreview({
     <div className="rounded-2xl border border-border bg-muted/40 p-4">
       <p className="text-sm font-semibold text-foreground">Preview</p>
       <p className="mt-1 text-xs text-muted-foreground">
-        How this looks on the competition page. The background is trimmed to fit the window, so it
-        shows less of the image on a wide screen than on a phone.
+        How this looks on the competition page. The banner is shown at 3:1, the same shape players
+        see on the list card, with the round logo over its bottom-left corner.
       </p>
 
       <div className="mt-3 space-y-4" aria-hidden="true">

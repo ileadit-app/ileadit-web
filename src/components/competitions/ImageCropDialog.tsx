@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Cropper, { type Area, type Point } from "react-easy-crop";
 import "react-easy-crop/react-easy-crop.css";
+import type { BannerGuides } from "@/lib/competitionArtwork";
 import type { CropArea } from "@/lib/imageCrop";
 
 /**
@@ -30,10 +31,8 @@ import type { CropArea } from "@/lib/imageCrop";
  * accessibility bugs, and the platform already has them.
  */
 
-export interface SafeAreaFractions {
-  horizontal: number;
-  vertical: number;
-}
+const LOGO_OVERLAP_NOTE =
+  "The tinted corner is where the round logo sits over the banner in the app. Keep anything important out of it.";
 
 export function ImageCropDialog({
   open,
@@ -42,8 +41,8 @@ export function ImageCropDialog({
   cropShape = "rect",
   title,
   instructions,
-  safeArea,
-  safeAreaNote,
+  guides,
+  guidesNote,
   confirmLabel = "Use this crop",
   onCancel,
   onConfirm,
@@ -54,10 +53,12 @@ export function ImageCropDialog({
   cropShape?: "rect" | "round";
   title: string;
   instructions: string;
-  /** When given, draws the always-visible guide box described by
-   * `bannerSafeAreaFractions` — see `src/lib/competitionArtwork.ts`. */
-  safeArea?: SafeAreaFractions;
-  safeAreaNote?: string;
+  /** When given, draws the banner guides over the crop frame: a dashed
+   * safe-zone box plus a tinted bottom-left logo-overlap area. See
+   * `BANNER_GUIDES` in `src/lib/competitionArtwork.ts`. */
+  guides?: BannerGuides;
+  /** Plain-words legend for the two guides, shown under the cropper. */
+  guidesNote?: string;
   confirmLabel?: string;
   onCancel: () => void;
   onConfirm: (area: CropArea) => void;
@@ -151,16 +152,32 @@ export function ImageCropDialog({
             onCropSizeChange={setCropSize}
             onCropComplete={onCropComplete}
           />
-          {safeArea && cropSize ? (
+          {guides && cropSize ? (
             <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-              <div className="relative" style={{ width: cropSize.width, height: cropSize.height }}>
+              <div
+                className="relative"
+                data-testid="banner-guides"
+                style={{ width: cropSize.width, height: cropSize.height }}
+              >
+                {/* Logo-overlap area: bottom-left, where the round logo
+                    sits over the banner in the app. Tinted, not dashed, so
+                    the two guides read as different things. */}
                 <div
+                  data-testid="banner-logo-overlap"
+                  className="absolute bottom-0 left-0 border border-brand-coral/80 bg-brand-coral/35"
+                  style={{
+                    width: `${guides.logoOverlap.width * 100}%`,
+                    height: `${guides.logoOverlap.height * 100}%`,
+                  }}
+                />
+                <div
+                  data-testid="banner-safe-zone"
                   className="absolute rounded-sm border-2 border-dashed border-brand-gold/90"
                   style={{
-                    left: `${((1 - safeArea.horizontal) / 2) * 100}%`,
-                    right: `${((1 - safeArea.horizontal) / 2) * 100}%`,
-                    top: `${((1 - safeArea.vertical) / 2) * 100}%`,
-                    bottom: `${((1 - safeArea.vertical) / 2) * 100}%`,
+                    left: `${guides.safeZone.insetX * 100}%`,
+                    right: `${guides.safeZone.insetX * 100}%`,
+                    top: `${guides.safeZone.insetY * 100}%`,
+                    bottom: `${guides.safeZone.insetY * 100}%`,
                   }}
                 />
               </div>
@@ -168,14 +185,23 @@ export function ImageCropDialog({
           ) : null}
         </div>
 
-        {safeArea && safeAreaNote ? (
-          <p className="mt-2 flex items-start gap-2 text-xs text-muted-foreground">
-            <span
-              className="mt-0.5 inline-block h-3 w-5 shrink-0 rounded-sm border-2 border-dashed border-brand-gold/90"
-              aria-hidden="true"
-            />
-            <span>{safeAreaNote}</span>
-          </p>
+        {guides && guidesNote ? (
+          <ul className="mt-2 space-y-1.5 text-xs text-muted-foreground">
+            <li className="flex items-start gap-2">
+              <span
+                className="mt-0.5 inline-block h-3 w-5 shrink-0 rounded-sm border-2 border-dashed border-brand-gold/90"
+                aria-hidden="true"
+              />
+              <span>{guidesNote}</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span
+                className="mt-0.5 inline-block h-3 w-5 shrink-0 border border-brand-coral/80 bg-brand-coral/35"
+                aria-hidden="true"
+              />
+              <span>{LOGO_OVERLAP_NOTE}</span>
+            </li>
+          </ul>
         ) : null}
 
         <div className="mt-4">

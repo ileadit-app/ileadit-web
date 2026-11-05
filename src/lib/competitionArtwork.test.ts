@@ -3,9 +3,11 @@ import { describe, expect, it } from "vitest";
 import {
   ACCEPTED_IMAGE_MIME_TYPES,
   ARTWORK_OUTPUT_SIZE,
+  BANNER_APP_DETAIL_ASPECT,
   BANNER_ASPECT,
+  BANNER_GUIDES,
+  BANNER_UPLOAD_GUIDANCE,
   MAX_SOURCE_FILE_BYTES_BY_KIND,
-  MEASURED_BANNER_DISPLAY_RATIOS,
   MIN_SOURCE_DIMENSIONS,
   TILE_ASPECT,
   type ArtworkFileLike,
@@ -13,7 +15,6 @@ import {
   artworkAspect,
   artworkOutputMimeType,
   artworkStoragePath,
-  bannerSafeAreaFractions,
   createDraftCompetitionId,
   isBelowMinimumResolution,
   isDraftCompetitionId,
@@ -124,15 +125,22 @@ describe("minimum source resolution — a soft, non-blocking warning (spec §2/�
     expect(isBelowMinimumResolution("tile", 512, 512)).toBe(false);
   });
 
-  it("flags a banner source under 1920×1080", () => {
-    expect(isBelowMinimumResolution("banner", 1919, 1080)).toBe(true);
-    expect(isBelowMinimumResolution("banner", 1920, 1079)).toBe(true);
-    expect(isBelowMinimumResolution("banner", 1920, 1080)).toBe(false);
+  it("flags a banner source under 1200×400, and never warns on a 2400×800 upload", () => {
+    expect(isBelowMinimumResolution("banner", 1199, 400)).toBe(true);
+    expect(isBelowMinimumResolution("banner", 1200, 399)).toBe(true);
+    expect(isBelowMinimumResolution("banner", 1200, 400)).toBe(false);
+    expect(isBelowMinimumResolution("banner", 2400, 800)).toBe(false);
+  });
+
+  it("the banner minimum is exactly half the output size, at the same 3:1 shape", () => {
+    expect(MIN_SOURCE_DIMENSIONS.banner).toEqual({ width: 1200, height: 400 });
+    expect(MIN_SOURCE_DIMENSIONS.banner.width * 2).toBe(ARTWORK_OUTPUT_SIZE.banner.width);
+    expect(MIN_SOURCE_DIMENSIONS.banner.height * 2).toBe(ARTWORK_OUTPUT_SIZE.banner.height);
   });
 
   it("names the actual minimum for the kind, not a generic message", () => {
     expect(lowResolutionWarning("tile")).toContain("512×512");
-    expect(lowResolutionWarning("banner")).toContain("1920×1080");
+    expect(lowResolutionWarning("banner")).toContain("1200×400");
   });
 
   it("reads its numbers from MIN_SOURCE_DIMENSIONS, not a second hand-copied pair", () => {
@@ -167,81 +175,43 @@ describe("aspect ratios", () => {
     expect(ARTWORK_OUTPUT_SIZE.tile.width).toBe(ARTWORK_OUTPUT_SIZE.tile.height);
   });
 
-  // The old provisional 3:1 crop (a compromise BETWEEN the measured web
-  // extremes — see the git history of this file for that version of the
-  // test) has been replaced by the spec's settled answer: a generous 16:9
-  // SOURCE, narrower than every real display ratio, plus a safe-area
-  // contract computed against the widest one. These two tests pin THAT
-  // relationship, not the old one — either would fail if the ratio ever
-  // silently reverted to 3, since 3 is neither 16:9 nor narrower than the
-  // measured narrowest (1.95).
-  it("the banner source contract is 16:9 (1920×1080) — the spec's settled answer, not the old provisional 3:1", () => {
-    expect(BANNER_ASPECT).toBeCloseTo(16 / 9, 10);
-    expect(BANNER_ASPECT).not.toBeCloseTo(3, 1);
-    expect(ARTWORK_OUTPUT_SIZE.banner).toEqual({ width: 1920, height: 1080 });
+  it("the banner is the one approved format: 3:1, output 2400×800 (COMP-BRAND-1) — the 16:9 crop is superseded", () => {
+    expect(BANNER_ASPECT).toBe(3);
+    expect(ARTWORK_OUTPUT_SIZE.banner).toEqual({ width: 2400, height: 800 });
+    expect(BANNER_ASPECT).not.toBeCloseTo(16 / 9, 1);
   });
 
-  it("16:9 is narrower than every measured real display ratio, so object-cover always keeps the full width", () => {
-    // This is the property the whole "generous source" strategy depends
-    // on: unlike the old 3:1 compromise (which sat BETWEEN the measured
-    // extremes and so lost width on narrow displays too), 16:9 sits below
-    // BOTH of them — width is never trimmed on any real surface, only
-    // height, which is what makes a single, purely-vertical safe area
-    // guide (see `bannerSafeAreaFractions`) an honest promise.
-    expect(BANNER_ASPECT).toBeLessThan(MEASURED_BANNER_DISPLAY_RATIOS.narrowest);
-    expect(BANNER_ASPECT).toBeLessThan(MEASURED_BANNER_DISPLAY_RATIOS.widest);
+  it("the upload guidance copy states the same format the crop actually produces", () => {
+    const { width, height } = ARTWORK_OUTPUT_SIZE.banner;
+    expect(BANNER_UPLOAD_GUIDANCE).toContain(`${width} × ${height} px (3:1)`);
   });
 });
 
-describe("bannerSafeAreaFractions", () => {
-  it("derives the visible fractions from arbitrary display ratios (illustrative numbers, not the live constants)", () => {
-    const safe = bannerSafeAreaFractions(3, { narrowest: 1.95, widest: 4.5 });
-    expect(safe.horizontal).toBeCloseTo(0.65, 5); // 1.95 / 3
-    expect(safe.vertical).toBeCloseTo(3 / 4.5, 5);
+describe("banner crop-dialog guides", () => {
+  it("the safe zone is inset 80/1200 each side and 80/400 top and bottom", () => {
+    expect(BANNER_GUIDES.safeZone.insetX).toBeCloseTo(80 / 1200, 10);
+    expect(BANNER_GUIDES.safeZone.insetY).toBeCloseTo(80 / 400, 10);
   });
 
-  it("clamps at 1 — nothing is ever more than fully visible", () => {
-    const safe = bannerSafeAreaFractions(3, { narrowest: 4, widest: 2 });
-    expect(safe.horizontal).toBe(1);
-    expect(safe.vertical).toBe(1);
+  it("the logo-overlap area is the bottom-left 300×120 of a 1200×400 banner", () => {
+    expect(BANNER_GUIDES.logoOverlap.width).toBeCloseTo(300 / 1200, 10);
+    expect(BANNER_GUIDES.logoOverlap.height).toBeCloseTo(120 / 400, 10);
   });
 
-  it("a crop at exactly one extreme is fully visible in that dimension", () => {
-    const ratios = { narrowest: 2, widest: 5 };
-    expect(bannerSafeAreaFractions(2, ratios).horizontal).toBe(1);
-    expect(bannerSafeAreaFractions(5, ratios).vertical).toBe(1);
+  it("the guides land on whole pixels of the 2400×800 output", () => {
+    const { width, height } = ARTWORK_OUTPUT_SIZE.banner;
+    expect(BANNER_GUIDES.safeZone.insetX * width).toBeCloseTo(160, 6);
+    expect(BANNER_GUIDES.safeZone.insetY * height).toBeCloseTo(160, 6);
+    expect(BANNER_GUIDES.logoOverlap.width * width).toBeCloseTo(600, 6);
+    expect(BANNER_GUIDES.logoOverlap.height * height).toBeCloseTo(240, 6);
   });
 
-  it("defaults to the real measured ratios: full width always survives, height is the real constraint", () => {
-    // With the spec's 16:9 crop, every measured display ratio (1.95
-    // through ~4.57) is WIDER than the crop, so `object-cover` always
-    // keeps the full width (horizontal === 1) and only ever trims top and
-    // bottom. This is a genuine behaviour change from the old 3:1 ratio,
-    // which sat between the measured extremes and so lost width on the
-    // narrowest ones too — if this ever comes back as < 1, either the
-    // ratio changed or this safe-area contract silently reverted to the
-    // old ambiguous-tradeoff shape.
-    const safe = bannerSafeAreaFractions();
-    expect(safe.horizontal).toBe(1);
-    expect(safe.vertical).toBeLessThan(1);
-  });
-
-  it("matches the spec's own arithmetic: ~39% of the source height survives the widest (desktop) target", () => {
-    // Spec §3: "cover-cropped into the widest target (4.6:1 desktop web),
-    // only the center ~39% of the source's height stays visible
-    // (1080 × 1.78/4.6 ≈ 418px of the original 1080px)."
-    const safe = bannerSafeAreaFractions();
-    expect(safe.vertical).toBeCloseTo(0.39, 2);
-  });
-
-  it("matches the spec's own arithmetic: ~73% of the source height survives the Android target (2.45:1)", () => {
-    // Spec §3: "Into the Android target (2.45:1), center ~73% of the
-    // height stays visible." Android's 2.45:1 isn't one of
-    // `MEASURED_BANNER_DISPLAY_RATIOS` (that record is web-breakpoint
-    // derived), so it's passed explicitly here rather than assumed to be
-    // covered by the default ratios.
-    const safe = bannerSafeAreaFractions(BANNER_ASPECT, { narrowest: 2.45, widest: 2.45 });
-    expect(safe.vertical).toBeCloseTo(0.73, 2);
+  it("the horizontal safe-zone inset is exactly what the app's 13:5 details crop trims from each side", () => {
+    // 3:1 -> 13:5 (2.6:1) keeps the full height and trims the sides: the
+    // visible width fraction is 2.6 / 3, so each side loses
+    // (1 - 2.6/3) / 2 = 1/15 = 80/1200 — the safe zone's own x inset.
+    const visibleWidth = BANNER_APP_DETAIL_ASPECT / BANNER_ASPECT;
+    expect(BANNER_GUIDES.safeZone.insetX).toBeCloseTo((1 - visibleWidth) / 2, 10);
   });
 });
 

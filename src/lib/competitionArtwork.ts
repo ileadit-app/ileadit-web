@@ -44,125 +44,53 @@
 export const TILE_ASPECT = 1;
 
 /**
- * `backgroundImageUrl` — the hero banner. **There is no single correct
- * DISPLAY ratio, and web and Android do not agree** — that part is still
- * true and unchanged. What changed (per
- * `automation-hub/docs/ileadit-branding-spec-20260920.md` §3, Paul-approved
- * design spec, superseding the provisional `BANNER_ASPECT = 3` this file
- * shipped with) is the STRATEGY: instead of guessing a single crop ratio
- * that compromises between the two platforms' display ratios, the crop
- * asks for a generous **16:9 (1920×1080) SOURCE** — wider than the
- * tightest Android target, narrower than the widest web target — and
- * accepts that each platform's `object-cover` render will trim a
- * DIFFERENT amount off the top and bottom of that same source. The safe
- * area (see `bannerSafeAreaFractions`) is what tells the uploader how much
- * survives everywhere.
+ * `backgroundImageUrl` — the banner. **One format everywhere: 3:1,
+ * uploaded at 2400 × 800 px** (COMP-BRAND-1, approved by Paul on
+ * 5 Nov 2026). This supersedes the earlier 16:9 / 1920 × 1080 "generous
+ * source" contract (branding spec 20 Sep 2026 §3), which tried to survive
+ * a full-bleed band of fixed height and variable width. The approved
+ * design instead has the app show the same 3:1 banner on list cards and
+ * crop it to 13:5 (2.6:1) on the details sheet and the leaderboard, so one
+ * source shape covers every surface and the web previews show it at 3:1
+ * too (see `CompetitionHero`).
  *
- * Neither platform renders the banner at a fixed ratio. Both render it as
- * a full-bleed band of FIXED HEIGHT and VARIABLE (viewport) WIDTH, filled
- * with `centerCrop`/`object-cover` — so the effective DISPLAY ratio is
- * whatever `viewportWidth / bandHeight` happens to be on the device.
- *
- * Android — ONE render site only (grep of `competition.backgroundImageUrl`
- * across `app/src/main/java` returns exactly
- * `CompetitionLeaderboardActivity.kt:643-648`, which resolves
- * `backgroundImageUrl ?: imageUrl` and Glides it into
- * `binding.competitionBackgroundImage`). That view is
- * `layout_width="match_parent"`, `layout_height="147dp"`,
- * `scaleType="centerCrop"`
- * (`app/src/main/res/layout/activity_competition_leaderboard.xml:27-33`):
- *
- * | Device width | Ratio |
- * |---|---|
- * | 360dp (baseline phone) | 2.45 : 1 |
- * | 393dp (Pixel-class) | 2.67 : 1 |
- * | 411dp (large phone) | 2.80 : 1 |
- *
- * Web — `src/components/competitions/CompetitionHero.tsx`, a full-viewport-
- * width band at `h-[200px]` below Tailwind's `sm` (640px) and
- * `h-[280px]` at and above it, with `object-cover`:
- *
- * | Viewport | Ratio |
- * |---|---|
- * | 390px phone | 1.95 : 1 |
- * | 640px (`sm` boundary) | 2.29 : 1 |
- * | 1280px laptop | 4.57 : 1 (the spec rounds this to "≈4.6:1") |
- * | 1920px desktop | 6.86 : 1 |
- *
- * So: Android sits in a narrow 2.4–2.8 band; web sweeps 1.95 → 6.86 and
- * spends most of its life far WIDER than Android ever gets. Both bands sit
- * ABOVE 16:9 (1.78:1) — a 16:9 source is narrower than every real display
- * target on either platform, which is exactly why it works as a source
- * contract: `object-cover` always keeps the FULL WIDTH of a 16:9 source
- * and trims only the top and bottom, never the sides, on every surface
- * this app actually renders.
- *
- * `BANNER_ASPECT = 16 / 9` is the spec's settled answer, not a provisional
- * placeholder — Paul has signed off on the 16:9/1920×1080 source
- * recommendation (spec §3). What is still asserted rather than guaranteed
- * is the sponsor's own choice of what to put in the source photo, which is
- * why the crop UI still draws the always-visible safe area (see
- * `bannerSafeAreaFractions`) over the crop frame, and the form still
- * previews the result at both a phone and a desktop width using the real
- * hero component — so the trimming stays visible rather than asserted.
+ * Images already uploaded at 16:9 are not touched; they simply
+ * `object-cover` into the 3:1 frame.
  */
-export const BANNER_ASPECT = 16 / 9;
+export const BANNER_ASPECT = 3;
 
 /**
- * The real display ratios measured above, kept as data so
- * `bannerSafeAreaFractions` derives the safe area from the SAME numbers
- * the comment cites instead of a second hand-copied pair.
- *
- * These are DISPLAY ratios (unaffected by the `BANNER_ASPECT` source
- * contract change above) — they describe `CompetitionHero.tsx`'s own
- * rendered band shape, not anything about the uploaded source. The spec
- * (§3) quotes the widest of these as "≈4.6:1"; `1280 / 280` below is the
- * precise figure that rounds to it.
+ * The aspect the app crops the banner to on the details sheet and the
+ * leaderboard: 13:5 = 2.6:1. Kept as data so tests can check the guides
+ * below against it — the web portal itself shows 3:1.
  */
-export const MEASURED_BANNER_DISPLAY_RATIOS = {
-  /** Web at a 390px phone viewport: 390 / 200. */
-  narrowest: 390 / 200,
-  /** Web at a 1280px laptop viewport: 1280 / 280 ≈ 4.6:1 — the spec's
-   * own "desktop web reaches about 4.6:1" figure. Wider desktops exist
-   * (1920px → 6.86) but a banner designed for those loses so much height
-   * everywhere else that it stops being a useful target; 1280 is the
-   * widest ratio this crop is asked to survive. */
-  widest: 1280 / 280,
+export const BANNER_APP_DETAIL_ASPECT = 13 / 5;
+
+/**
+ * Crop-dialog guides, as fractions of the banner. The design states them
+ * in pixels of a 1200 × 400 reference banner, so the fractions are derived
+ * from those pixel figures rather than typed as decimals:
+ *
+ *  - safe zone: inset 80px left/right and 80px top/bottom (at 1200 × 400);
+ *    keep logos and text inside it.
+ *  - logo overlap: the bottom-left 300 × 120px (at 1200 × 400), where the
+ *    round competition logo sits over the banner in the app. Keep
+ *    anything important out of it.
+ */
+const BANNER_GUIDE_REFERENCE = { width: 1200, height: 400 } as const;
+
+export const BANNER_GUIDES = {
+  safeZone: {
+    insetX: 80 / BANNER_GUIDE_REFERENCE.width,
+    insetY: 80 / BANNER_GUIDE_REFERENCE.height,
+  },
+  logoOverlap: {
+    width: 300 / BANNER_GUIDE_REFERENCE.width,
+    height: 120 / BANNER_GUIDE_REFERENCE.height,
+  },
 } as const;
 
-/**
- * The fraction of a crop at `cropAspect` that survives `object-cover` at
- * every display ratio between `narrowest` and `widest`.
- *
- * A display band WIDER than the crop keeps the full width and trims top
- * and bottom (vertical fraction `cropAspect / widest`); a band NARROWER
- * than the crop keeps the full height and trims left and right
- * (horizontal fraction `narrowest / cropAspect`). Both are clamped at 1 —
- * nothing is ever more than fully visible.
- *
- * With the spec's 16:9 `BANNER_ASPECT`, EVERY real display ratio measured
- * above (1.95 through 4.6+) is wider than the crop, so in practice
- * `horizontal` always clamps to 1 (nothing is ever trimmed off the sides)
- * and the whole safe area question is really a `vertical` question, always
- * decided by the WIDEST target — that is what actually determines what
- * survives, per the spec's own arithmetic: cover-cropping a 1920×1080
- * (16:9) source into the 4.6:1 desktop band keeps only
- * `(16/9) / 4.6 ≈ 0.386` — about 39% — of the source's height
- * (1080 × 0.386 ≈ 417px of the original 1080px), matching spec §3's own
- * "~39% of the source's height" figure. The Android target (2.45:1) is
- * far gentler by comparison: `(16/9) / 2.45 ≈ 0.726`, about 73%.
- *
- * Used to draw the "always visible" guide inside the banner crop frame.
- */
-export function bannerSafeAreaFractions(
-  cropAspect: number = BANNER_ASPECT,
-  ratios: { narrowest: number; widest: number } = MEASURED_BANNER_DISPLAY_RATIOS,
-): { horizontal: number; vertical: number } {
-  return {
-    horizontal: Math.min(1, ratios.narrowest / cropAspect),
-    vertical: Math.min(1, cropAspect / ratios.widest),
-  };
-}
+export type BannerGuides = typeof BANNER_GUIDES;
 
 /* ------------------------------------------------------------------ *
  * Output sizes
@@ -173,17 +101,14 @@ export function bannerSafeAreaFractions(
  *
  *  - tile: Android's largest render is 118dp → 354px at 3x device pixel
  *    ratio → rounded to 512.
- *  - banner: the spec's own recommended/minimum SOURCE resolution,
- *    1920×1080 (16:9) — not a value derived from any one render site's
- *    pixel density, because the banner's whole point is to be one generous
- *    source that every display ratio then crops independently (see
- *    `BANNER_ASPECT`). 1920×1080 comfortably exceeds even the sharpest
- *    real render (the 1280px-wide desktop band, 1280×280) at 1x, so it is
- *    never the limiting factor.
+ *  - banner: 2400×800 (3:1), the approved COMP-BRAND-1 upload size — the
+ *    same shape as `BANNER_ASPECT`, so the output canvas is never
+ *    stretched. 2x the 1200×400 reference the crop-dialog guides are
+ *    specified in, so the guides scale exactly.
  */
 export const ARTWORK_OUTPUT_SIZE = {
   tile: { width: 512, height: 512 },
-  banner: { width: 1920, height: 1080 },
+  banner: { width: 2400, height: 800 },
 } as const;
 
 export type ArtworkKind = keyof typeof ARTWORK_OUTPUT_SIZE;
@@ -331,7 +256,7 @@ export function losesAnimationOnCrop(file: ArtworkFileLike): boolean {
  * genuinely a warning, not an error, since a slightly soft badge is a real
  * ship-it-anyway call sponsors get to make", spec §4). These functions are
  * pure and kind-generic so both the badge's 512×512 and the banner's
- * 1920×1080 minimum go through one path; the actual pixel dimensions can
+ * 1200×400 minimum go through one path; the actual pixel dimensions can
  * only be read by decoding the file in a browser, which is why this is
  * split from the deciding logic below — see `getImageDimensions` in
  * `src/lib/imageCrop.ts` for the half that needs an `Image`.
@@ -339,11 +264,13 @@ export function losesAnimationOnCrop(file: ArtworkFileLike): boolean {
 
 /** Minimum recommended source dimensions per kind. Badge: spec §2,
  * "minimum 512×512px (1024×1024 recommended...)". Banner: spec §3,
- * "min 1920×1080". Falling short of these is a warning, never a block —
+ * "min 1920×1080", superseded by COMP-BRAND-1 (5 Nov 2026): the banner is
+ * 3:1 at 2400×800, and a source below half that (1200×400) is what warns,
+ * so a correctly-sized 2400×800 upload never does. Falling short of these is a warning, never a block —
  * nothing here throws or rejects a file for being under this size. */
 export const MIN_SOURCE_DIMENSIONS: Record<ArtworkKind, { width: number; height: number }> = {
   tile: { width: 512, height: 512 },
-  banner: { width: 1920, height: 1080 },
+  banner: { width: 1200, height: 400 },
 };
 
 export function isBelowMinimumResolution(kind: ArtworkKind, width: number, height: number): boolean {
@@ -367,8 +294,9 @@ export function lowResolutionWarning(kind: ArtworkKind): string {
  * ------------------------------------------------------------------ */
 
 /** Exact words from the ticket — shown under each upload field. The banner
- * wording describes the sponsor-branded design (3:1, 2400 × 800 px); note
- * the crop step above still produces `BANNER_ASPECT` (16:9) output. */
+ * wording describes the sponsor-branded design (3:1, 2400 × 800 px), which
+ * is exactly what the crop step produces (`BANNER_ASPECT`,
+ * `ARTWORK_OUTPUT_SIZE.banner`). */
 export const BANNER_UPLOAD_GUIDANCE =
   "Banner: 2400 × 800 px (3:1). Keep logos and text inside the centre area, away from the bottom-left corner, where the round logo sits. Don't put text in the image; the app shows the name and prize.";
 
