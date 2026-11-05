@@ -79,6 +79,10 @@ export interface CompetitionHeroCompetition {
   /** IANA zone the competition's own dates are computed in (WEB-3 item 3) —
    * feeds `CompetitionStatusChip`'s "Starting today" copy override. */
   timeZone: string | null;
+  /** WEB-SPONSOR-NAME — optional; when set, a "Sponsored by …" line shows
+   * under the name. Currently only the creation form's preview supplies
+   * it; the detail page does not read the field from Firestore yet. */
+  sponsorName?: string | null;
 }
 
 function dateLineFor(
@@ -170,6 +174,11 @@ export function CompetitionHero({
           <h1 className="mt-2 text-2xl font-extrabold text-on-navy-foreground sm:text-3xl">
             {competition.name ?? "Untitled competition"}
           </h1>
+          {competition.sponsorName?.trim() ? (
+            <p className="mt-1 break-words text-sm text-on-navy-muted">
+              Sponsored by {competition.sponsorName.trim()}
+            </p>
+          ) : null}
         </div>
       </div>
 

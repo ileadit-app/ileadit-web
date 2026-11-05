@@ -363,6 +363,19 @@ export function lowResolutionWarning(kind: ArtworkKind): string {
 }
 
 /* ------------------------------------------------------------------ *
+ * Upload guidance copy (WEB-SPONSOR-NAME, COMP-BRAND-1)
+ * ------------------------------------------------------------------ */
+
+/** Exact words from the ticket — shown under each upload field. The banner
+ * wording describes the sponsor-branded design (3:1, 2400 × 800 px); note
+ * the crop step above still produces `BANNER_ASPECT` (16:9) output. */
+export const BANNER_UPLOAD_GUIDANCE =
+  "Banner: 2400 × 800 px (3:1). Keep logos and text inside the centre area, away from the bottom-left corner, where the round logo sits. Don't put text in the image; the app shows the name and prize.";
+
+export const LOGO_UPLOAD_GUIDANCE =
+  "Logo: square, 512 × 512 px, ideally a transparent PNG. It's shown in full inside a circle.";
+
+/* ------------------------------------------------------------------ *
  * Draft competition ids and storage paths
  * ------------------------------------------------------------------ */
 

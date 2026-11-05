@@ -127,3 +127,124 @@ describe("CreateCompetitionForm — createCompetition wrapper outcomes shown to 
     await waitFor(() => expect(pushMock).toHaveBeenCalledWith("/dashboard"));
   });
 });
+
+describe("CreateCompetitionForm — sponsor name (WEB-SPONSOR-NAME)", () => {
+  function setSponsor(value: string) {
+    fireEvent.change(screen.getByLabelText(/sponsor name/i), { target: { value } });
+  }
+  function submit() {
+    fireEvent.click(screen.getByRole("button", { name: /create competition/i }));
+  }
+
+  it("sends sponsorName trimmed", async () => {
+    mockCallable.mockResolvedValueOnce({ data: { competitionId: "comp_123" } });
+    render(<CreateCompetitionForm />);
+
+    fillRequiredFields();
+    setSponsor("   Acme Ltd  ");
+    submit();
+
+    await waitFor(() => expect(pushMock).toHaveBeenCalledWith("/dashboard"));
+    expect(mockCallable).toHaveBeenCalledTimes(1);
+    expect(mockCallable.mock.calls[0][0]).toMatchObject({ sponsorName: "Acme Ltd" });
+  });
+
+  it("omits sponsorName entirely when the field is empty", async () => {
+    mockCallable.mockResolvedValueOnce({ data: { competitionId: "comp_123" } });
+    render(<CreateCompetitionForm />);
+
+    fillRequiredFields();
+    submit();
+
+    await waitFor(() => expect(pushMock).toHaveBeenCalledWith("/dashboard"));
+    expect(mockCallable.mock.calls[0][0]).not.toHaveProperty("sponsorName");
+  });
+
+  it("omits sponsorName entirely when the field is only whitespace", async () => {
+    mockCallable.mockResolvedValueOnce({ data: { competitionId: "comp_123" } });
+    render(<CreateCompetitionForm />);
+
+    fillRequiredFields();
+    setSponsor("    ");
+    submit();
+
+    await waitFor(() => expect(pushMock).toHaveBeenCalledWith("/dashboard"));
+    expect(mockCallable.mock.calls[0][0]).not.toHaveProperty("sponsorName");
+  });
+
+  it("rejects 41 characters: shows an error and never calls the callable", async () => {
+    render(<CreateCompetitionForm />);
+
+    fillRequiredFields();
+    setSponsor("x".repeat(41));
+    expect(screen.getByText("41/40")).toBeInTheDocument();
+    submit();
+
+    expect(await screen.findByText(/40 characters or fewer/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/sponsor name/i)).toHaveAttribute("aria-invalid", "true");
+    expect(mockCallable).not.toHaveBeenCalled();
+    expect(pushMock).not.toHaveBeenCalled();
+  });
+
+  it("accepts exactly 40 characters (boundary)", async () => {
+    mockCallable.mockResolvedValueOnce({ data: { competitionId: "comp_123" } });
+    render(<CreateCompetitionForm />);
+
+    fillRequiredFields();
+    setSponsor("x".repeat(40));
+    submit();
+
+    await waitFor(() => expect(pushMock).toHaveBeenCalledWith("/dashboard"));
+    expect(mockCallable.mock.calls[0][0]).toMatchObject({ sponsorName: "x".repeat(40) });
+  });
+
+  it("counts the trimmed length, so padding does not push a 40-char name over", async () => {
+    mockCallable.mockResolvedValueOnce({ data: { competitionId: "comp_123" } });
+    render(<CreateCompetitionForm />);
+
+    fillRequiredFields();
+    setSponsor(`  ${"x".repeat(40)}  `);
+    expect(screen.getByText("40/40")).toBeInTheDocument();
+    submit();
+
+    await waitFor(() => expect(pushMock).toHaveBeenCalledWith("/dashboard"));
+  });
+
+  it("rejects control characters", async () => {
+    render(<CreateCompetitionForm />);
+
+    fillRequiredFields();
+    setSponsor("AcmeLtd");
+    submit();
+
+    expect(await screen.findByText(/plain text only/i)).toBeInTheDocument();
+    expect(mockCallable).not.toHaveBeenCalled();
+  });
+
+  it("renders the sponsor help text", () => {
+    render(<CreateCompetitionForm />);
+    expect(
+      screen.getByText("Shown in the app as 'Sponsored by …'. Leave blank if there's no sponsor."),
+    ).toBeInTheDocument();
+  });
+});
+
+describe("CreateCompetitionForm — image upload guidance (WEB-SPONSOR-NAME)", () => {
+  it("renders the banner guidance verbatim", () => {
+    render(<CreateCompetitionForm />);
+    expect(
+      screen.getByText(
+        "Banner: 2400 × 800 px (3:1). Keep logos and text inside the centre area, away from the bottom-left corner, where the round logo sits. Don't put text in the image; the app shows the name and prize.",
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("renders the logo guidance verbatim", () => {
+    render(<CreateCompetitionForm />);
+    expect(
+      screen.getByText(
+        "Logo: square, 512 × 512 px, ideally a transparent PNG. It's shown in full inside a circle.",
+      ),
+    ).toBeInTheDocument();
+  });
+});

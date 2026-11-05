@@ -7,8 +7,12 @@ import { ErrorBanner } from "@/components/auth/formFields";
 import { NumberField, SelectField, TextAreaField, TextField } from "@/components/forms/fields";
 import { ArtworkUploadField } from "./ArtworkUploadField";
 import { CompetitionHero } from "./CompetitionHero";
-import { createDraftCompetitionId } from "@/lib/competitionArtwork";
-import { createCompetition } from "@/lib/createCompetition";
+import {
+  BANNER_UPLOAD_GUIDANCE,
+  LOGO_UPLOAD_GUIDANCE,
+  createDraftCompetitionId,
+} from "@/lib/competitionArtwork";
+import { SPONSOR_NAME_MAX_LENGTH, createCompetition, validateSponsorName } from "@/lib/createCompetition";
 import { createCompetitionFailureMessage } from "@/lib/createCompetitionErrors";
 import {
   detectBrowserTimeZone,
@@ -25,7 +29,11 @@ interface FieldErrors {
   startTime?: string;
   durationDays?: string;
   timeZone?: string;
+  sponsorName?: string;
 }
+
+const SPONSOR_NAME_HELP_TEXT =
+  "Shown in the app as 'Sponsored by …'. Leave blank if there's no sponsor.";
 
 /**
  * The competition creation form (P1.4). Only rendered once
@@ -35,7 +43,8 @@ interface FieldErrors {
  *
  * Fields sent match the `createCompetition` callable's contract exactly
  * (`src/lib/createCompetition.ts`): `name`, `startTime`, `durationDays`,
- * `timeZone`, `description`, `imageUrl`, `backgroundImageUrl`. Nothing
+ * `timeZone`, `description`, `imageUrl`, `backgroundImageUrl`, `sponsorName`
+ * (optional, trimmed 1-40 chars, omitted when blank). Nothing
  * engine-derived (`startDate`, `endDate`, `status`, `playerCount`) is ever
  * collected as an input here — there is no field for any of them below.
  *
@@ -57,6 +66,7 @@ export function CreateCompetitionForm() {
   const [durationDaysValue, setDurationDaysValue] = useState("7");
   const [timeZone, setTimeZone] = useState(() => detectBrowserTimeZone());
   const [description, setDescription] = useState("");
+  const [sponsorName, setSponsorName] = useState("");
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [backgroundImageUrl, setBackgroundImageUrl] = useState<string | null>(null);
 
@@ -104,6 +114,13 @@ export function CreateCompetitionForm() {
       errors.timeZone = "Choose a valid time zone.";
     }
 
+    const sponsorProblem = validateSponsorName(sponsorName);
+    if (sponsorProblem === "too-long") {
+      errors.sponsorName = `Keep the sponsor name to ${SPONSOR_NAME_MAX_LENGTH} characters or fewer.`;
+    } else if (sponsorProblem === "control-characters") {
+      errors.sponsorName = "Use plain text only for the sponsor name.";
+    }
+
     return errors;
   }
 
@@ -133,6 +150,9 @@ export function CreateCompetitionForm() {
       // (`imageUrl: z.string().url().max(2048).optional()`).
       imageUrl: imageUrl ?? undefined,
       backgroundImageUrl: backgroundImageUrl ?? undefined,
+      // Trimmed and omitted when blank by the wrapper, which owns the
+      // contract; validate() above has already enforced 1-40 chars.
+      sponsorName: sponsorName.trim() || undefined,
     });
     setSubmitting(false);
 
@@ -208,10 +228,29 @@ export function CreateCompetitionForm() {
           placeholder="What's this competition for?"
         />
 
+        <div>
+          <TextField
+            label="Sponsor name (optional)"
+            value={sponsorName}
+            onChange={setSponsorName}
+            error={fieldErrors.sponsorName}
+            helperText={SPONSOR_NAME_HELP_TEXT}
+            disabled={submitting}
+            placeholder="Acme Ltd"
+          />
+          {/* No `maxLength` on the input on purpose: hard-truncating would
+              make the 40-char limit unreachable and hide a too-long paste
+              instead of telling the admin about it. The count is of the
+              TRIMMED value, which is what the contract measures. */}
+          <p className="mt-1 text-xs text-muted-foreground" aria-live="polite">
+            {sponsorName.trim().length}/{SPONSOR_NAME_MAX_LENGTH}
+          </p>
+        </div>
+
         <ArtworkUploadField
           kind="tile"
           label="Competition image (optional)"
-          helperText="Square image, at least 512×512px. Shown as a circle on the web and in the Android app."
+          helperText={LOGO_UPLOAD_GUIDANCE}
           draftId={draftId}
           value={imageUrl}
           onChange={setImageUrl}
@@ -221,7 +260,7 @@ export function CreateCompetitionForm() {
         <ArtworkUploadField
           kind="banner"
           label="Background image (optional)"
-          helperText="Wide image, at least 1920×1080px. Keep logos and faces centered — edges get cropped on some screens. A darkening gradient sits over it so the name stays readable."
+          helperText={BANNER_UPLOAD_GUIDANCE}
           draftId={draftId}
           value={backgroundImageUrl}
           onChange={setBackgroundImageUrl}
@@ -230,6 +269,7 @@ export function CreateCompetitionForm() {
 
         <ArtworkPreview
           name={name}
+          sponsorName={sponsorName}
           imageUrl={imageUrl}
           backgroundImageUrl={backgroundImageUrl}
           startTimeValue={startTimeValue}
@@ -305,6 +345,7 @@ function previewDates(
  */
 function ArtworkPreview({
   name,
+  sponsorName,
   imageUrl,
   backgroundImageUrl,
   startTimeValue,
@@ -312,6 +353,7 @@ function ArtworkPreview({
   timeZone,
 }: {
   name: string;
+  sponsorName: string;
   imageUrl: string | null;
   backgroundImageUrl: string | null;
   startTimeValue: string;
@@ -323,6 +365,7 @@ function ArtworkPreview({
   const { startDate, endDate } = previewDates(startTimeValue, durationDays);
   const competition = {
     name: name.trim() || "Untitled competition",
+    sponsorName: sponsorName.trim() || null,
     imageUrl,
     backgroundImageUrl,
     // Anything created here starts in the future, so `scheduled` is what
