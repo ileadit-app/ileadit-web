@@ -32,7 +32,7 @@ function useTickingNow(intervalMs: number = 60_000): Date {
 
 /**
  * The competition hero — the banner band, the status/date line, the name,
- * and the circular tile that overlaps the band's bottom edge.
+ * and the round logo plate that overlaps the band's bottom edge.
  *
  * Extracted verbatim from `CompetitionDetail.tsx` so the creation form's
  * artwork preview can render THE hero rather than a lookalike. That
@@ -66,6 +66,61 @@ const HERO_BAND_CLASS = {
   desktop: "h-[280px] rounded-b-3xl",
 } as const;
 
+/**
+ * Corner treatment only, for the layout used when a banner image is set
+ * (COMP-BRAND-1): the banner is shown as its own 3:1 strip — exactly what
+ * a player sees on the list card — and the text block below it sizes to
+ * its content instead of a fixed 200/280px. `responsive` mirrors the
+ * no-banner `sm:` rounding; `phone` is square; `desktop` is rounded.
+ */
+const HERO_TEXT_BLOCK_CLASS = {
+  responsive: "sm:rounded-b-3xl",
+  phone: "",
+  desktop: "rounded-b-3xl",
+} as const;
+
+/** Banner shape: 3:1, same as `BANNER_ASPECT` in `competitionArtwork.ts`. */
+const BANNER_STRIP_CLASS = "aspect-[3/1]";
+
+/**
+ * The logo plate, matching the app's details screen (COMP-BRAND-1): a
+ * 64 px round white plate with a thin ring. The WHOLE logo is fitted
+ * (`object-contain`) inside the square inscribed in the plate's inner
+ * circle, so a square logo's corners stay inside the ring and nothing is
+ * cropped. Inner circle = 64 − 2 × 2 px border = 60 px; the inscribed
+ * square is 60 / √2 ≈ 42 px.
+ */
+const HERO_LOGO_PLATE_PX = 64;
+const HERO_LOGO_INNER_SQUARE_PX = 42;
+
+function HeroLogo({
+  imageUrl,
+  className,
+}: {
+  imageUrl: string | null;
+  className: string;
+}) {
+  return (
+    <span
+      data-testid="hero-logo-plate"
+      style={{ width: HERO_LOGO_PLATE_PX, height: HERO_LOGO_PLATE_PX }}
+      className={`flex shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-border bg-white shadow-lg ${className}`}
+    >
+      {imageUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={imageUrl}
+          alt=""
+          style={{ width: HERO_LOGO_INNER_SQUARE_PX, height: HERO_LOGO_INNER_SQUARE_PX }}
+          className="object-contain"
+        />
+      ) : (
+        <LogoMark className="h-8 w-8" />
+      )}
+    </span>
+  );
+}
+
 export type CompetitionHeroSize = keyof typeof HERO_BAND_CLASS;
 
 export interface CompetitionHeroCompetition {
@@ -79,6 +134,11 @@ export interface CompetitionHeroCompetition {
   /** IANA zone the competition's own dates are computed in (WEB-3 item 3) —
    * feeds `CompetitionStatusChip`'s "Starting today" copy override. */
   timeZone: string | null;
+  /** WEB-SPONSOR-NAME — optional; when set (non-blank), a "Sponsored by …"
+   * line shows under the name. The detail page reads it from the
+   * competition document's `sponsorName` field (`competitionDetail.ts`);
+   * the creation form's preview supplies it from the form value. */
+  sponsorName?: string | null;
 }
 
 function dateLineFor(
@@ -121,67 +181,92 @@ export function CompetitionHero({
   // hooks, and the cost of an idle 60s timer on a static-copy hero is
   // negligible.
   const now = useTickingNow();
+  const sponsorName = competition.sponsorName?.trim() ?? "";
+  const hasBanner = Boolean(competition.backgroundImageUrl);
+
+  const textBlock = (
+    <div
+      className={`mx-auto flex max-w-5xl flex-col px-5 sm:px-6 ${
+        hasBanner ? "pb-8 pt-10" : "relative z-10 h-full justify-end pb-8"
+      }`}
+    >
+      <div className="flex flex-wrap items-center gap-2">
+        <CompetitionStatusChip
+          status={competition.status}
+          startDate={competition.startDate}
+          timeZone={competition.timeZone}
+        />
+        {/* `tabular-nums` — WEB-4 item 2's "no layout shift" requirement:
+            the last-day countdown's digits change every tick
+            (`5h 12m` -> `5h 11m`), and proportional digit widths in the
+            body font would otherwise cause the surrounding chip/heading
+            to visibly reflow by a pixel or two once a minute. */}
+        <span className="text-sm tabular-nums text-on-navy-muted">{dateLineFor(competition, now)}</span>
+      </div>
+      <h1 className="mt-2 text-2xl font-extrabold text-on-navy-foreground sm:text-3xl">
+        {competition.name ?? "Untitled competition"}
+      </h1>
+      {sponsorName ? (
+        <p className="mt-1 break-words text-sm text-on-navy-muted">Sponsored by {sponsorName}</p>
+      ) : null}
+    </div>
+  );
+
+  if (hasBanner) {
+    return (
+      <div className="relative">
+        <div className={`bg-brand-navy ${HERO_TEXT_BLOCK_CLASS[size]}`}>
+          {/* The banner at its real 3:1 shape — what a player sees on the
+              list card. `object-cover`, so an older 16:9 upload is trimmed
+              into the frame rather than stretched. The round logo straddles
+              the strip's bottom-left, mirroring the app, which is exactly
+              the corner the crop dialog tints as "logo overlap". */}
+          <div className="relative mx-auto max-w-5xl sm:px-6 sm:pt-4">
+            <div
+              data-testid="hero-banner"
+              className={`relative overflow-hidden bg-brand-navy-deep sm:rounded-2xl ${BANNER_STRIP_CLASS}`}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element -- remote,
+                  admin-supplied URL; not a build-time-known asset. */}
+              <img
+                src={competition.backgroundImageUrl ?? undefined}
+                alt=""
+                className="absolute inset-0 h-full w-full object-cover"
+              />
+            </div>
+            <HeroLogo
+              imageUrl={competition.imageUrl}
+              className="absolute bottom-0 left-5 translate-y-1/2 sm:left-12"
+            />
+          </div>
+          {textBlock}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="relative">
       <div className={`relative overflow-hidden bg-brand-navy ${HERO_BAND_CLASS[size]}`}>
-        {competition.backgroundImageUrl ? (
-          <>
-            {/* eslint-disable-next-line @next/next/no-img-element -- remote,
-                admin-supplied URL; not a build-time-known asset. */}
-            <img
-              src={competition.backgroundImageUrl}
-              alt=""
-              className="absolute inset-0 h-full w-full object-cover"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-brand-navy/95 via-brand-navy/60 to-brand-navy/20" />
-          </>
-        ) : (
-          <>
-            <div
-              className="absolute -right-10 -top-10 size-56 rounded-full bg-brand-pink/20 blur-3xl"
-              aria-hidden="true"
-            />
-            <div
-              className="absolute -bottom-16 left-10 size-64 rounded-full bg-brand-gold/15 blur-3xl"
-              aria-hidden="true"
-            />
-          </>
-        )}
+        <div
+          className="absolute -right-10 -top-10 size-56 rounded-full bg-brand-pink/20 blur-3xl"
+          aria-hidden="true"
+        />
+        <div
+          className="absolute -bottom-16 left-10 size-64 rounded-full bg-brand-gold/15 blur-3xl"
+          aria-hidden="true"
+        />
         {/* No-prize-field note: the design doc specifies a speculative prize
             pill here (§4), gated on a `prizeDescription`-shaped field that
             does not exist anywhere in the engine schema (grep of
             `functions/src` and `firestore.rules` for "prize" is zero
             matches). Deliberately not rendered — an empty slot beats a
             fabricated placeholder string. */}
-        <div className="relative z-10 mx-auto flex h-full max-w-5xl flex-col justify-end px-5 pb-8 sm:px-6">
-          <div className="flex flex-wrap items-center gap-2">
-            <CompetitionStatusChip
-              status={competition.status}
-              startDate={competition.startDate}
-              timeZone={competition.timeZone}
-            />
-            {/* `tabular-nums` — WEB-4 item 2's "no layout shift" requirement:
-                the last-day countdown's digits change every tick
-                (`5h 12m` -> `5h 11m`), and proportional digit widths in the
-                body font would otherwise cause the surrounding chip/heading
-                to visibly reflow by a pixel or two once a minute. */}
-            <span className="text-sm tabular-nums text-on-navy-muted">{dateLineFor(competition, now)}</span>
-          </div>
-          <h1 className="mt-2 text-2xl font-extrabold text-on-navy-foreground sm:text-3xl">
-            {competition.name ?? "Untitled competition"}
-          </h1>
-        </div>
+        {textBlock}
       </div>
 
       <div className="mx-auto max-w-5xl px-5 sm:px-6">
-        <span className="relative -mt-7 flex size-14 items-center justify-center overflow-hidden rounded-full bg-card shadow-lg ring-4 ring-white">
-          {competition.imageUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={competition.imageUrl} alt="" className="h-full w-full object-cover" />
-          ) : (
-            <LogoMark className="h-8 w-8" />
-          )}
-        </span>
+        <HeroLogo imageUrl={competition.imageUrl} className="relative -mt-8" />
       </div>
     </div>
   );

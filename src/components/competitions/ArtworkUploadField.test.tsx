@@ -1,7 +1,7 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { ArtworkUploadField } from "./ArtworkUploadField";
-import { MAX_SOURCE_FILE_BYTES_BY_KIND } from "@/lib/competitionArtwork";
+import { LOGO_PLATE_GUIDE, MAX_SOURCE_FILE_BYTES_BY_KIND } from "@/lib/competitionArtwork";
 
 /**
  * What a person actually sees when they pick a file — asserted on the
@@ -26,22 +26,31 @@ import { MAX_SOURCE_FILE_BYTES_BY_KIND } from "@/lib/competitionArtwork";
  * run FOR REAL in every test below.
  */
 
+// The props the dialog last handed the cropper, so a test can pin that the
+// logo crop is a plain square frame and not a round mask.
+const cropperProps: { current: Record<string, unknown> } = { current: {} };
+
 vi.mock("react-easy-crop", async () => {
   const { useEffect } = await import("react");
   return {
     // Named (and capitalised) so eslint's rules-of-hooks sees a component,
     // which it must be — it uses a hook.
-    default: function MockCropper({
-      onCropComplete,
-    }: {
+    default: function MockCropper(props: {
       onCropComplete?: (a: unknown, b: { x: number; y: number; width: number; height: number }) => void;
+      onCropSizeChange?: (size: { width: number; height: number }) => void;
+      [key: string]: unknown;
     }) {
+      cropperProps.current = props;
+      const { onCropComplete, onCropSizeChange } = props;
       // Reported once on mount, not on every render — the real library
       // emits on interaction, and an unconditional call during render
       // would be a mock-only render loop.
       useEffect(() => {
         onCropComplete?.({}, { x: 0, y: 0, width: 400, height: 400 });
-      }, [onCropComplete]);
+        // The real library reports the on-screen crop frame size; the
+        // banner guides are positioned inside a box of exactly this size.
+        onCropSizeChange?.({ width: 600, height: 200 });
+      }, [onCropComplete, onCropSizeChange]);
       return <div data-testid="cropper" />;
     },
   };
@@ -171,6 +180,91 @@ describe("ArtworkUploadField — low-resolution source, a soft warning that neve
 
     await screen.findByTestId("cropper");
     expect(screen.queryByText(/smaller than/i)).not.toBeInTheDocument();
+  });
+});
+
+describe("ArtworkUploadField — banner crop guides (COMP-BRAND-1)", () => {
+  function renderBannerField() {
+    render(
+      <ArtworkUploadField
+        kind="banner"
+        label="Background banner"
+        helperText="The banner."
+        draftId={DRAFT_ID}
+        value={null}
+        onChange={vi.fn()}
+      />,
+    );
+    return screen.getByLabelText(/drag an image here, or browse/i);
+  }
+
+  it("draws the dashed safe zone and the tinted logo-overlap corner", async () => {
+    pick(renderBannerField(), makeFile());
+
+    const safeZone = await screen.findByTestId("banner-safe-zone");
+    const overlap = screen.getByTestId("banner-logo-overlap");
+
+    // Insets: 80/1200 each side, 80/400 top and bottom.
+    expect(parseFloat(safeZone.style.left)).toBeCloseTo((80 / 1200) * 100, 4);
+    expect(parseFloat(safeZone.style.right)).toBeCloseTo((80 / 1200) * 100, 4);
+    expect(parseFloat(safeZone.style.top)).toBeCloseTo((80 / 400) * 100, 4);
+    expect(parseFloat(safeZone.style.bottom)).toBeCloseTo((80 / 400) * 100, 4);
+    expect(safeZone.className).toContain("border-dashed");
+
+    // Bottom-left 300x120 of a 1200x400 banner.
+    expect(overlap.className).toContain("bottom-0");
+    expect(overlap.className).toContain("left-0");
+    expect(parseFloat(overlap.style.width)).toBeCloseTo(25, 4);
+    expect(parseFloat(overlap.style.height)).toBeCloseTo(30, 4);
+
+    expect(screen.getByText(/round logo sits over the banner/i)).toBeInTheDocument();
+  });
+
+  it("logo crop: a square frame with no round mask, the plate circle as a guide, and the new copy", async () => {
+    const { input } = renderField();
+    pick(input, makeFile());
+
+    await screen.findByTestId("cropper");
+    // Square frame: never the library's round mask.
+    expect(cropperProps.current.cropShape).toBe("rect");
+    expect(cropperProps.current.aspect).toBe(1);
+    // Starts with the whole of a square image inside the frame.
+    expect(cropperProps.current.objectFit).toBe("cover");
+    expect(cropperProps.current.cropSize).toEqual({
+      width: LOGO_PLATE_GUIDE.frameSidePx,
+      height: LOGO_PLATE_GUIDE.frameSidePx,
+    });
+
+    // The plate's ring is drawn through the frame's corners: diameter = side × √2.
+    const ring = screen.getByTestId("logo-plate-ring");
+    expect(ring.className).toContain("rounded-full");
+    expect(parseFloat(ring.style.width)).toBeCloseTo(LOGO_PLATE_GUIDE.frameSidePx * Math.SQRT2, 4);
+    expect(parseFloat(ring.style.height)).toBeCloseTo(LOGO_PLATE_GUIDE.frameSidePx * Math.SQRT2, 4);
+
+    // Exact copy from the ticket; the old "shown as a circle" claim is gone.
+    expect(
+      screen.getByText(
+        "Your logo is shown whole on a round white plate in the app. Keep it inside the square; a transparent PNG works best.",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/shown as a circle/i)).not.toBeInTheDocument();
+  });
+
+  it("banner crop: rect frame, no plate ring", async () => {
+    pick(renderBannerField(), makeFile());
+    await screen.findByTestId("banner-safe-zone");
+    expect(cropperProps.current.cropShape).toBe("rect");
+    expect(cropperProps.current.cropSize).toBeUndefined();
+    expect(screen.queryByTestId("logo-plate-ring")).not.toBeInTheDocument();
+  });
+
+  it("draws no banner guides on the square logo crop", async () => {
+    const { input } = renderField();
+    pick(input, makeFile());
+
+    await screen.findByTestId("cropper");
+    expect(screen.queryByTestId("banner-safe-zone")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("banner-logo-overlap")).not.toBeInTheDocument();
   });
 });
 

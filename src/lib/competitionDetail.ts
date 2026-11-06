@@ -27,6 +27,12 @@ function asCompetitionStatus(value: unknown): CompetitionStatus | null {
     : null;
 }
 
+function asNonBlankString(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  return trimmed === "" ? null : trimmed;
+}
+
 function asStringArray(value: unknown): string[] {
   return Array.isArray(value) ? value.filter((v): v is string => typeof v === "string") : [];
 }
@@ -47,6 +53,12 @@ export interface CompetitionDetailDoc {
   description: string | null;
   imageUrl: string | null;
   backgroundImageUrl: string | null;
+  /** The sponsor's display name, stored by the engine's `createCompetition`
+   * under exactly `sponsorName` (engine branch `engine/sponsor-name`).
+   * `null` when absent, not a string, or blank after trimming — the hero
+   * shows "Sponsored by …" only for a real value. Optional on the engine
+   * side, and absent on every competition created before it shipped. */
+  sponsorName: string | null;
   status: CompetitionStatus | null;
   /** `YYYY-MM-DD`, engine-derived, the competition's own calendar. */
   startDate: string | null;
@@ -106,6 +118,7 @@ export function useCompetitionDetail(competitionId: string): CompetitionDetailSt
             imageUrl: typeof data.imageUrl === "string" ? data.imageUrl : null,
             backgroundImageUrl:
               typeof data.backgroundImageUrl === "string" ? data.backgroundImageUrl : null,
+            sponsorName: asNonBlankString(data.sponsorName),
             status: asCompetitionStatus(data.status),
             startDate: typeof data.startDate === "string" ? data.startDate : null,
             endDate: typeof data.endDate === "string" ? data.endDate : null,

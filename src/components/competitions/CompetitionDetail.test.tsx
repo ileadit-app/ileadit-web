@@ -79,6 +79,33 @@ beforeEach(() => {
   useCompetitionPlayersMock.mockReturnValue({ status: "loading" });
 });
 
+describe("CompetitionDetail — sponsor line (WEB-SPONSOR-NAME r2)", () => {
+  function withSponsor(sponsorName: string | null | undefined) {
+    // Aliased: the hook-named mock would trip rules-of-hooks inside a plain helper.
+    const detailMock = useCompetitionDetailMock;
+    const current = detailMock();
+    detailMock.mockReturnValue({
+      status: "success",
+      competition: { ...current.competition, sponsorName },
+    });
+  }
+
+  it("shows 'Sponsored by {sponsorName}' on the hero when the competition has one", () => {
+    withSponsor("Acme Ltd");
+    render(<CompetitionDetail competitionId={COMPETITION_ID} />);
+    expect(screen.getByText("Sponsored by Acme Ltd")).toBeInTheDocument();
+  });
+
+  it("shows no sponsor line when sponsorName is null, absent or blank", () => {
+    for (const value of [null, undefined, "   "]) {
+      withSponsor(value);
+      const { unmount } = render(<CompetitionDetail competitionId={COMPETITION_ID} />);
+      expect(screen.queryByText(/sponsored by/i)).not.toBeInTheDocument();
+      unmount();
+    }
+  });
+});
+
 describe("CompetitionDetail — WEB-3 item 6 back-to-dashboard link", () => {
   it("MUT-BACKLINK: the happy path renders a link back to /dashboard", () => {
     render(<CompetitionDetail competitionId={COMPETITION_ID} />);

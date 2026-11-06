@@ -3,6 +3,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Cropper, { type Area, type Point } from "react-easy-crop";
 import "react-easy-crop/react-easy-crop.css";
+import {
+  LOGO_PLATE_GUIDE,
+  LOGO_PLATE_RING_NOTE,
+  LOGO_SQUARE_NOTE,
+  type BannerGuides,
+} from "@/lib/competitionArtwork";
 import type { CropArea } from "@/lib/imageCrop";
 
 /**
@@ -30,20 +36,18 @@ import type { CropArea } from "@/lib/imageCrop";
  * accessibility bugs, and the platform already has them.
  */
 
-export interface SafeAreaFractions {
-  horizontal: number;
-  vertical: number;
-}
+const LOGO_OVERLAP_NOTE =
+  "The tinted corner is where the round logo sits over the banner in the app. Keep anything important out of it.";
 
 export function ImageCropDialog({
   open,
   imageSrc,
   aspect,
-  cropShape = "rect",
   title,
   instructions,
-  safeArea,
-  safeAreaNote,
+  guides,
+  guidesNote,
+  logoPlateGuide = false,
   confirmLabel = "Use this crop",
   onCancel,
   onConfirm,
@@ -51,13 +55,19 @@ export function ImageCropDialog({
   open: boolean;
   imageSrc: string;
   aspect: number;
-  cropShape?: "rect" | "round";
   title: string;
   instructions: string;
-  /** When given, draws the always-visible guide box described by
-   * `bannerSafeAreaFractions` — see `src/lib/competitionArtwork.ts`. */
-  safeArea?: SafeAreaFractions;
-  safeAreaNote?: string;
+  /** When given, draws the banner guides over the crop frame: a dashed
+   * safe-zone box plus a tinted bottom-left logo-overlap area. See
+   * `BANNER_GUIDES` in `src/lib/competitionArtwork.ts`. */
+  guides?: BannerGuides;
+  /** Plain-words legend for the two guides, shown under the cropper. */
+  guidesNote?: string;
+  /** Logo crop (COMP-BRAND-1): the frame stays a plain SQUARE (never a
+   * round mask — the apps show the whole square), at the fixed size in
+   * `LOGO_PLATE_GUIDE`, with a dashed circle drawn through its corners to
+   * show the round plate the whole square sits inside. */
+  logoPlateGuide?: boolean;
   confirmLabel?: string;
   onCancel: () => void;
   onConfirm: (area: CropArea) => void;
@@ -65,7 +75,10 @@ export function ImageCropDialog({
   const dialogRef = useRef<HTMLDialogElement>(null);
   const [crop, setCrop] = useState<Point>({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
-  const [cropSize, setCropSize] = useState<{ width: number; height: number } | null>(null);
+  const [cropSize, setCropSize] = useState<{
+    width: number;
+    height: number;
+  } | null>(null);
   const [areaPixels, setAreaPixels] = useState<CropArea | null>(null);
 
   // A new image starts from a clean pan/zoom rather than inheriting the
@@ -119,6 +132,33 @@ export function ImageCropDialog({
 
   if (!open) return null;
 
+  const cropper = (
+    <Cropper
+      image={imageSrc}
+      crop={crop}
+      zoom={zoom}
+      aspect={aspect}
+      cropShape="rect"
+      showGrid={!logoPlateGuide}
+      objectFit={logoPlateGuide ? "cover" : "contain"}
+      cropSize={
+        logoPlateGuide
+          ? {
+              width: LOGO_PLATE_GUIDE.frameSidePx,
+              height: LOGO_PLATE_GUIDE.frameSidePx,
+            }
+          : undefined
+      }
+      restrictPosition
+      minZoom={1}
+      maxZoom={4}
+      onCropChange={setCrop}
+      onZoomChange={setZoom}
+      onCropSizeChange={setCropSize}
+      onCropComplete={onCropComplete}
+    />
+  );
+
   return (
     <dialog
       ref={dialogRef}
@@ -130,37 +170,78 @@ export function ImageCropDialog({
       className="m-auto w-[min(40rem,calc(100vw-2rem))] rounded-3xl border border-border bg-card p-0 text-foreground backdrop:bg-brand-navy-deep/70"
     >
       <div className="p-5 sm:p-6">
-        <h2 id="crop-dialog-title" className="text-lg font-extrabold text-foreground">
+        <h2
+          id="crop-dialog-title"
+          className="text-lg font-extrabold text-foreground"
+        >
           {title}
         </h2>
         <p className="mt-1 text-sm text-muted-foreground">{instructions}</p>
 
-        <div className="relative mt-4 h-64 overflow-hidden rounded-xl bg-brand-navy-deep sm:h-80">
-          <Cropper
-            image={imageSrc}
-            crop={crop}
-            zoom={zoom}
-            aspect={aspect}
-            cropShape={cropShape}
-            showGrid={cropShape === "rect"}
-            restrictPosition
-            minZoom={1}
-            maxZoom={4}
-            onCropChange={setCrop}
-            onZoomChange={setZoom}
-            onCropSizeChange={setCropSize}
-            onCropComplete={onCropComplete}
-          />
-          {safeArea && cropSize ? (
+        <div
+          className={`relative mt-4 overflow-hidden rounded-xl bg-brand-navy-deep ${
+            logoPlateGuide ? "h-72" : "h-64 sm:h-80"
+          }`}
+        >
+          {logoPlateGuide ? (
             <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-              <div className="relative" style={{ width: cropSize.width, height: cropSize.height }}>
+              <div
+                data-testid="logo-plate-ring"
+                className="shrink-0 rounded-full border-2 border-dashed border-brand-gold/90 bg-white/15"
+                style={{
+                  width:
+                    LOGO_PLATE_GUIDE.frameSidePx *
+                    LOGO_PLATE_GUIDE.circleDiameterRatio,
+                  height:
+                    LOGO_PLATE_GUIDE.frameSidePx *
+                    LOGO_PLATE_GUIDE.circleDiameterRatio,
+                }}
+              />
+            </div>
+          ) : null}
+          {logoPlateGuide ? (
+            // The logo cropper lives in a box exactly the size of the square
+            // frame, centred, so the library's `cover` fit starts with the
+            // WHOLE of a square image inside the frame (not a crop into the
+            // middle of it), and the plate circle can be drawn around it.
+            <div
+              className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 overflow-hidden"
+              style={{
+                width: LOGO_PLATE_GUIDE.frameSidePx,
+                height: LOGO_PLATE_GUIDE.frameSidePx,
+              }}
+            >
+              {cropper}
+            </div>
+          ) : (
+            cropper
+          )}
+          {guides && cropSize ? (
+            <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+              <div
+                className="relative"
+                data-testid="banner-guides"
+                style={{ width: cropSize.width, height: cropSize.height }}
+              >
+                {/* Logo-overlap area: bottom-left, where the round logo
+                    sits over the banner in the app. Tinted, not dashed, so
+                    the two guides read as different things. */}
                 <div
+                  data-testid="banner-logo-overlap"
+                  className="absolute bottom-0 left-0 border border-brand-coral/80 bg-brand-coral/35"
+                  style={{
+                    width: `${guides.logoOverlap.width * 100}%`,
+                    height: `${guides.logoOverlap.height * 100}%`,
+                  }}
+                />
+                <div
+                  data-testid="banner-safe-zone"
                   className="absolute rounded-sm border-2 border-dashed border-brand-gold/90"
                   style={{
-                    left: `${((1 - safeArea.horizontal) / 2) * 100}%`,
-                    right: `${((1 - safeArea.horizontal) / 2) * 100}%`,
-                    top: `${((1 - safeArea.vertical) / 2) * 100}%`,
-                    bottom: `${((1 - safeArea.vertical) / 2) * 100}%`,
+                    left: `${guides.safeZone.insetX * 100}%`,
+                    right: `${guides.safeZone.insetX * 100}%`,
+                    top: `${guides.safeZone.insetY * 100}%`,
+                    bottom: `${guides.safeZone.insetY * 100}%`,
                   }}
                 />
               </div>
@@ -168,18 +249,49 @@ export function ImageCropDialog({
           ) : null}
         </div>
 
-        {safeArea && safeAreaNote ? (
-          <p className="mt-2 flex items-start gap-2 text-xs text-muted-foreground">
-            <span
-              className="mt-0.5 inline-block h-3 w-5 shrink-0 rounded-sm border-2 border-dashed border-brand-gold/90"
-              aria-hidden="true"
-            />
-            <span>{safeAreaNote}</span>
-          </p>
+        {logoPlateGuide ? (
+          <ul className="mt-2 space-y-1.5 text-xs text-muted-foreground">
+            <li className="flex items-start gap-2">
+              <span
+                className="mt-0.5 inline-block size-3.5 shrink-0 rounded-full border-2 border-dashed border-brand-gold/90"
+                aria-hidden="true"
+              />
+              <span>{LOGO_PLATE_RING_NOTE}</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span
+                className="mt-0.5 inline-block size-3 shrink-0 border-2 border-brand-navy"
+                aria-hidden="true"
+              />
+              <span>{LOGO_SQUARE_NOTE}</span>
+            </li>
+          </ul>
+        ) : null}
+
+        {guides && guidesNote ? (
+          <ul className="mt-2 space-y-1.5 text-xs text-muted-foreground">
+            <li className="flex items-start gap-2">
+              <span
+                className="mt-0.5 inline-block h-3 w-5 shrink-0 rounded-sm border-2 border-dashed border-brand-gold/90"
+                aria-hidden="true"
+              />
+              <span>{guidesNote}</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span
+                className="mt-0.5 inline-block h-3 w-5 shrink-0 border border-brand-coral/80 bg-brand-coral/35"
+                aria-hidden="true"
+              />
+              <span>{LOGO_OVERLAP_NOTE}</span>
+            </li>
+          </ul>
         ) : null}
 
         <div className="mt-4">
-          <label htmlFor="crop-zoom" className="text-sm font-semibold text-foreground">
+          <label
+            htmlFor="crop-zoom"
+            className="text-sm font-semibold text-foreground"
+          >
             Zoom
           </label>
           <input
