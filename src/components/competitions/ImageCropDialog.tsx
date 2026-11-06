@@ -75,7 +75,10 @@ export function ImageCropDialog({
   const dialogRef = useRef<HTMLDialogElement>(null);
   const [crop, setCrop] = useState<Point>({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
-  const [cropSize, setCropSize] = useState<{ width: number; height: number } | null>(null);
+  const [cropSize, setCropSize] = useState<{
+    width: number;
+    height: number;
+  } | null>(null);
   const [areaPixels, setAreaPixels] = useState<CropArea | null>(null);
 
   // A new image starts from a clean pan/zoom rather than inheriting the
@@ -129,6 +132,33 @@ export function ImageCropDialog({
 
   if (!open) return null;
 
+  const cropper = (
+    <Cropper
+      image={imageSrc}
+      crop={crop}
+      zoom={zoom}
+      aspect={aspect}
+      cropShape="rect"
+      showGrid={!logoPlateGuide}
+      objectFit={logoPlateGuide ? "cover" : "contain"}
+      cropSize={
+        logoPlateGuide
+          ? {
+              width: LOGO_PLATE_GUIDE.frameSidePx,
+              height: LOGO_PLATE_GUIDE.frameSidePx,
+            }
+          : undefined
+      }
+      restrictPosition
+      minZoom={1}
+      maxZoom={4}
+      onCropChange={setCrop}
+      onZoomChange={setZoom}
+      onCropSizeChange={setCropSize}
+      onCropComplete={onCropComplete}
+    />
+  );
+
   return (
     <dialog
       ref={dialogRef}
@@ -140,7 +170,10 @@ export function ImageCropDialog({
       className="m-auto w-[min(40rem,calc(100vw-2rem))] rounded-3xl border border-border bg-card p-0 text-foreground backdrop:bg-brand-navy-deep/70"
     >
       <div className="p-5 sm:p-6">
-        <h2 id="crop-dialog-title" className="text-lg font-extrabold text-foreground">
+        <h2
+          id="crop-dialog-title"
+          className="text-lg font-extrabold text-foreground"
+        >
           {title}
         </h2>
         <p className="mt-1 text-sm text-muted-foreground">{instructions}</p>
@@ -150,38 +183,39 @@ export function ImageCropDialog({
             logoPlateGuide ? "h-72" : "h-64 sm:h-80"
           }`}
         >
-          <Cropper
-            image={imageSrc}
-            crop={crop}
-            zoom={zoom}
-            aspect={aspect}
-            cropShape="rect"
-            showGrid={!logoPlateGuide}
-            cropSize={
-              logoPlateGuide
-                ? { width: LOGO_PLATE_GUIDE.frameSidePx, height: LOGO_PLATE_GUIDE.frameSidePx }
-                : undefined
-            }
-            restrictPosition
-            minZoom={1}
-            maxZoom={4}
-            onCropChange={setCrop}
-            onZoomChange={setZoom}
-            onCropSizeChange={setCropSize}
-            onCropComplete={onCropComplete}
-          />
           {logoPlateGuide ? (
             <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
               <div
                 data-testid="logo-plate-ring"
-                className="shrink-0 rounded-full border-2 border-dashed border-brand-gold/90 bg-white/10"
+                className="shrink-0 rounded-full border-2 border-dashed border-brand-gold/90 bg-white/15"
                 style={{
-                  width: LOGO_PLATE_GUIDE.frameSidePx * LOGO_PLATE_GUIDE.circleDiameterRatio,
-                  height: LOGO_PLATE_GUIDE.frameSidePx * LOGO_PLATE_GUIDE.circleDiameterRatio,
+                  width:
+                    LOGO_PLATE_GUIDE.frameSidePx *
+                    LOGO_PLATE_GUIDE.circleDiameterRatio,
+                  height:
+                    LOGO_PLATE_GUIDE.frameSidePx *
+                    LOGO_PLATE_GUIDE.circleDiameterRatio,
                 }}
               />
             </div>
           ) : null}
+          {logoPlateGuide ? (
+            // The logo cropper lives in a box exactly the size of the square
+            // frame, centred, so the library's `cover` fit starts with the
+            // WHOLE of a square image inside the frame (not a crop into the
+            // middle of it), and the plate circle can be drawn around it.
+            <div
+              className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 overflow-hidden"
+              style={{
+                width: LOGO_PLATE_GUIDE.frameSidePx,
+                height: LOGO_PLATE_GUIDE.frameSidePx,
+              }}
+            >
+              {cropper}
+            </div>
+          ) : (
+            cropper
+          )}
           {guides && cropSize ? (
             <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
               <div
@@ -254,7 +288,10 @@ export function ImageCropDialog({
         ) : null}
 
         <div className="mt-4">
-          <label htmlFor="crop-zoom" className="text-sm font-semibold text-foreground">
+          <label
+            htmlFor="crop-zoom"
+            className="text-sm font-semibold text-foreground"
+          >
             Zoom
           </label>
           <input

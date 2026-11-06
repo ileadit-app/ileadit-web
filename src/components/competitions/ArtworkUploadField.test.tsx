@@ -228,6 +228,8 @@ describe("ArtworkUploadField — banner crop guides (COMP-BRAND-1)", () => {
     // Square frame: never the library's round mask.
     expect(cropperProps.current.cropShape).toBe("rect");
     expect(cropperProps.current.aspect).toBe(1);
+    // Starts with the whole of a square image inside the frame.
+    expect(cropperProps.current.objectFit).toBe("cover");
     expect(cropperProps.current.cropSize).toEqual({
       width: LOGO_PLATE_GUIDE.frameSidePx,
       height: LOGO_PLATE_GUIDE.frameSidePx,
