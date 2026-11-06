@@ -29,6 +29,26 @@ describe("CompetitionHero — sponsor line (WEB-SPONSOR-NAME)", () => {
   });
 });
 
+describe("CompetitionHero — logo plate (COMP-BRAND-1)", () => {
+  it("is a 64 px round plate with the whole logo fitted inside (contain, not cover)", () => {
+    const { container } = render(
+      <CompetitionHero competition={{ ...base, imageUrl: "https://storage.example/logo.png" }} />,
+    );
+    const plate = screen.getByTestId("hero-logo-plate");
+    expect(plate.style.width).toBe("64px");
+    expect(plate.style.height).toBe("64px");
+    expect(plate.className).toContain("rounded-full");
+
+    const img = container.querySelector("img") as HTMLImageElement;
+    expect(img).toHaveAttribute("src", "https://storage.example/logo.png");
+    expect(img.className).toContain("object-contain");
+    expect(img.className).not.toContain("object-cover");
+    // Inside the square inscribed in the plate's inner circle: (64 − 4) / √2 ≈ 42.
+    expect(parseFloat(img.style.width)).toBeLessThanOrEqual((64 - 4) / Math.SQRT2);
+    expect(parseFloat(img.style.width)).toBeGreaterThan(40);
+  });
+});
+
 describe("CompetitionHero — banner shown at 3:1 (COMP-BRAND-1)", () => {
   const withBanner = {
     ...base,

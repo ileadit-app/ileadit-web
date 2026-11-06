@@ -364,7 +364,10 @@ function ArtworkPreview({
   const { startDate, endDate } = previewDates(startTimeValue, durationDays);
   const competition = {
     name: name.trim() || "Untitled competition",
-    sponsorName: sponsorName.trim() || null,
+    // While the sponsor name is invalid (over 40 characters, or control
+    // characters) the preview behaves as if it were blank: the over-long
+    // "Sponsored by …" line is not rendered until the value is valid again.
+    sponsorName: validateSponsorName(sponsorName) === null ? sponsorName.trim() || null : null,
     imageUrl,
     backgroundImageUrl,
     // Anything created here starts in the future, so `scheduled` is what

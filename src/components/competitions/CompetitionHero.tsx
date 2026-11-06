@@ -32,7 +32,7 @@ function useTickingNow(intervalMs: number = 60_000): Date {
 
 /**
  * The competition hero — the banner band, the status/date line, the name,
- * and the circular tile that overlaps the band's bottom edge.
+ * and the round logo plate that overlaps the band's bottom edge.
  *
  * Extracted verbatim from `CompetitionDetail.tsx` so the creation form's
  * artwork preview can render THE hero rather than a lookalike. That
@@ -82,6 +82,17 @@ const HERO_TEXT_BLOCK_CLASS = {
 /** Banner shape: 3:1, same as `BANNER_ASPECT` in `competitionArtwork.ts`. */
 const BANNER_STRIP_CLASS = "aspect-[3/1]";
 
+/**
+ * The logo plate, matching the app's details screen (COMP-BRAND-1): a
+ * 64 px round white plate with a thin ring. The WHOLE logo is fitted
+ * (`object-contain`) inside the square inscribed in the plate's inner
+ * circle, so a square logo's corners stay inside the ring and nothing is
+ * cropped. Inner circle = 64 − 2 × 2 px border = 60 px; the inscribed
+ * square is 60 / √2 ≈ 42 px.
+ */
+const HERO_LOGO_PLATE_PX = 64;
+const HERO_LOGO_INNER_SQUARE_PX = 42;
+
 function HeroLogo({
   imageUrl,
   className,
@@ -91,11 +102,18 @@ function HeroLogo({
 }) {
   return (
     <span
-      className={`flex size-14 items-center justify-center overflow-hidden rounded-full bg-card shadow-lg ring-4 ring-white ${className}`}
+      data-testid="hero-logo-plate"
+      style={{ width: HERO_LOGO_PLATE_PX, height: HERO_LOGO_PLATE_PX }}
+      className={`flex shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-border bg-white shadow-lg ${className}`}
     >
       {imageUrl ? (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={imageUrl} alt="" className="h-full w-full object-cover" />
+        <img
+          src={imageUrl}
+          alt=""
+          style={{ width: HERO_LOGO_INNER_SQUARE_PX, height: HERO_LOGO_INNER_SQUARE_PX }}
+          className="object-contain"
+        />
       ) : (
         <LogoMark className="h-8 w-8" />
       )}
@@ -248,7 +266,7 @@ export function CompetitionHero({
       </div>
 
       <div className="mx-auto max-w-5xl px-5 sm:px-6">
-        <HeroLogo imageUrl={competition.imageUrl} className="relative -mt-7" />
+        <HeroLogo imageUrl={competition.imageUrl} className="relative -mt-8" />
       </div>
     </div>
   );

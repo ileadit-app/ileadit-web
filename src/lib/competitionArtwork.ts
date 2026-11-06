@@ -21,25 +21,21 @@
  * ------------------------------------------------------------------ */
 
 /**
- * `imageUrl` — the circular tile/avatar. **1:1, and it is a circle.**
+ * `imageUrl` — the logo. **Uploaded as a 1:1 square, and NEVER cropped to
+ * a circle** (COMP-BRAND-1, approved by Paul on 5 Nov 2026; build notes in
+ * `qa-refs/compbrand/COMP-BRAND-1-build-notes.md`).
  *
- * This one is not in doubt. Every render site on both platforms is a
- * square box with a 50% corner radius:
+ * The apps show it on a round white plate with a thin ring: the WHOLE
+ * uploaded square is fitted (aspect-fit) inside the square inscribed in
+ * the plate's inner circle, so a square photo's corners stay visible
+ * inside the ring, just smaller. Nothing is cut off. The plate is 52 px on
+ * the list card and 64 px on the details, leaderboard and result screens;
+ * the web detail hero matches the 64 px one (`CompetitionHero.tsx`).
  *
- * | Where | Size | Evidence |
- * |---|---|---|
- * | Android leaderboard header | 118dp × 118dp | `app/src/main/res/layout/activity_competition_leaderboard.xml:66-74` (`ShapeableImageView`, `shapeAppearance="@style/circularImageView"`) |
- * | Android competition list row | 64dp × 64dp | `app/src/main/res/layout/item_competition.xml:18-27` |
- * | Android joined-list row | 64dp × 64dp | `app/src/main/res/layout/item_joined_competition.xml:21-30` |
- * | Android details dialog | 96dp × 96dp | `app/src/main/res/layout/dialog_competition_details.xml:17-26` |
- * | Android joined dialog | 96dp × 96dp | `app/src/main/res/layout/dialog_joined_competition_details.xml:17-26` |
- * | Web detail hero | `size-14` (56 × 56 px), `rounded-full` | `src/components/competitions/CompetitionHero.tsx` |
- *
- * `@style/circularImageView` is `cornerFamily=rounded, cornerSize=50%`
- * (`app/src/main/res/values/styles.xml:192-196`), i.e. a true circle.
- * Every Android site uses `scaleType="centerCrop"`; the web site uses
- * `object-cover` — the same behaviour. Cropping to 1:1 with a round mask
- * is therefore exactly what both platforms show, at every size.
+ * So the crop step only chooses which square to upload; the circle is a
+ * guide on top of it (`LOGO_PLATE_GUIDE`), not a mask. An earlier version
+ * masked the crop to a circle and said "shown as a circle everywhere",
+ * which made organisers expect the corners to be trimmed.
  */
 export const TILE_ASPECT = 1;
 
@@ -303,6 +299,33 @@ export const BANNER_UPLOAD_GUIDANCE =
 export const LOGO_UPLOAD_GUIDANCE =
   "Logo: square, 512 × 512 px, ideally a transparent PNG. It's shown in full inside a circle.";
 
+/** Instructions line in the logo crop dialog (COMP-BRAND-1). Exact words
+ * from the ticket. */
+export const LOGO_CROP_INSTRUCTIONS =
+  "Your logo is shown whole on a round white plate in the app. Keep it inside the square; a transparent PNG works best.";
+
+/** Legend lines under the logo crop frame, one per guide. */
+export const LOGO_PLATE_RING_NOTE =
+  "The dashed circle is the edge of the round white plate in the app.";
+export const LOGO_SQUARE_NOTE =
+  "The square is your whole logo. Its corners sit just inside the ring, so nothing is cut off.";
+
+/**
+ * Geometry of the logo crop guide. The crop frame IS the square inscribed
+ * in the plate's inner circle, so the circle that passes through the
+ * frame's four corners has a diameter of `frameSide × √2`. The frame is a
+ * fixed pixel size (passed to the cropper as `cropSize`) so the guide can
+ * be drawn from constants without measuring anything; it is sized so the
+ * circle fits the dialog's crop area (288 px tall, ≥ 248 px wide on a
+ * 320 px phone) with a margin.
+ */
+export const LOGO_PLATE_GUIDE = {
+  /** Side of the square crop frame, in CSS px. */
+  frameSidePx: 176,
+  /** Circle diameter as a multiple of the frame side: √2. */
+  circleDiameterRatio: Math.SQRT2,
+} as const;
+
 /* ------------------------------------------------------------------ *
  * Draft competition ids and storage paths
  * ------------------------------------------------------------------ */
@@ -406,9 +429,9 @@ export function artworkStoragePath(
  * The mime type the crop is re-encoded to.
  *
  * PNG when the source could carry transparency (PNG/WebP/GIF) and the
- * output is the tile — the tile is masked into a circle over whatever
- * background the app happens to use, so a logo with a transparent
- * surround must stay transparent or it gains a white square's corners.
+ * output is the tile — the logo sits on a white plate in the app, so a
+ * transparent surround must stay transparent rather than gaining an opaque
+ * square of its own.
  * JPEG otherwise, including for every banner: the banner is a full-bleed
  * photographic band sitting on solid navy under a gradient overlay, where
  * alpha buys nothing and PNG would multiply the file size of a 1536px

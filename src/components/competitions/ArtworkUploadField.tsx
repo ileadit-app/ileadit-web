@@ -10,6 +10,7 @@ import {
   artworkStoragePath,
   BANNER_GUIDES,
   isBelowMinimumResolution,
+  LOGO_CROP_INSTRUCTIONS,
   losesAnimationOnCrop,
   lowResolutionWarning,
   validateArtworkFile,
@@ -340,13 +341,13 @@ export function ArtworkUploadField({
           open
           imageSrc={phase.imageSrc}
           aspect={artworkAspect(kind)}
-          cropShape={kind === "tile" ? "round" : "rect"}
           title={`Crop the ${label.toLowerCase()}`}
           instructions={
             kind === "tile"
-              ? "Drag to reposition, pinch or use the slider to zoom. This one is shown as a circle everywhere in the app, on web and on Android."
+              ? LOGO_CROP_INSTRUCTIONS
               : "Drag to reposition, pinch or use the slider to zoom. The banner is 3:1. The app shows it in full on list cards and trims it slightly (to 13:5) on the details and leaderboard screens."
           }
+          logoPlateGuide={kind === "tile"}
           guides={guides}
           guidesNote={
             guides

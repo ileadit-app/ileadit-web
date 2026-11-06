@@ -3,7 +3,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Cropper, { type Area, type Point } from "react-easy-crop";
 import "react-easy-crop/react-easy-crop.css";
-import type { BannerGuides } from "@/lib/competitionArtwork";
+import {
+  LOGO_PLATE_GUIDE,
+  LOGO_PLATE_RING_NOTE,
+  LOGO_SQUARE_NOTE,
+  type BannerGuides,
+} from "@/lib/competitionArtwork";
 import type { CropArea } from "@/lib/imageCrop";
 
 /**
@@ -38,11 +43,11 @@ export function ImageCropDialog({
   open,
   imageSrc,
   aspect,
-  cropShape = "rect",
   title,
   instructions,
   guides,
   guidesNote,
+  logoPlateGuide = false,
   confirmLabel = "Use this crop",
   onCancel,
   onConfirm,
@@ -50,7 +55,6 @@ export function ImageCropDialog({
   open: boolean;
   imageSrc: string;
   aspect: number;
-  cropShape?: "rect" | "round";
   title: string;
   instructions: string;
   /** When given, draws the banner guides over the crop frame: a dashed
@@ -59,6 +63,11 @@ export function ImageCropDialog({
   guides?: BannerGuides;
   /** Plain-words legend for the two guides, shown under the cropper. */
   guidesNote?: string;
+  /** Logo crop (COMP-BRAND-1): the frame stays a plain SQUARE (never a
+   * round mask — the apps show the whole square), at the fixed size in
+   * `LOGO_PLATE_GUIDE`, with a dashed circle drawn through its corners to
+   * show the round plate the whole square sits inside. */
+  logoPlateGuide?: boolean;
   confirmLabel?: string;
   onCancel: () => void;
   onConfirm: (area: CropArea) => void;
@@ -136,14 +145,23 @@ export function ImageCropDialog({
         </h2>
         <p className="mt-1 text-sm text-muted-foreground">{instructions}</p>
 
-        <div className="relative mt-4 h-64 overflow-hidden rounded-xl bg-brand-navy-deep sm:h-80">
+        <div
+          className={`relative mt-4 overflow-hidden rounded-xl bg-brand-navy-deep ${
+            logoPlateGuide ? "h-72" : "h-64 sm:h-80"
+          }`}
+        >
           <Cropper
             image={imageSrc}
             crop={crop}
             zoom={zoom}
             aspect={aspect}
-            cropShape={cropShape}
-            showGrid={cropShape === "rect"}
+            cropShape="rect"
+            showGrid={!logoPlateGuide}
+            cropSize={
+              logoPlateGuide
+                ? { width: LOGO_PLATE_GUIDE.frameSidePx, height: LOGO_PLATE_GUIDE.frameSidePx }
+                : undefined
+            }
             restrictPosition
             minZoom={1}
             maxZoom={4}
@@ -152,6 +170,18 @@ export function ImageCropDialog({
             onCropSizeChange={setCropSize}
             onCropComplete={onCropComplete}
           />
+          {logoPlateGuide ? (
+            <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+              <div
+                data-testid="logo-plate-ring"
+                className="shrink-0 rounded-full border-2 border-dashed border-brand-gold/90 bg-white/10"
+                style={{
+                  width: LOGO_PLATE_GUIDE.frameSidePx * LOGO_PLATE_GUIDE.circleDiameterRatio,
+                  height: LOGO_PLATE_GUIDE.frameSidePx * LOGO_PLATE_GUIDE.circleDiameterRatio,
+                }}
+              />
+            </div>
+          ) : null}
           {guides && cropSize ? (
             <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
               <div
@@ -184,6 +214,25 @@ export function ImageCropDialog({
             </div>
           ) : null}
         </div>
+
+        {logoPlateGuide ? (
+          <ul className="mt-2 space-y-1.5 text-xs text-muted-foreground">
+            <li className="flex items-start gap-2">
+              <span
+                className="mt-0.5 inline-block size-3.5 shrink-0 rounded-full border-2 border-dashed border-brand-gold/90"
+                aria-hidden="true"
+              />
+              <span>{LOGO_PLATE_RING_NOTE}</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span
+                className="mt-0.5 inline-block size-3 shrink-0 border-2 border-brand-navy"
+                aria-hidden="true"
+              />
+              <span>{LOGO_SQUARE_NOTE}</span>
+            </li>
+          </ul>
+        ) : null}
 
         {guides && guidesNote ? (
           <ul className="mt-2 space-y-1.5 text-xs text-muted-foreground">
