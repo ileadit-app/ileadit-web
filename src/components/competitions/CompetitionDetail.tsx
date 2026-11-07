@@ -98,6 +98,10 @@ function CompetitionDetailContent({ competitionId, uid }: { competitionId: strin
 
   const { competition } = competitionState;
   const status = competition.status;
+  // INVITE-2: for an invite-only competition nobody can join without a link,
+  // so for the organiser the invite panel IS the next step. It moves to the
+  // top of the page (rendered once, here or at the bottom, never both).
+  const inviteFirst = competition.inviteOnly && organiserCapability === "organiser";
 
   return (
     <div className="pb-28 sm:pb-16">
@@ -115,6 +119,16 @@ function CompetitionDetailContent({ competitionId, uid }: { competitionId: strin
           <ArrowLeft className="size-4" aria-hidden="true" />
           Back to dashboard
         </Link>
+
+        {inviteFirst ? (
+          <div className="mt-4" data-testid="invite-first">
+            <p className="mb-3 text-sm font-semibold text-foreground">
+              Next step: create an invite link and send it to the people you want in. Nobody can join
+              this competition without one.
+            </p>
+            <InvitePanel competitionId={competitionId} />
+          </div>
+        ) : null}
 
         {/* The Today Card (W7-TODAY) only makes sense while there's a
             "today" to report on — during scheduled, nothing has started
@@ -166,7 +180,7 @@ function CompetitionDetailContent({ competitionId, uid }: { competitionId: strin
             Deliberately rendered regardless of the organiser's own
             membership/leaderboard state above — an organiser managing
             invites may not be a player in their own competition at all. */}
-        {organiserCapability === "organiser" ? (
+        {organiserCapability === "organiser" && !inviteFirst ? (
           <div className="mt-4">
             <InvitePanel competitionId={competitionId} />
           </div>

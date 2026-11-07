@@ -64,6 +64,10 @@ export interface CompetitionDetailDoc {
    * engine's `createCompetition` only. `null` when absent or malformed;
    * absent on every ordinary (and every older) competition. */
   localTo: LocalTo | null;
+  /** INVITE-1: the engine writes `inviteOnly: true` or nothing. Read
+   * strictly — only the boolean `true` counts; absent, `false`, `"true"`
+   * and everything else is a public competition. */
+  inviteOnly: boolean;
   status: CompetitionStatus | null;
   /** `YYYY-MM-DD`, engine-derived, the competition's own calendar. */
   startDate: string | null;
@@ -125,6 +129,7 @@ export function useCompetitionDetail(competitionId: string): CompetitionDetailSt
               typeof data.backgroundImageUrl === "string" ? data.backgroundImageUrl : null,
             sponsorName: asNonBlankString(data.sponsorName),
             localTo: parseLocalTo(data.localTo),
+            inviteOnly: data.inviteOnly === true,
             status: asCompetitionStatus(data.status),
             startDate: typeof data.startDate === "string" ? data.startDate : null,
             endDate: typeof data.endDate === "string" ? data.endDate : null,

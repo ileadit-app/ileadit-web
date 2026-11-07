@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { LogoMark } from "@/components/brand/Logo";
 import { CompetitionStatusChip } from "@/components/status/CompetitionStatusChip";
+import { InviteOnlyBadge } from "@/components/status/InviteOnlyBadge";
 import {
   competitionActiveTimeLabel,
   competitionScheduledTimeLabel,
@@ -143,6 +144,9 @@ export interface CompetitionHeroCompetition {
   /** LOCAL-2 — optional; when set, a "Local to {town} · {n} km" line shows
    * under the name. Read from the competition document's `localTo` map. */
   localTo?: { cityName: string; radiusKm: number } | null;
+  /** INVITE-2 — optional; the "Invite only" badge shows beside the status
+   * chip only for the boolean `true` (see `InviteOnlyBadge`). */
+  inviteOnly?: boolean;
 }
 
 function dateLineFor(
@@ -200,6 +204,7 @@ export function CompetitionHero({
           startDate={competition.startDate}
           timeZone={competition.timeZone}
         />
+        <InviteOnlyBadge inviteOnly={competition.inviteOnly} />
         {/* `tabular-nums` — WEB-4 item 2's "no layout shift" requirement:
             the last-day countdown's digits change every tick
             (`5h 12m` -> `5h 11m`), and proportional digit widths in the
