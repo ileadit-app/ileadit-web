@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { AlertCircle, PlayCircle } from "lucide-react";
+import { AlertCircle } from "lucide-react";
 import { useUser } from "@/context/AuthContext";
 import { LogoMark } from "@/components/brand/Logo";
 import { CompetitionStatusChip } from "@/components/status/CompetitionStatusChip";
@@ -16,6 +16,8 @@ import {
   formatInviteCodeForDisplay,
   type InvitePreviewAvailable,
 } from "@/lib/invites";
+import { StoreButtons } from "@/components/StoreButtons";
+import { APP_STORE_URL, PLAY_STORE_URL, storeAvailabilityCopy } from "@/lib/storeLinks";
 import { InviteQrCode } from "./InviteQrCode";
 
 /**
@@ -178,39 +180,18 @@ function GenericErrorInvite() {
 }
 
 /**
- * Placeholder pattern deliberately mirrored (not imported) from
- * `src/app/download/page.tsx` — no real Play Store listing exists yet
- * (`PLAY_STORE_URL` is `null` there too). Swap both this and `/download`'s
- * copy in together once a real listing URL exists; don't fix one and leave
- * the other stale.
+ * Store buttons and wording come from `src/lib/storeLinks.ts`; no button for
+ * a store that has no listing yet.
  */
 function GetTheAppBlock() {
-  const PLAY_STORE_URL: string | null = null;
   return (
     <div className="mt-8 rounded-3xl border border-dashed border-border bg-muted/40 p-5 text-left">
       <p className="text-xs font-bold uppercase tracking-wide text-coral-text">Get the app</p>
       <p className="mt-1 text-sm text-muted-foreground">
-        Free to download. Available on Android today — walking is the whole game, and nobody but
-        you ever sees your step count.
+        Free to download. {storeAvailabilityCopy(PLAY_STORE_URL, APP_STORE_URL)} Walking is the
+        whole game, and nobody but you ever sees your step count.
       </p>
-      {PLAY_STORE_URL ? (
-        <a
-          href={PLAY_STORE_URL}
-          className="mt-3 inline-flex h-11 items-center gap-2 rounded-full border border-[rgba(25,47,95,0.15)] bg-brand-gold px-5 text-sm font-bold text-brand-navy transition-colors hover:bg-brand-gold/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-navy"
-        >
-          <PlayCircle className="size-4" aria-hidden="true" />
-          Get it on Google Play
-        </a>
-      ) : (
-        <div
-          role="note"
-          aria-label="Placeholder — Play Store link not yet available"
-          className="mt-3 inline-flex h-11 cursor-not-allowed items-center gap-2 rounded-full border-2 border-dashed border-brand-coral/50 bg-brand-coral/5 px-5 text-sm font-bold text-coral-text"
-        >
-          <PlayCircle className="size-4" aria-hidden="true" />
-          Get it on Google Play — PLACEHOLDER LINK
-        </div>
-      )}
+      <StoreButtons className="mt-3" />
     </div>
   );
 }

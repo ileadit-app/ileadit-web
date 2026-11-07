@@ -1,12 +1,15 @@
-import Link from "next/link";
-import { Apple, PlayCircle } from "lucide-react";
+import { StoreButtons } from "@/components/StoreButtons";
+import {
+  APP_STORE_URL,
+  PLAY_STORE_URL,
+  storeAvailabilityCopy,
+} from "@/lib/storeLinks";
 
 /**
- * Deviation from the design spec: the spec pointed both store buttons at
- * `href="#"` (dead links). This repo has a real `/download` page (App
- * Store / Play Store links land there once they exist), so both CTAs go
- * there instead — a `#` link that does nothing fails "no non-functional
- * control presented as working."
+ * Store buttons and the availability sentence both come from
+ * `src/lib/storeLinks.ts`. While no listing is public there are no buttons,
+ * just the early-access sentence — no dead `#` links and no buttons that
+ * lead to another page pretending to be a store.
  */
 export function DownloadSection() {
   return (
@@ -30,22 +33,10 @@ export function DownloadSection() {
           workplace in whenever you&apos;re ready.
         </p>
 
-        <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-          <Link
-            href="/download"
-            className="inline-flex h-12 items-center gap-2 rounded-full border border-on-navy-border bg-white/5 px-6 text-sm font-bold text-on-navy-foreground transition-colors hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
-          >
-            <Apple className="size-5" aria-hidden="true" />
-            Download on the App Store
-          </Link>
-          <Link
-            href="/download"
-            className="inline-flex h-12 items-center gap-2 rounded-full border border-on-navy-border bg-white/5 px-6 text-sm font-bold text-on-navy-foreground transition-colors hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
-          >
-            <PlayCircle className="size-5" aria-hidden="true" />
-            Get it on Google Play
-          </Link>
-        </div>
+        <p className="mx-auto mt-4 max-w-xl text-base text-on-navy-muted">
+          {storeAvailabilityCopy(PLAY_STORE_URL, APP_STORE_URL)}
+        </p>
+        <StoreButtons tone="dark" className="mt-8 justify-center" />
       </div>
     </section>
   );
