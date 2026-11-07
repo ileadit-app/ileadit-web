@@ -1,5 +1,6 @@
 import { httpsCallable } from "firebase/functions";
 import { getFunctionsClient } from "./functions";
+import { DEFAULT_LOCAL_RADIUS_KM } from "./localTo";
 import { toCreateCompetitionFailure, type CreateCompetitionFailure } from "./createCompetitionErrors";
 
 /**
@@ -9,6 +10,9 @@ import { toCreateCompetitionFailure, type CreateCompetitionFailure } from "./cre
  *
  *   createCompetition({ name, startTime, durationDays, timeZone?,
  *     description?, imageUrl?, backgroundImageUrl?, sponsorName? })
+ *
+ * `localToCityId` + `localRadiusKm` (LOCAL-2, engine LOCAL-1, built in
+ * parallel): optional, both or neither — see the input type below.
  *
  * `sponsorName` (WEB-SPONSOR-NAME, COMP-BRAND-1, 5 Nov 2026) is added to
  * the engine contract in parallel with this change: optional string,
@@ -95,6 +99,14 @@ export interface CreateCompetitionInput {
    * omitted from the payload when blank — callers may pass the raw field
    * value. See `validateSponsorName` for the limits. */
   sponsorName?: string;
+  /** Optional "Local to" (LOCAL-2 / engine LOCAL-1): a gazetteer city id
+   * from `searchCities`. BOTH OR NEITHER with `localRadiusKm`: the wrapper
+   * sends the pair only when a town is given, and a radius without a town
+   * is dropped rather than sent alone. The engine writes `localTo` itself;
+   * clients can never write it. */
+  localToCityId?: number;
+  /** Integer km, engine range 5-50, default 25. Only sent with a town. */
+  localRadiusKm?: number;
 }
 
 export type CreateCompetitionOutcome =
@@ -116,6 +128,15 @@ export async function createCompetition(input: CreateCompetitionInput): Promise<
     ...(input.imageUrl ? { imageUrl: input.imageUrl } : {}),
     ...(input.backgroundImageUrl ? { backgroundImageUrl: input.backgroundImageUrl } : {}),
     ...(sponsorName ? { sponsorName } : {}),
+    // Both or neither (LOCAL-1): only ever sent together, and only when a
+    // town was picked. The radius falls back to the engine default so a
+    // town can never go out without it.
+    ...(input.localToCityId !== undefined
+      ? {
+          localToCityId: input.localToCityId,
+          localRadiusKm: input.localRadiusKm ?? DEFAULT_LOCAL_RADIUS_KM,
+        }
+      : {}),
     // Deliberately absent: startDate, endDate, status, playerCount,
     // configVersion, finalisedAt, winnerIds — all engine-derived, per this
     // file's header comment. Do not add any of them here.

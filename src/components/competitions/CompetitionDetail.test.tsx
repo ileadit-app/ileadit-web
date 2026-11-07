@@ -106,6 +106,32 @@ describe("CompetitionDetail — sponsor line (WEB-SPONSOR-NAME r2)", () => {
   });
 });
 
+describe("CompetitionDetail — Local to line (LOCAL-2)", () => {
+  function withLocalTo(localTo: unknown) {
+    const detailMock = useCompetitionDetailMock;
+    const current = detailMock();
+    detailMock.mockReturnValue({
+      status: "success",
+      competition: { ...current.competition, localTo },
+    });
+  }
+
+  it("shows 'Local to {cityName} · {radiusKm} km' when localTo is set", () => {
+    withLocalTo({ cityId: 2644688, cityName: "Leeds", countryIso2: "GB", radiusKm: 25 });
+    render(<CompetitionDetail competitionId={COMPETITION_ID} />);
+    expect(screen.getByText("Local to Leeds · 25 km")).toBeInTheDocument();
+  });
+
+  it("shows no Local to line when localTo is null or absent", () => {
+    for (const value of [null, undefined]) {
+      withLocalTo(value);
+      const { unmount } = render(<CompetitionDetail competitionId={COMPETITION_ID} />);
+      expect(screen.queryByText(/local to/i)).not.toBeInTheDocument();
+      unmount();
+    }
+  });
+});
+
 describe("CompetitionDetail — WEB-3 item 6 back-to-dashboard link", () => {
   it("MUT-BACKLINK: the happy path renders a link back to /dashboard", () => {
     render(<CompetitionDetail competitionId={COMPETITION_ID} />);

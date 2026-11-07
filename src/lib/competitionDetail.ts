@@ -11,6 +11,7 @@ import {
 } from "firebase/firestore";
 import { getFirebaseDb } from "./firebase";
 import type { CompetitionStatus } from "./competitions";
+import { parseLocalTo, type LocalTo } from "./localTo";
 
 export type { CompetitionStatus } from "./competitions";
 
@@ -59,6 +60,10 @@ export interface CompetitionDetailDoc {
    * shows "Sponsored by …" only for a real value. Optional on the engine
    * side, and absent on every competition created before it shipped. */
   sponsorName: string | null;
+  /** LOCAL-1: `{ cityId, cityName, countryIso2, radiusKm }`, written by the
+   * engine's `createCompetition` only. `null` when absent or malformed;
+   * absent on every ordinary (and every older) competition. */
+  localTo: LocalTo | null;
   status: CompetitionStatus | null;
   /** `YYYY-MM-DD`, engine-derived, the competition's own calendar. */
   startDate: string | null;
@@ -119,6 +124,7 @@ export function useCompetitionDetail(competitionId: string): CompetitionDetailSt
             backgroundImageUrl:
               typeof data.backgroundImageUrl === "string" ? data.backgroundImageUrl : null,
             sponsorName: asNonBlankString(data.sponsorName),
+            localTo: parseLocalTo(data.localTo),
             status: asCompetitionStatus(data.status),
             startDate: typeof data.startDate === "string" ? data.startDate : null,
             endDate: typeof data.endDate === "string" ? data.endDate : null,

@@ -9,6 +9,7 @@ import {
   formatShortDate,
 } from "@/lib/competitionDates";
 import type { CompetitionStatus } from "@/lib/competitionDetail";
+import { localToLine } from "@/lib/localTo";
 
 /**
  * WEB-4 item 2 — a `now` that re-renders at least once a minute, so the
@@ -139,6 +140,9 @@ export interface CompetitionHeroCompetition {
    * competition document's `sponsorName` field (`competitionDetail.ts`);
    * the creation form's preview supplies it from the form value. */
   sponsorName?: string | null;
+  /** LOCAL-2 — optional; when set, a "Local to {town} · {n} km" line shows
+   * under the name. Read from the competition document's `localTo` map. */
+  localTo?: { cityName: string; radiusKm: number } | null;
 }
 
 function dateLineFor(
@@ -208,6 +212,9 @@ export function CompetitionHero({
       </h1>
       {sponsorName ? (
         <p className="mt-1 break-words text-sm text-on-navy-muted">Sponsored by {sponsorName}</p>
+      ) : null}
+      {competition.localTo ? (
+        <p className="mt-1 break-words text-sm text-on-navy-muted">{localToLine(competition.localTo)}</p>
       ) : null}
     </div>
   );
