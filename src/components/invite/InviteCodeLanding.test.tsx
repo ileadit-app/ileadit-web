@@ -109,8 +109,8 @@ describe("InviteCodeLanding — preview states", () => {
     render(<InviteCodeLanding code={CODE} />);
 
     expect(await screen.findByText("Step Champs")).toBeInTheDocument();
-    expect(screen.getByText("K7M4-PQX2")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /sign in to join/i })).toBeInTheDocument();
+    expect(screen.getByTestId("invite-code")).toHaveTextContent("K7M4 PQX2");
+    expect(screen.getByRole("link", { name: /sign in to join here/i })).toBeInTheDocument();
   });
 });
 

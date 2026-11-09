@@ -1,5 +1,6 @@
 import { httpsCallable } from "firebase/functions";
 import { getFunctionsClient } from "./functions";
+import { DEFAULT_LOCAL_RADIUS_KM } from "./localTo";
 import { toCreateCompetitionFailure, type CreateCompetitionFailure } from "./createCompetitionErrors";
 
 /**
@@ -9,6 +10,14 @@ import { toCreateCompetitionFailure, type CreateCompetitionFailure } from "./cre
  *
  *   createCompetition({ name, startTime, durationDays, timeZone?,
  *     description?, imageUrl?, backgroundImageUrl?, sponsorName? })
+ *
+ * `localToCityId` + `localRadiusKm` (LOCAL-2, engine LOCAL-1, built in
+ * parallel): optional, both or neither — see the input type below.
+ *
+ * `inviteOnly` (INVITE-2, engine INVITE-1, branch `engine/invite-only`, built
+ * in parallel): optional boolean. Sent as `inviteOnly: true` or not at all
+ * (absent means public on the engine). The engine refuses it together with
+ * `localToCityId` (`invalid-argument`), so this wrapper never sends both.
  *
  * `sponsorName` (WEB-SPONSOR-NAME, COMP-BRAND-1, 5 Nov 2026) is added to
  * the engine contract in parallel with this change: optional string,
@@ -95,6 +104,21 @@ export interface CreateCompetitionInput {
    * omitted from the payload when blank — callers may pass the raw field
    * value. See `validateSponsorName` for the limits. */
   sponsorName?: string;
+  /** Optional "Local to" (LOCAL-2 / engine LOCAL-1): a gazetteer city id
+   * from `searchCities`. BOTH OR NEITHER with `localRadiusKm`: the wrapper
+   * sends the pair only when a town is given, and a radius without a town
+   * is dropped rather than sent alone. The engine writes `localTo` itself;
+   * clients can never write it. */
+  localToCityId?: number;
+  /** Integer km, engine range 5-50, default 25. Only sent with a town. */
+  localRadiusKm?: number;
+  /** Optional "Invite only" (INVITE-2 / engine INVITE-1). Only `true` is
+   * ever sent; `false`/`undefined` leave the key out entirely. Mutually
+   * exclusive with `localToCityId` on the engine: if a caller passes both,
+   * invite-only wins here and the "Local to" pair is dropped, so a form bug
+   * can never turn into an engine refusal. (The form itself already makes
+   * the two impossible to combine.) */
+  inviteOnly?: boolean;
 }
 
 export type CreateCompetitionOutcome =
@@ -105,6 +129,7 @@ export async function createCompetition(input: CreateCompetitionInput): Promise<
   const callable = httpsCallable(getFunctionsClient(), "createCompetition");
 
   const sponsorName = input.sponsorName?.trim();
+  const inviteOnly = input.inviteOnly === true;
 
   const requestBody = {
     name: input.name,
@@ -116,6 +141,17 @@ export async function createCompetition(input: CreateCompetitionInput): Promise<
     ...(input.imageUrl ? { imageUrl: input.imageUrl } : {}),
     ...(input.backgroundImageUrl ? { backgroundImageUrl: input.backgroundImageUrl } : {}),
     ...(sponsorName ? { sponsorName } : {}),
+    // Both or neither (LOCAL-1): only ever sent together, and only when a
+    // town was picked. The radius falls back to the engine default so a
+    // town can never go out without it.
+    ...(!inviteOnly && input.localToCityId !== undefined
+      ? {
+          localToCityId: input.localToCityId,
+          localRadiusKm: input.localRadiusKm ?? DEFAULT_LOCAL_RADIUS_KM,
+        }
+      : {}),
+    // INVITE-1: the key is left out unless true; absent means public.
+    ...(inviteOnly ? { inviteOnly: true } : {}),
     // Deliberately absent: startDate, endDate, status, playerCount,
     // configVersion, finalisedAt, winnerIds — all engine-derived, per this
     // file's header comment. Do not add any of them here.

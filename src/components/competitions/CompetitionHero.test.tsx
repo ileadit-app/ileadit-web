@@ -81,3 +81,22 @@ describe("CompetitionHero — banner shown at 3:1 (COMP-BRAND-1)", () => {
     expect(container.querySelectorAll(`img[src="${withBanner.imageUrl}"]`)).toHaveLength(1);
   });
 });
+
+describe("CompetitionHero — Invite only badge (INVITE-2)", () => {
+  it("shows the badge when inviteOnly is true", () => {
+    render(<CompetitionHero competition={{ ...base, inviteOnly: true }} />);
+    expect(screen.getByTestId("invite-only-badge")).toHaveTextContent("Invite only");
+  });
+
+  it("shows no badge for absent, false or the string 'true'", () => {
+    const values: unknown[] = [undefined, false, "true", 1, null];
+    for (const inviteOnly of values) {
+      const { unmount } = render(
+        <CompetitionHero competition={{ ...base, inviteOnly: inviteOnly as boolean }} />,
+      );
+      expect(screen.queryByTestId("invite-only-badge")).not.toBeInTheDocument();
+      expect(screen.queryByText(/invite only/i)).not.toBeInTheDocument();
+      unmount();
+    }
+  });
+});

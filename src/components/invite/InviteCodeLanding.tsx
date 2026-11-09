@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, Check, Copy } from "lucide-react";
 import { useUser } from "@/context/AuthContext";
 import { LogoMark } from "@/components/brand/Logo";
 import { CompetitionStatusChip } from "@/components/status/CompetitionStatusChip";
@@ -12,8 +12,10 @@ import {
   previewInvite,
   acceptInvite,
   acceptInviteFailureMessage,
+  buildAppInviteUrl,
   buildInviteUrl,
-  formatInviteCodeForDisplay,
+  formatInviteCodeSpaced,
+  normalizeInviteCodeInput,
   type InvitePreviewAvailable,
 } from "@/lib/invites";
 import { StoreButtons } from "@/components/StoreButtons";
@@ -179,6 +181,120 @@ function GenericErrorInvite() {
   );
 }
 
+const SECONDARY_CTA_CLASSES =
+  "flex h-12 w-full max-w-xs items-center justify-center rounded-full border border-brand-navy/30 bg-card px-6 text-base font-bold text-brand-navy transition-colors hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-navy";
+
+/**
+ * JOIN-CODE-W: new players join in the app, where the age confirmation and
+ * home town are collected. This is a plain `<a>` to the app's own scheme
+ * (`ileadit://invite/{CODE}`, 8-character code only). We deliberately do NOT
+ * try to detect whether the app is installed: if it is not, the link does
+ * nothing (or the browser shows an error), which is why the steps sit right
+ * next to this button on the signed-out page.
+ */
+function OpenInAppButton({ code, primary }: { code: string; primary: boolean }) {
+  return (
+    <a href={buildAppInviteUrl(code)} className={primary ? CTA_CLASSES : SECONDARY_CTA_CLASSES}>
+      Open in the ileadit app
+    </a>
+  );
+}
+
+/** The code, big and grouped (`ABCD EFGH`), with a button that copies the plain 8 characters. */
+function InviteCodeBlock({ code }: { code: string }) {
+  const [copyState, setCopyState] = useState<"idle" | "copied" | "failed">("idle");
+
+  useEffect(() => {
+    if (copyState === "idle") return;
+    const timer = setTimeout(() => setCopyState("idle"), 2500);
+    return () => clearTimeout(timer);
+  }, [copyState]);
+
+  async function handleCopy() {
+    try {
+      await navigator.clipboard.writeText(normalizeInviteCodeInput(code));
+      setCopyState("copied");
+    } catch {
+      setCopyState("failed");
+    }
+  }
+
+  return (
+    <div className="w-full rounded-3xl border border-border bg-card p-5">
+      <p className="text-xs font-bold uppercase tracking-wide text-coral-text">Invite code</p>
+      <p
+        data-testid="invite-code"
+        className="mt-1 font-mono text-4xl font-extrabold tracking-[0.15em] text-foreground"
+      >
+        {formatInviteCodeSpaced(code)}
+      </p>
+      <button
+        type="button"
+        onClick={() => void handleCopy()}
+        className="mt-3 inline-flex h-11 items-center gap-2 rounded-full border border-brand-navy/30 px-5 text-sm font-bold text-brand-navy transition-colors hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-navy"
+      >
+        {copyState === "copied" ? (
+          <Check className="size-4" aria-hidden="true" />
+        ) : (
+          <Copy className="size-4" aria-hidden="true" />
+        )}
+        Copy code
+      </button>
+      <p role="status" className="mt-2 min-h-5 text-sm text-muted-foreground">
+        {copyState === "copied"
+          ? "Copied"
+          : copyState === "failed"
+            ? "Couldn't copy. Select the code instead."
+            : ""}
+      </p>
+    </div>
+  );
+}
+
+const APP_STEPS: string[] = [
+  "Get ileadit free.",
+  "Open it and set up your account.",
+  "Come back here and tap Open in the ileadit app, or enter the code in Competitions.",
+];
+
+/**
+ * The three steps, sitting right under the app button. Step 1 carries the
+ * store buttons from `storeLinks.ts` (no button for a store with no listing;
+ * when there is no listing at all, the shared early-access sentence instead).
+ */
+function AppSteps() {
+  const noStoreYet = !PLAY_STORE_URL && !APP_STORE_URL;
+  return (
+    <div className="w-full rounded-3xl border border-dashed border-border bg-muted/40 p-5 text-left">
+      <p className="text-xs font-bold uppercase tracking-wide text-coral-text">How to join</p>
+      <ol role="list" className="mt-3 space-y-3">
+        {APP_STEPS.map((title, index) => (
+          <li key={title} className="flex gap-3">
+            <span
+              aria-hidden="true"
+              className="flex size-7 shrink-0 items-center justify-center rounded-full bg-brand-navy text-sm font-bold text-on-navy-foreground"
+            >
+              {index + 1}
+            </span>
+            <div className="min-w-0 pt-0.5">
+              <p className="text-sm font-bold text-foreground">{title}</p>
+              {index === 0 ? (
+                noStoreYet ? (
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {storeAvailabilityCopy(PLAY_STORE_URL, APP_STORE_URL)}
+                  </p>
+                ) : (
+                  <StoreButtons className="mt-2" />
+                )
+              ) : null}
+            </div>
+          </li>
+        ))}
+      </ol>
+    </div>
+  );
+}
+
 /**
  * Store buttons and wording come from `src/lib/storeLinks.ts`; no button for
  * a store that has no listing yet.
@@ -208,14 +324,20 @@ function InvitePreviewCard({
   code,
   children,
   live,
+  codeInPanel,
+  hideGetApp,
 }: {
   preview: InvitePreviewAvailable;
   code: string;
   children: React.ReactNode;
   live?: boolean;
+  /** The CTA area already shows the code (with its copy button): don't repeat it below. */
+  codeInPanel?: boolean;
+  /** The CTA area already carries the store links: skip the "Get the app" block. */
+  hideGetApp?: boolean;
 }) {
   const url = buildInviteUrl(code);
-  const displayCode = formatInviteCodeForDisplay(code);
+  const displayCode = formatInviteCodeSpaced(code);
 
   return (
     <div
@@ -254,11 +376,15 @@ function InvitePreviewCard({
       <div className="mt-6 flex flex-col items-center gap-2">{children}</div>
 
       <div className="mt-8 rounded-3xl border border-border bg-card p-5">
-        <p className="text-xs font-bold uppercase tracking-wide text-coral-text">Invite code</p>
-        <p className="mt-1 font-mono text-2xl font-extrabold tracking-[0.2em] text-foreground">
-          {displayCode}
-        </p>
-        <p className="mt-3 text-xs text-muted-foreground">
+        {codeInPanel ? null : (
+          <>
+            <p className="text-xs font-bold uppercase tracking-wide text-coral-text">Invite code</p>
+            <p className="mt-1 font-mono text-2xl font-extrabold tracking-[0.2em] text-foreground">
+              {displayCode}
+            </p>
+          </>
+        )}
+        <p className={`${codeInPanel ? "" : "mt-3 "}text-xs text-muted-foreground`}>
           On a computer? Scan this with your phone&apos;s camera to open the invite there instead.
         </p>
         <div className="mt-3 flex justify-center">
@@ -266,7 +392,7 @@ function InvitePreviewCard({
         </div>
       </div>
 
-      <GetTheAppBlock />
+      {hideGetApp ? null : <GetTheAppBlock />}
     </div>
   );
 }
@@ -284,14 +410,23 @@ function SignedOutInviteCode({
 }) {
   const redirect = `/invite/${code}`;
   return (
-    <InvitePreviewCard preview={preview} code={code}>
-      <p className="text-sm text-muted-foreground">
-        Sign in (or create a free account) to join — it only takes a minute. Nobody but you ever
-        sees your step count.
+    <InvitePreviewCard preview={preview} code={code} codeInPanel hideGetApp>
+      <InviteCodeBlock code={code} />
+      <div className="mt-2 flex w-full justify-center">
+        <OpenInAppButton code={code} primary />
+      </div>
+      <div className="mt-2 w-full">
+        <AppSteps />
+      </div>
+      <p className="mt-3 text-sm text-muted-foreground">
+        Already playing?{" "}
+        <Link
+          href={`/login?redirect=${encodeURIComponent(redirect)}`}
+          className="font-bold text-brand-navy underline underline-offset-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-navy"
+        >
+          Sign in to join here.
+        </Link>
       </p>
-      <Link href={`/login?redirect=${encodeURIComponent(redirect)}`} className={CTA_CLASSES}>
-        Sign in to join
-      </Link>
     </InvitePreviewCard>
   );
 }
@@ -368,6 +503,7 @@ function JoinInviteCode({
   const [joined, setJoined] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [dayNumber, setDayNumber] = useState<number | null>(preview.dayNumber);
+  const [ageRefused, setAgeRefused] = useState(false);
 
   const showMidCompetitionNote = preview.status === "active" && preview.dayNumber !== null;
 
@@ -393,18 +529,20 @@ function JoinInviteCode({
   async function handleJoin() {
     setPending(true);
     setError(null);
+    setAgeRefused(false);
     const outcome = await acceptInvite(code);
     setPending(false);
     if (outcome.status === "success") {
       setDayNumber(outcome.result.dayNumber);
       setJoined(true);
     } else {
-      setError(acceptInviteFailureMessage(outcome.failure));
+      setAgeRefused(outcome.failure.kind === "age-not-confirmed");
+      setError(acceptInviteFailureMessage(outcome.failure, formatInviteCodeSpaced(code)));
     }
   }
 
   return (
-    <InvitePreviewCard preview={preview} code={code}>
+    <InvitePreviewCard preview={preview} code={code} codeInPanel>
       {showMidCompetitionNote ? (
         <p className="rounded-2xl bg-muted p-3 text-sm text-muted-foreground">
           You&apos;re joining on day {preview.dayNumber} — earlier days count as 0, so your target
@@ -415,7 +553,7 @@ function JoinInviteCode({
         type="button"
         onClick={() => void handleJoin()}
         disabled={pending}
-        className={CTA_CLASSES}
+        className={ageRefused ? SECONDARY_CTA_CLASSES : CTA_CLASSES}
       >
         {pending ? "Joining…" : "Join competition"}
       </button>
@@ -424,6 +562,12 @@ function JoinInviteCode({
           {error}
         </p>
       ) : null}
+      <div className="mt-4 w-full">
+        <InviteCodeBlock code={code} />
+      </div>
+      <div className="mt-2 flex w-full justify-center">
+        <OpenInAppButton code={code} primary={ageRefused} />
+      </div>
     </InvitePreviewCard>
   );
 }

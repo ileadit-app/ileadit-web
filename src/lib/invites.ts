@@ -82,6 +82,26 @@ export function formatInviteCodeForDisplay(code: string): string {
   return `${normalized.slice(0, 4)}-${normalized.slice(4)}`;
 }
 
+/** `"K7M4PQX2"` -> `"K7M4 PQX2"`. The shape the public invite page shows and
+ * the app's "Join with a code" field accepts (JOIN-CODE-W). Same rule as
+ * above: anything not exactly 8 normalised characters comes back
+ * normalised-but-ungrouped. The organiser screens keep the hyphen form. */
+export function formatInviteCodeSpaced(code: string): string {
+  const normalized = normalizeInviteCodeInput(code);
+  if (normalized.length !== INVITE_CODE_LENGTH) return normalized;
+  return `${normalized.slice(0, 4)} ${normalized.slice(4)}`;
+}
+
+/**
+ * The deep link the ileadit apps register (JOIN-CODE-A / JOIN-CODE-I):
+ * `ileadit://invite/{CODE}` with the plain 8-character code. Always built
+ * from a real invite code, never from a shop slug (the shop route resolves
+ * the slug to its current round's invite code before this is called).
+ */
+export function buildAppInviteUrl(code: string): string {
+  return `ileadit://invite/${normalizeInviteCodeInput(code)}`;
+}
+
 /**
  * The invite link host, per Paul's INV-1 decision: "Link host:
  * `https://ileadit-portal.web.app/invite/{CODE}` as ONE swappable constant
@@ -192,8 +212,19 @@ export async function createInvite(input: CreateInviteInput): Promise<CreateInvi
     getFunctionsClient(),
     "createInvite",
   );
+  // The engine's strict zod schema takes `label`/`expiresAt`/`maxUses` as
+  // optional (absent is fine) but REFUSES null, and the Functions SDK turns
+  // `undefined` into null on the wire. So an optional field with no value
+  // must be left out of the payload, not sent (WEB-INVITE-FIXES-1).
+  const label = typeof input.label === "string" ? input.label.trim() : "";
+  const payload: CreateInviteInput = {
+    competitionId: input.competitionId,
+    ...(label ? { label } : {}),
+    ...(input.expiresAt ? { expiresAt: input.expiresAt } : {}),
+    ...(typeof input.maxUses === "number" ? { maxUses: input.maxUses } : {}),
+  };
   try {
-    const result = await callable(input);
+    const result = await callable(payload);
     return { status: "success", result: result.data };
   } catch (error) {
     return {
@@ -299,11 +330,21 @@ export interface AcceptInviteResult {
  */
 export type AcceptInviteFailure =
   | { kind: "invite-unavailable"; failure: InviteCallableFailure }
+  /** The engine refuses a join until the player has confirmed they are 16+,
+   * which only the app collects (`details.reason: "age-not-confirmed"`). */
+  | { kind: "age-not-confirmed"; failure: InviteCallableFailure }
   | { kind: "join-refused"; failure: CompetitionMembershipFailure };
 
 export type AcceptInviteOutcome =
   | { status: "success"; result: AcceptInviteResult }
   | { status: "failure"; failure: AcceptInviteFailure };
+
+/** `details.reason` the engine sends when the player has not confirmed 16+. */
+const AGE_NOT_CONFIRMED_REASON = "age-not-confirmed";
+
+/** `details.reason` values the engine sends on `failed-precondition` from
+ * both `joinCompetition` and `acceptInvite` (ILR-16-ENG overlap, INVITE-1). */
+const JOIN_REFUSAL_REASONS = ["overlap", "invite-only"];
 
 const JOIN_REFUSAL_MESSAGE_SUBSTRINGS = [
   "is not open for joining",
@@ -320,10 +361,17 @@ export async function acceptInvite(code: string): Promise<AcceptInviteOutcome> {
     const result = await callable({ code: normalizeInviteCodeInput(code) });
     return { status: "success", result: result.data };
   } catch (error) {
+    if (isFunctionsError(error)) {
+      const failure = toInviteCallableFailure(error, "Couldn't accept that invite.");
+      if (failure.reason === AGE_NOT_CONFIRMED_REASON) {
+        return { status: "failure", failure: { kind: "age-not-confirmed", failure } };
+      }
+    }
     if (
       isFunctionsError(error) &&
       error.code === "functions/failed-precondition" &&
-      JOIN_REFUSAL_MESSAGE_SUBSTRINGS.some((substring) => error.message.includes(substring))
+      (JOIN_REFUSAL_REASONS.includes(toInviteCallableFailure(error, "").reason ?? "") ||
+        JOIN_REFUSAL_MESSAGE_SUBSTRINGS.some((substring) => error.message.includes(substring)))
     ) {
       return {
         status: "failure",
@@ -340,7 +388,16 @@ export async function acceptInvite(code: string): Promise<AcceptInviteOutcome> {
   }
 }
 
-export function acceptInviteFailureMessage(failure: AcceptInviteFailure): string {
+export function acceptInviteFailureMessage(
+  failure: AcceptInviteFailure,
+  /** The code to name in the age-not-confirmed message (already formatted for display). */
+  displayCode?: string,
+): string {
+  if (failure.kind === "age-not-confirmed") {
+    return displayCode
+      ? `Finish setting up your account in the ileadit app first, then join with code ${displayCode} in the app or here.`
+      : "Finish setting up your account in the ileadit app first, then join with your code in the app or here.";
+  }
   if (failure.kind === "join-refused") {
     return competitionMembershipFailureMessage(failure.failure, "join");
   }

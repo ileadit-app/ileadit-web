@@ -15,7 +15,7 @@ import {
 } from "@/lib/competitionDetail";
 import { joinCompetition } from "@/lib/joinCompetition";
 import { leaveCompetition } from "@/lib/leaveCompetition";
-import { competitionMembershipFailureMessage } from "@/lib/competitionMembershipErrors";
+import { INVITE_ONLY_MESSAGE, competitionMembershipFailureMessage } from "@/lib/competitionMembershipErrors";
 import { formatShortDate, isDayOneOfActiveCompetition } from "@/lib/competitionDates";
 import { CompetitionLeaderboard } from "./CompetitionLeaderboard";
 import { TodayCard } from "./TodayCard";
@@ -98,6 +98,10 @@ function CompetitionDetailContent({ competitionId, uid }: { competitionId: strin
 
   const { competition } = competitionState;
   const status = competition.status;
+  // INVITE-2: for an invite-only competition nobody can join without a link,
+  // so for the organiser the invite panel IS the next step. It moves to the
+  // top of the page (rendered once, here or at the bottom, never both).
+  const inviteFirst = competition.inviteOnly && organiserCapability === "organiser";
 
   return (
     <div className="pb-28 sm:pb-16">
@@ -115,6 +119,16 @@ function CompetitionDetailContent({ competitionId, uid }: { competitionId: strin
           <ArrowLeft className="size-4" aria-hidden="true" />
           Back to dashboard
         </Link>
+
+        {inviteFirst ? (
+          <div className="mt-4" data-testid="invite-first">
+            <p className="mb-3 text-sm font-semibold text-foreground">
+              Next step: create an invite link and send it to the people you want in. Nobody can join
+              this competition without one.
+            </p>
+            <InvitePanel competitionId={competitionId} />
+          </div>
+        ) : null}
 
         {/* The Today Card (W7-TODAY) only makes sense while there's a
             "today" to report on — during scheduled, nothing has started
@@ -148,6 +162,10 @@ function CompetitionDetailContent({ competitionId, uid }: { competitionId: strin
             startDate={competition.startDate}
             timeZone={competition.timeZone}
             membershipState={membershipState}
+            // Nobody can join an invite-only competition without a code, so a
+            // non-member gets a plain line instead of a Join button that can
+            // only fail. The organiser is left unchanged.
+            joinNeedsInvite={competition.inviteOnly === true && organiserCapability !== "organiser"}
           />
         ) : null}
 
@@ -166,7 +184,7 @@ function CompetitionDetailContent({ competitionId, uid }: { competitionId: strin
             Deliberately rendered regardless of the organiser's own
             membership/leaderboard state above — an organiser managing
             invites may not be a player in their own competition at all. */}
-        {organiserCapability === "organiser" ? (
+        {organiserCapability === "organiser" && !inviteFirst ? (
           <div className="mt-4">
             <InvitePanel competitionId={competitionId} />
           </div>
@@ -350,6 +368,7 @@ function MembershipCta({
   startDate,
   timeZone,
   membershipState,
+  joinNeedsInvite,
 }: {
   competitionId: string;
   competitionName: string | null;
@@ -357,6 +376,7 @@ function MembershipCta({
   startDate: string | null;
   timeZone: string | null;
   membershipState: ReturnType<typeof useOwnMembership>;
+  joinNeedsInvite: boolean;
 }) {
   const [pending, setPending] = useState<"join" | "leave" | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -441,6 +461,23 @@ function MembershipCta({
     setConfirmingActiveLeave(false);
   }
 
+  // The Join button, or - for a non-member of an invite-only competition,
+  // who can never use it - a plain line saying how to get in.
+  const joinControl = joinNeedsInvite ? (
+    <p className="rounded-2xl bg-muted p-4 text-center text-sm text-muted-foreground">
+      {INVITE_ONLY_MESSAGE}
+    </p>
+  ) : (
+    <button
+      type="button"
+      onClick={() => void handleJoin()}
+      disabled={pending !== null}
+      className="flex h-12 w-full items-center justify-center rounded-full border border-[rgba(25,47,95,0.15)] bg-brand-gold text-base font-bold text-brand-navy transition-colors hover:bg-brand-gold/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-navy disabled:cursor-not-allowed disabled:border-transparent disabled:bg-cta-disabled disabled:text-cta-disabled-foreground"
+    >
+      {pending === "join" ? "Joining…" : "Join competition"}
+    </button>
+  );
+
   let body: React.ReactNode;
 
   if (status === "scheduled") {
@@ -459,14 +496,7 @@ function MembershipCta({
         </button>
       </div>
     ) : (
-      <button
-        type="button"
-        onClick={() => void handleJoin()}
-        disabled={pending !== null}
-        className="flex h-12 w-full items-center justify-center rounded-full border border-[rgba(25,47,95,0.15)] bg-brand-gold text-base font-bold text-brand-navy transition-colors hover:bg-brand-gold/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-navy disabled:cursor-not-allowed disabled:border-transparent disabled:bg-cta-disabled disabled:text-cta-disabled-foreground"
-      >
-        {pending === "join" ? "Joining…" : "Join competition"}
-      </button>
+      joinControl
     );
   } else if (status === "active" || status === "finalising") {
     // WEB-3 item 3 / JOIN-1: a non-member can still join on the
@@ -496,14 +526,7 @@ function MembershipCta({
         ) : null}
       </div>
     ) : canStillJoin ? (
-      <button
-        type="button"
-        onClick={() => void handleJoin()}
-        disabled={pending !== null}
-        className="flex h-12 w-full items-center justify-center rounded-full border border-[rgba(25,47,95,0.15)] bg-brand-gold text-base font-bold text-brand-navy transition-colors hover:bg-brand-gold/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-navy disabled:cursor-not-allowed disabled:border-transparent disabled:bg-cta-disabled disabled:text-cta-disabled-foreground"
-      >
-        {pending === "join" ? "Joining…" : "Join competition"}
-      </button>
+      joinControl
     ) : (
       <div className="rounded-2xl bg-muted p-4 text-center text-sm text-muted-foreground">
         {status === "active"
