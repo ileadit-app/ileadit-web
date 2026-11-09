@@ -14,7 +14,7 @@ import type { User } from "firebase/auth";
 const NAV_LINKS = [
   { href: "/#how-it-works", label: "How it works" },
   { href: "/#average", label: "Why average wins" },
-  { href: "/#teams", label: "Teams" },
+  { href: "/#companies", label: "For companies" },
   { href: "/#pricing", label: "Pricing" },
 ];
 
@@ -111,7 +111,7 @@ export default function Header() {
                 href="/#employer"
                 className="inline-flex h-10 items-center rounded-full border border-[rgba(25,47,95,0.15)] bg-brand-gold px-4 text-sm font-bold text-brand-navy transition-colors hover:bg-brand-gold/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-navy"
               >
-                Bring it to your team
+                Bring it to your company
               </Link>
             </>
           )}
@@ -190,7 +190,7 @@ export default function Header() {
                 className="mt-2 block rounded-full border border-[rgba(25,47,95,0.15)] bg-brand-gold px-4 py-3 text-center text-sm font-bold text-brand-navy transition-colors hover:bg-brand-gold/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-navy"
                 onClick={() => setMenuOpen(false)}
               >
-                Bring it to your team
+                Bring it to your company
               </Link>
             </>
           )}

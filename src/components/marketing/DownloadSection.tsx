@@ -29,8 +29,8 @@ export function DownloadSection() {
           Your average is waiting. Go find out if you&apos;re a winner.
         </h2>
         <p className="mx-auto mt-4 max-w-xl text-lg leading-relaxed text-on-navy-muted">
-          Free to download, free to join a public competition. Bring your
-          workplace in whenever you&apos;re ready.
+          Free to join a public competition. Bring your workplace in
+          whenever you&apos;re ready.
         </p>
 
         <p className="mx-auto mt-4 max-w-xl text-base text-on-navy-muted">
