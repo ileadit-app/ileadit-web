@@ -4,7 +4,8 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { ErrorBanner } from "@/components/auth/formFields";
-import { NumberField, SelectField, TextAreaField, TextField } from "@/components/forms/fields";
+import { NumberField, SelectField, TextAreaField, TextField, ToggleField } from "@/components/forms/fields";
+import { CityPicker } from "@/components/forms/CityPicker";
 import { ArtworkUploadField } from "./ArtworkUploadField";
 import { CompetitionHero } from "./CompetitionHero";
 import {
@@ -14,6 +15,12 @@ import {
 } from "@/lib/competitionArtwork";
 import { SPONSOR_NAME_MAX_LENGTH, createCompetition, validateSponsorName } from "@/lib/createCompetition";
 import { createCompetitionFailureMessage } from "@/lib/createCompetitionErrors";
+import {
+  DEFAULT_LOCAL_RADIUS_KM,
+  LOCAL_RADIUS_OPTIONS_KM,
+  LOCAL_TO_HELP_TEXT,
+} from "@/lib/localTo";
+import type { CitySearchResult } from "@/lib/searchCities";
 import {
   detectBrowserTimeZone,
   getTimeZoneOptions,
@@ -31,6 +38,21 @@ interface FieldErrors {
   timeZone?: string;
   sponsorName?: string;
 }
+
+/** The distance select works in strings; "25 km" <-> 25. */
+const RADIUS_LABELS = LOCAL_RADIUS_OPTIONS_KM.map((km) => `${km} km`);
+function radiusFromLabel(label: string): number {
+  const km = Number.parseInt(label, 10);
+  return (LOCAL_RADIUS_OPTIONS_KM as readonly number[]).includes(km) ? km : DEFAULT_LOCAL_RADIUS_KM;
+}
+
+/** INVITE-2. Wording is fixed by the ticket; "Invite only" is about who can
+ * join, so the copy sticks to that. */
+export const INVITE_ONLY_HELP_TEXT =
+  "Only people you send an invite link to can join. It won't appear in the app's list of competitions.";
+const INVITE_ONLY_BLOCKS_LOCAL_TEXT = "Invite-only competitions aren't shown to local players.";
+const LOCAL_BLOCKS_INVITE_ONLY_TEXT =
+  "Local competitions can't be invite only. Clear the town to change this.";
 
 const SPONSOR_NAME_HELP_TEXT =
   "Shown in the app as 'Sponsored by …'. Leave blank if there's no sponsor.";
@@ -67,6 +89,11 @@ export function CreateCompetitionForm() {
   const [timeZone, setTimeZone] = useState(() => detectBrowserTimeZone());
   const [description, setDescription] = useState("");
   const [sponsorName, setSponsorName] = useState("");
+  const [localTown, setLocalTown] = useState<CitySearchResult | null>(null);
+  const [localRadiusLabel, setLocalRadiusLabel] = useState(`${DEFAULT_LOCAL_RADIUS_KM} km`);
+  // INVITE-2: mutually exclusive with `localTown`. Ticking clears the town
+  // and disables the Local to fields; picking a town disables the tick box.
+  const [inviteOnly, setInviteOnly] = useState(false);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [backgroundImageUrl, setBackgroundImageUrl] = useState<string | null>(null);
 
@@ -153,6 +180,14 @@ export function CreateCompetitionForm() {
       // Trimmed and omitted when blank by the wrapper, which owns the
       // contract; validate() above has already enforced 1-40 chars.
       sponsorName: sponsorName.trim() || undefined,
+      // LOCAL-2: both or neither. No town picked means neither key is sent,
+      // whatever the distance select happens to read.
+      // INVITE-2: the key is left out unless ticked. The engine refuses it
+      // alongside a town, and the UI makes the two impossible to combine.
+      ...(inviteOnly ? { inviteOnly: true } : {}),
+      ...(localTown && !inviteOnly
+        ? { localToCityId: localTown.cityId, localRadiusKm: radiusFromLabel(localRadiusLabel) }
+        : {}),
     });
     setSubmitting(false);
 
@@ -161,13 +196,16 @@ export function CreateCompetitionForm() {
       return;
     }
 
-    // No `/competitions/[id]` detail page exists yet (see CLAUDE.md's page
-    // list — aspirational, not built) — the dashboard is the one place a
-    // freshly created competition is guaranteed to show up, even before the
-    // engine's onCompetitionWritten trigger has derived status/dates
-    // (CreatedCompetitions.tsx already renders a "Setting up…" badge for
-    // exactly that transient state).
-    router.push("/dashboard");
+    // The dashboard is the one place a freshly created competition is
+    // guaranteed to show up, even before the engine's onCompetitionWritten
+    // trigger has derived status/dates (CreatedCompetitions.tsx already
+    // renders a "Setting up…" badge for exactly that transient state).
+    //
+    // INVITE-2: an invite-only competition cannot be joined without a link,
+    // so the organiser goes straight to its page, where the invite panel is
+    // the first thing shown. Falls back to the dashboard if the callable did
+    // not return an id.
+    router.push(inviteOnly && outcome.competitionId ? `/competitions/${outcome.competitionId}` : "/dashboard");
   }
 
   return (
@@ -247,6 +285,55 @@ export function CreateCompetitionForm() {
           </p>
         </div>
 
+        <div>
+          <ToggleField
+            label="Invite only"
+            description={INVITE_ONLY_HELP_TEXT}
+            checked={inviteOnly}
+            onChange={(checked) => {
+              setInviteOnly(checked);
+              if (checked) {
+                setLocalTown(null);
+                setLocalRadiusLabel(`${DEFAULT_LOCAL_RADIUS_KM} km`);
+              }
+            }}
+            disabled={submitting || localTown !== null}
+          />
+          {localTown ? (
+            <p className="mt-1.5 text-xs text-muted-foreground">{LOCAL_BLOCKS_INVITE_ONLY_TEXT}</p>
+          ) : null}
+        </div>
+
+        <fieldset
+          className="space-y-4 rounded-2xl border border-border p-4"
+          disabled={submitting || inviteOnly}
+        >
+          <legend className="px-1 text-sm font-semibold text-foreground">Local to (optional)</legend>
+          <p className="text-xs text-muted-foreground">
+            {inviteOnly ? INVITE_ONLY_BLOCKS_LOCAL_TEXT : LOCAL_TO_HELP_TEXT}
+          </p>
+          <CityPicker
+            // Remounts when invite-only flips, so any half-typed search text
+            // is cleared along with the (already cleared) picked town.
+            key={inviteOnly ? "invite-only" : "open"}
+            label="Town"
+            value={localTown}
+            onChange={(town) => {
+              setLocalTown(town);
+              // Clearing the town clears both: the distance goes back to its default too.
+              if (!town) setLocalRadiusLabel(`${DEFAULT_LOCAL_RADIUS_KM} km`);
+            }}
+            disabled={submitting || inviteOnly}
+          />
+          <SelectField
+            label="Distance"
+            value={localRadiusLabel}
+            onChange={setLocalRadiusLabel}
+            disabled={submitting || inviteOnly}
+            options={RADIUS_LABELS}
+          />
+        </fieldset>
+
         <ArtworkUploadField
           kind="tile"
           label="Competition image (optional)"
@@ -275,6 +362,8 @@ export function CreateCompetitionForm() {
           startTimeValue={startTimeValue}
           durationDays={Number(durationDaysValue)}
           timeZone={timeZone}
+          inviteOnly={inviteOnly}
+          localTo={localTown ? { cityName: localTown.name, radiusKm: radiusFromLabel(localRadiusLabel) } : null}
         />
 
         <button
@@ -350,6 +439,8 @@ function ArtworkPreview({
   startTimeValue,
   durationDays,
   timeZone,
+  localTo,
+  inviteOnly,
 }: {
   name: string;
   sponsorName: string;
@@ -358,6 +449,8 @@ function ArtworkPreview({
   startTimeValue: string;
   durationDays: number;
   timeZone: string;
+  localTo: { cityName: string; radiusKm: number } | null;
+  inviteOnly: boolean;
 }) {
   if (!imageUrl && !backgroundImageUrl) return null;
 
@@ -370,6 +463,8 @@ function ArtworkPreview({
     sponsorName: validateSponsorName(sponsorName) === null ? sponsorName.trim() || null : null,
     imageUrl,
     backgroundImageUrl,
+    localTo,
+    inviteOnly,
     // Anything created here starts in the future, so `scheduled` is what
     // the engine's own onCompetitionWritten trigger will derive.
     status: "scheduled" as const,

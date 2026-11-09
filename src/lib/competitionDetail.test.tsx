@@ -47,3 +47,24 @@ describe("useCompetitionDetail — sponsorName", () => {
     expect(sponsorNameFor({ sponsorName: null })).toBeNull();
   });
 });
+
+describe("useCompetitionDetail — inviteOnly (INVITE-2)", () => {
+  function inviteOnlyFor(data: Record<string, unknown>): boolean {
+    snapshotData.mockReturnValue(data);
+    const { result } = renderHook(() => useCompetitionDetail("comp-1"));
+    if (result.current.status !== "success") throw new Error("expected success");
+    return result.current.competition.inviteOnly;
+  }
+
+  it("is true only for the boolean true", () => {
+    expect(inviteOnlyFor({ inviteOnly: true })).toBe(true);
+  });
+
+  it("is false when absent, false, the string 'true', 1, or null", () => {
+    expect(inviteOnlyFor({ name: "x" })).toBe(false);
+    expect(inviteOnlyFor({ inviteOnly: false })).toBe(false);
+    expect(inviteOnlyFor({ inviteOnly: "true" })).toBe(false);
+    expect(inviteOnlyFor({ inviteOnly: 1 })).toBe(false);
+    expect(inviteOnlyFor({ inviteOnly: null })).toBe(false);
+  });
+});

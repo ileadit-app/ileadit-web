@@ -49,6 +49,15 @@ vi.mock("@/lib/leaveCompetition", () => ({ leaveCompetition: vi.fn() }));
 // render *something* in that slot. Stub it out rather than also mocking two
 // more hooks this file has no other reason to touch.
 vi.mock("./TodayCard", () => ({ TodayCard: () => null }));
+// INVITE-2: the organiser gate and the panel are stubbed so the tests can pin
+// WHERE the panel renders without pulling in the invite callables.
+const organiserMock = vi.fn(() => "not-organiser");
+vi.mock("@/lib/useIsCompetitionOrganiser", () => ({
+  useIsCompetitionOrganiser: () => organiserMock(),
+}));
+vi.mock("./InvitePanel", () => ({
+  InvitePanel: () => <div data-testid="invite-panel" />,
+}));
 
 const COMPETITION_ID = "comp-123";
 
@@ -57,6 +66,8 @@ beforeEach(() => {
   useCompetitionDetailMock.mockReset();
   useOwnMembershipMock.mockReset();
   useCompetitionPlayersMock.mockReset();
+  organiserMock.mockReset();
+  organiserMock.mockReturnValue("not-organiser");
 
   useUserMock.mockReturnValue({ user: { uid: "u1" } });
   useCompetitionDetailMock.mockReturnValue({
@@ -101,6 +112,32 @@ describe("CompetitionDetail — sponsor line (WEB-SPONSOR-NAME r2)", () => {
       withSponsor(value);
       const { unmount } = render(<CompetitionDetail competitionId={COMPETITION_ID} />);
       expect(screen.queryByText(/sponsored by/i)).not.toBeInTheDocument();
+      unmount();
+    }
+  });
+});
+
+describe("CompetitionDetail — Local to line (LOCAL-2)", () => {
+  function withLocalTo(localTo: unknown) {
+    const detailMock = useCompetitionDetailMock;
+    const current = detailMock();
+    detailMock.mockReturnValue({
+      status: "success",
+      competition: { ...current.competition, localTo },
+    });
+  }
+
+  it("shows 'Local to {cityName} · {radiusKm} km' when localTo is set", () => {
+    withLocalTo({ cityId: 2644688, cityName: "Leeds", countryIso2: "GB", radiusKm: 25 });
+    render(<CompetitionDetail competitionId={COMPETITION_ID} />);
+    expect(screen.getByText("Local to Leeds · 25 km")).toBeInTheDocument();
+  });
+
+  it("shows no Local to line when localTo is null or absent", () => {
+    for (const value of [null, undefined]) {
+      withLocalTo(value);
+      const { unmount } = render(<CompetitionDetail competitionId={COMPETITION_ID} />);
+      expect(screen.queryByText(/local to/i)).not.toBeInTheDocument();
       unmount();
     }
   });
@@ -370,5 +407,54 @@ describe("CompetitionDetail — WEB-4 item 3 / LEAVE-1 active-leave UI", () => {
     );
     expect(screen.queryByRole("heading", { name: /leave march madness steps\?/i })).not.toBeInTheDocument();
     confirmSpy.mockRestore();
+  });
+});
+
+describe("CompetitionDetail — Invite only (INVITE-2)", () => {
+  function withInviteOnly(inviteOnly: unknown) {
+    const detailMock = useCompetitionDetailMock;
+    const current = detailMock();
+    detailMock.mockReturnValue({
+      status: "success",
+      competition: { ...current.competition, inviteOnly },
+    });
+  }
+
+  it("shows the Invite only badge when inviteOnly is true", () => {
+    withInviteOnly(true);
+    render(<CompetitionDetail competitionId={COMPETITION_ID} />);
+    expect(screen.getByTestId("invite-only-badge")).toBeInTheDocument();
+  });
+
+  it("shows no badge for false or absent", () => {
+    for (const value of [false, undefined]) {
+      withInviteOnly(value);
+      const { unmount } = render(<CompetitionDetail competitionId={COMPETITION_ID} />);
+      expect(screen.queryByTestId("invite-only-badge")).not.toBeInTheDocument();
+      unmount();
+    }
+  });
+
+  it("puts the invite panel first, once, for the organiser of an invite-only competition", () => {
+    withInviteOnly(true);
+    organiserMock.mockReturnValue("organiser");
+    render(<CompetitionDetail competitionId={COMPETITION_ID} />);
+    expect(screen.getAllByTestId("invite-panel")).toHaveLength(1);
+    expect(screen.getByTestId("invite-first")).toContainElement(screen.getByTestId("invite-panel"));
+    expect(screen.getByText(/next step: create an invite link/i)).toBeInTheDocument();
+  });
+
+  it("keeps the panel at the bottom, with no 'next step' line, for a public competition's organiser", () => {
+    withInviteOnly(false);
+    organiserMock.mockReturnValue("organiser");
+    render(<CompetitionDetail competitionId={COMPETITION_ID} />);
+    expect(screen.getAllByTestId("invite-panel")).toHaveLength(1);
+    expect(screen.queryByTestId("invite-first")).not.toBeInTheDocument();
+  });
+
+  it("shows no invite panel to a non-organiser, even on an invite-only competition", () => {
+    withInviteOnly(true);
+    render(<CompetitionDetail competitionId={COMPETITION_ID} />);
+    expect(screen.queryByTestId("invite-panel")).not.toBeInTheDocument();
   });
 });
