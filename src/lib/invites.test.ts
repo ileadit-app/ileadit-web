@@ -210,6 +210,105 @@ describe("JOIN-CODE-W helpers and age-not-confirmed", () => {
   });
 });
 
+describe("acceptInvite — engine refusal reasons (WEB-INVITE-FIXES-1)", () => {
+  it("MUT-REASON-OVERLAP-A: details.reason overlap shows the already-in-a-competition copy, not 'isn't available'", async () => {
+    mockCallable.mockRejectedValueOnce(
+      functionsError("functions/failed-precondition", "You're already in a competition on those dates.", {
+        reason: "overlap",
+      }),
+    );
+    const { acceptInvite, acceptInviteFailureMessage } = await import("./invites");
+    const outcome = await acceptInvite("K7M4-PQX2");
+    expect(outcome.status).toBe("failure");
+    if (outcome.status === "failure") {
+      expect(acceptInviteFailureMessage(outcome.failure)).toBe(
+        "You're already in a competition on those dates.",
+      );
+    }
+  });
+
+  it("MUT-REASON-OVERLAP-B: matches on details.reason, not message text", async () => {
+    mockCallable.mockRejectedValueOnce(
+      functionsError("functions/failed-precondition", "some other wording entirely", {
+        reason: "overlap",
+      }),
+    );
+    const { acceptInvite, acceptInviteFailureMessage } = await import("./invites");
+    const outcome = await acceptInvite("K7M4-PQX2");
+    expect(outcome.status === "failure" && acceptInviteFailureMessage(outcome.failure)).toBe(
+      "You're already in a competition on those dates.",
+    );
+  });
+
+  it("MUT-REASON-INVITEONLY-A: details.reason invite-only shows the invite-only copy", async () => {
+    mockCallable.mockRejectedValueOnce(
+      functionsError("functions/failed-precondition", "This competition is invite only.", {
+        reason: "invite-only",
+      }),
+    );
+    const { acceptInvite, acceptInviteFailureMessage } = await import("./invites");
+    const outcome = await acceptInvite("K7M4-PQX2");
+    expect(outcome.status === "failure" && acceptInviteFailureMessage(outcome.failure)).toBe(
+      "This competition is invite only. Ask the organiser for an invite code.",
+    );
+  });
+
+  it("MUT-REASON-UNCHANGED: a revoked/expired code with no reason keeps the generic 'isn't available' copy", async () => {
+    mockCallable.mockRejectedValueOnce(
+      functionsError("functions/failed-precondition", "invite has expired", { reason: "invite-expired" }),
+    );
+    const { acceptInvite, acceptInviteFailureMessage } = await import("./invites");
+    const outcome = await acceptInvite("K7M4-PQX2");
+    expect(outcome.status === "failure" && acceptInviteFailureMessage(outcome.failure)).toMatch(
+      /isn't available any more/i,
+    );
+  });
+});
+
+describe("createInvite — optional fields are left out, never sent as null (WEB-INVITE-FIXES-1)", () => {
+  const okResult = {
+    data: { code: "K7M4PQX2", displayCode: "K7M4-PQX2", url: "https://ileadit.co.uk/invite/K7M4PQX2" },
+  };
+
+  it("MUT-PAYLOAD-LABEL: an undefined label leaves the label key out of the payload", async () => {
+    mockCallable.mockResolvedValueOnce(okResult);
+    const { createInvite } = await import("./invites");
+    await createInvite({ competitionId: "comp1", label: undefined });
+    const payload = mockCallable.mock.calls[0][0];
+    expect(payload).toEqual({ competitionId: "comp1" });
+    expect("label" in payload).toBe(false);
+  });
+
+  it("MUT-PAYLOAD-BLANK: a blank or whitespace label, and null/undefined expiresAt/maxUses, are all left out", async () => {
+    mockCallable.mockResolvedValueOnce(okResult);
+    const { createInvite } = await import("./invites");
+    await createInvite({
+      competitionId: "comp1",
+      label: "   ",
+      expiresAt: undefined,
+      maxUses: null as unknown as undefined,
+    });
+    expect(Object.keys(mockCallable.mock.calls[0][0])).toEqual(["competitionId"]);
+  });
+
+  it("MUT-PAYLOAD-KEPT: real values are still sent (label trimmed)", async () => {
+    mockCallable.mockResolvedValueOnce(okResult);
+    const { createInvite } = await import("./invites");
+    await createInvite({
+      competitionId: "comp1",
+      label: " Marketing ",
+      expiresAt: "2026-12-01T00:00:00.000Z",
+      maxUses: 5,
+    });
+    expect(mockCallable.mock.calls[0][0]).toEqual({
+      competitionId: "comp1",
+      label: "Marketing",
+      expiresAt: "2026-12-01T00:00:00.000Z",
+      maxUses: 5,
+    });
+  });
+});
+
 describe("listInvites / createInvite / revokeInvite — organiser callables", () => {
   it("MUT-LIST-1: returns the invites array from the callable as-is", async () => {
     const invites = [

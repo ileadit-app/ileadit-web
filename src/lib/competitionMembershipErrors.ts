@@ -36,16 +36,29 @@ import type { FunctionsError } from "firebase/functions";
  *     ensureAccount first" — `MissingGameStateError` (join only; leave never
  *     throws this because it doesn't require `gameSnap.exists`)
  *
- * Neither callable ever sets `details.reason` (unlike `submitSteps.ts`,
- * which `engineErrors.ts` maps) — every distinction below comes from `code`
- * plus a message-substring check, same technique `engineErrors.ts` already
- * uses for its own message-only case (`missing-game-state`).
+ * Most refusals above carry no `details.reason`, so those are told apart by
+ * `code` plus a message-substring check (same technique `engineErrors.ts`
+ * uses for its message-only `missing-game-state`). Two `failed-precondition`
+ * refusals DO set `details.reason`, on both `joinCompetition` and
+ * `acceptInvite` (engine main, `functions/src/callables/{joinCompetition,
+ * acceptInvite}.ts`, `services/competitions.ts` `OVERLAP_MESSAGE`):
+ *   - `reason: "overlap"` — already in a competition on those dates (ILR-16-ENG)
+ *   - `reason: "invite-only"` — joining an invite-only competition without an
+ *     invite code (INVITE-1; `joinCompetition` only)
+ * These are matched on `details.reason` FIRST, never on message text.
+ * (`age-not-confirmed` is the third reason; it is handled in `invites.ts`.)
  */
+/** Shown wherever an invite-only competition can't be joined directly. */
+export const INVITE_ONLY_MESSAGE =
+  "This competition is invite only. Ask the organiser for an invite code.";
+
 export type CompetitionMembershipFailureReason =
   | "not-found"
   | "not-joinable"
   | "missing-game-state"
   | "config-not-seeded"
+  | "overlap"
+  | "invite-only"
   | "unauthenticated"
   | "invalid-argument"
   | "unknown";
@@ -88,6 +101,13 @@ export function toCompetitionMembershipFailure(error: unknown): CompetitionMembe
     return { reason: "invalid-argument", code: error.code, message: error.message, cause: error };
   }
   if (error.code === "functions/failed-precondition") {
+    const details = error.details as { reason?: unknown } | undefined;
+    if (details?.reason === "overlap") {
+      return { reason: "overlap", code: error.code, message: error.message, cause: error };
+    }
+    if (details?.reason === "invite-only") {
+      return { reason: "invite-only", code: error.code, message: error.message, cause: error };
+    }
     // TODO(LEAVE-1): once the engine ships a distinguishable signal (a
     // distinct `details.reason`, or a message that names this case
     // specifically) for "this player left this competition while it was
@@ -137,6 +157,10 @@ export function competitionMembershipFailureMessage(
       return operation === "join"
         ? "You can't join this one any more — it's already under way, wrapping up, finished, or you've already left it."
         : "You can't leave this one any more.";
+    case "overlap":
+      return "You're already in a competition on those dates.";
+    case "invite-only":
+      return INVITE_ONLY_MESSAGE;
     case "missing-game-state":
       return "Your account isn't fully set up yet. Sign out and back in, then try again.";
     case "config-not-seeded":
