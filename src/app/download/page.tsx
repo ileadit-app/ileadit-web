@@ -1,27 +1,22 @@
 import type { Metadata } from "next";
-import { AlertTriangle, PlayCircle, Smartphone } from "lucide-react";
+import { Apple, PlayCircle } from "lucide-react";
+import {
+  APP_STORE_URL,
+  PLAY_STORE_URL,
+  storeAvailabilityCopy,
+} from "@/lib/storeLinks";
 
 export const metadata: Metadata = {
   title: "Get the app — ileadit",
-  description: "Download ileadit and start competing on points, not step counts. Free to download, available on Android today.",
+  description: "Download ileadit and start competing on points, not step counts. Free to download.",
 };
 
 /**
- * PLACEHOLDER STATE — read before editing.
- *
- * Android is the only platform that exists today. There is no live iOS app
- * (Gerald is building it — no ship date yet), so this page must not present
- * an App Store link or imply "download on iOS" is possible right now.
- *
- * There is also no real Play Store URL yet (the app isn't listed). The
- * button below is deliberately styled as a non-functional placeholder
- * (dashed border, "PLACEHOLDER" tag, not a real <Link>/<a>) rather than a
- * finished-looking store badge pointing at "#" — a dead link that looks
- * real is worse than an honest placeholder. Swap PLAY_STORE_URL below for
- * the real listing URL and turn this into a proper <a> once it exists.
+ * Store buttons come from `src/lib/storeLinks.ts` (the one place the listing
+ * URLs live). A null URL means no card and no button for that store — never
+ * a dead link or a placeholder on a public page. With both null the page
+ * shows just the early-access sentence.
  */
-const PLAY_STORE_URL = null; // e.g. "https://play.google.com/store/apps/details?id=..."
-
 export default function Download() {
   return (
     <>
@@ -38,75 +33,53 @@ export default function Download() {
             Download ileadit
           </h1>
           <p className="mt-5 max-w-xl text-lg leading-relaxed text-on-navy-muted sm:text-xl">
-            Free to download, free to join a public competition. Available
-            on Android today.
+            Free to download, free to join a public competition.{" "}
+            {storeAvailabilityCopy(PLAY_STORE_URL, APP_STORE_URL)}
           </p>
         </div>
       </section>
 
-      <section className="bg-background py-16 sm:py-24">
-        <div className="mx-auto max-w-6xl px-5 sm:px-6">
-          <div className="grid gap-6 sm:grid-cols-2">
-            {/* Android — placeholder link, real listing not live yet */}
-            <div className="rounded-3xl border border-border bg-card p-6 sm:p-8">
-              <div className="flex size-11 items-center justify-center rounded-2xl bg-primary text-primary-foreground">
-                <PlayCircle className="size-5" aria-hidden="true" />
-              </div>
-              <h2 className="mt-5 text-lg font-bold text-foreground">
-                Android
-              </h2>
-              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                The live platform. Requires Health Connect.
-              </p>
-
+      {PLAY_STORE_URL || APP_STORE_URL ? (
+        <section className="bg-background py-16 sm:py-24">
+          <div className="mx-auto max-w-6xl px-5 sm:px-6">
+            <div className="grid gap-6 sm:grid-cols-2">
               {PLAY_STORE_URL ? (
-                <a
-                  href={PLAY_STORE_URL}
-                  className="mt-6 inline-flex h-12 items-center gap-2 rounded-full border border-[rgba(25,47,95,0.15)] bg-brand-gold px-6 text-sm font-bold text-brand-navy transition-colors hover:bg-brand-gold/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-navy"
-                >
-                  <PlayCircle className="size-5" aria-hidden="true" />
-                  Get it on Google Play
-                </a>
-              ) : (
-                <div
-                  role="note"
-                  aria-label="Placeholder — Play Store link not yet available"
-                  className="mt-6 inline-flex h-12 cursor-not-allowed items-center gap-2 rounded-full border-2 border-dashed border-brand-coral/50 bg-brand-coral/5 px-6 text-sm font-bold text-coral-text"
-                >
-                  <PlayCircle className="size-5" aria-hidden="true" />
-                  Get it on Google Play — PLACEHOLDER LINK
+                <div className="rounded-3xl border border-border bg-card p-6 sm:p-8">
+                  <div className="flex size-11 items-center justify-center rounded-2xl bg-primary text-primary-foreground">
+                    <PlayCircle className="size-5" aria-hidden="true" />
+                  </div>
+                  <h2 className="mt-5 text-lg font-bold text-foreground">Android</h2>
+                  <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                    Requires Health Connect.
+                  </p>
+                  <a
+                    href={PLAY_STORE_URL}
+                    className="mt-6 inline-flex h-12 items-center gap-2 rounded-full border border-[rgba(25,47,95,0.15)] bg-brand-gold px-6 text-sm font-bold text-brand-navy transition-colors hover:bg-brand-gold/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-navy"
+                  >
+                    <PlayCircle className="size-5" aria-hidden="true" />
+                    Get it on Google Play
+                  </a>
                 </div>
-              )}
-              <p className="mt-3 flex items-start gap-1.5 text-xs leading-relaxed text-coral-text">
-                <AlertTriangle className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
-                Placeholder: the real Play Store listing URL must be swapped
-                in here before this page ships.
-              </p>
-            </div>
-
-            {/* iOS — genuinely doesn't exist, say so plainly */}
-            <div className="rounded-3xl border border-dashed border-border bg-muted/40 p-6 opacity-80 sm:p-8">
-              <div className="flex size-11 items-center justify-center rounded-2xl bg-muted text-muted-foreground">
-                <Smartphone className="size-5" aria-hidden="true" />
-              </div>
-              <h2 className="mt-5 text-lg font-bold text-foreground">
-                iOS
-              </h2>
-              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                Not built yet. There is no iOS app to download today, and no
-                date to announce — this section will be replaced with a real
-                App Store link once one exists.
-              </p>
-              <div
-                aria-disabled="true"
-                className="mt-6 inline-flex h-12 items-center gap-2 rounded-full border-2 border-dashed border-border px-6 text-sm font-bold text-muted-foreground"
-              >
-                Coming later — no link yet
-              </div>
+              ) : null}
+              {APP_STORE_URL ? (
+                <div className="rounded-3xl border border-border bg-card p-6 sm:p-8">
+                  <div className="flex size-11 items-center justify-center rounded-2xl bg-primary text-primary-foreground">
+                    <Apple className="size-5" aria-hidden="true" />
+                  </div>
+                  <h2 className="mt-5 text-lg font-bold text-foreground">iPhone</h2>
+                  <a
+                    href={APP_STORE_URL}
+                    className="mt-6 inline-flex h-12 items-center gap-2 rounded-full border border-[rgba(25,47,95,0.15)] bg-brand-gold px-6 text-sm font-bold text-brand-navy transition-colors hover:bg-brand-gold/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-navy"
+                  >
+                    <Apple className="size-5" aria-hidden="true" />
+                    Download on the App Store
+                  </a>
+                </div>
+              ) : null}
             </div>
           </div>
-        </div>
-      </section>
+        </section>
+      ) : null}
     </>
   );
 }

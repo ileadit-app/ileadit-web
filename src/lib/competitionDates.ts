@@ -55,7 +55,7 @@ export const DEFAULT_COMPETITION_ZONE = "Europe/London";
  * correctly as plain strings. Same technique as `todayCard.ts`'s private
  * `formatDateInZone` — duplicated rather than imported since that one is
  * file-private and this module has no existing dependency on `todayCard.ts`. */
-function zonedDateString(date: Date, timeZone: string): string {
+export function zonedDateString(date: Date, timeZone: string): string {
   return new Intl.DateTimeFormat("en-CA", {
     timeZone,
     year: "numeric",
