@@ -1,11 +1,15 @@
 import Link from "next/link";
 import { ArrowRight, Check } from "lucide-react";
 
+// WEB-HONEST-1: this section used to promise per-player pricing, "unlimited
+// teams and department rivalries" and a quote. None of that is real yet:
+// January is free, there are no paid plans, and team competitions do not
+// exist. Only list things that are true today.
 const INCLUDED = [
-  "Unlimited teams and department rivalries",
-  "Public and private competitions",
-  "iOS and Android apps for every player",
-  "Employer view of participation, never step data",
+  "Free to run in January",
+  "Up to 3 pilot competitions",
+  "Private competitions for your colleagues",
+  "Organisers see points, never step counts",
 ];
 
 export function PricingSection() {
@@ -19,11 +23,12 @@ export function PricingSection() {
                 Pricing
               </p>
               <h2 className="mt-3 text-balance text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl">
-                Simple, per-player pricing that scales with your team.
+                Free company pilots in January.
               </h2>
               <p className="mt-4 text-lg leading-relaxed text-muted-foreground">
-                No tiers to puzzle over on this page — just tell us the size
-                of your team and we&apos;ll get you a straight quote.
+                We&apos;re running up to 3 free pilot competitions with
+                companies in January. Tell us about yours and we&apos;ll get
+                in touch.
               </p>
               <ul className="mt-6 space-y-3" role="list">
                 {INCLUDED.map((item) => (
@@ -48,8 +53,8 @@ export function PricingSection() {
                 Are your employees average winners?
               </h3>
               <p className="mt-2 text-sm leading-relaxed text-on-navy-muted">
-                Tell us a little about your team and we&apos;ll get back with
-                a quote and a walkthrough.
+                Tell us a little about your company and we&apos;ll get back to
+                you about a pilot.
               </p>
               <Link
                 href="mailto:hello@ileadit.co.uk"

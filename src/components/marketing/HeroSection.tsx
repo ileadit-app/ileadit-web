@@ -60,7 +60,7 @@ export function HeroSection() {
           <p className="mt-5 max-w-xl text-lg leading-relaxed text-on-navy-muted sm:text-xl">
             You&apos;re never scored against anyone else&apos;s step count —
             only your own rolling average. Walk more than usual and you
-            climb. That means the fittest person in the office and the least
+            climb. That means the most active person in the office and the least
             active have exactly the same shot at winning.
           </p>
 
@@ -69,7 +69,7 @@ export function HeroSection() {
               href="/#employer"
               className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-brand-gold px-6 text-base font-bold text-brand-navy transition-colors hover:bg-brand-gold/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-gold"
             >
-              Bring it to your team
+              Bring it to your company
               <ArrowRight className="size-4" aria-hidden="true" />
             </Link>
             <Link
@@ -83,7 +83,7 @@ export function HeroSection() {
 
           <div className="mt-6 flex items-center gap-2 text-sm font-medium text-on-navy-muted">
             <Lock className="size-4 shrink-0 text-brand-gold" aria-hidden="true" />
-            Your step count is private. Always. Only you ever see the number.
+            Other players never see your step count, only your points.
           </div>
         </div>
 
@@ -135,7 +135,7 @@ type PlayerId = "priya" | "deepak" | "marcus";
 
 const PLAYER_META: Record<PlayerId, { name: string; note: string }> = {
   priya: { name: "Priya", note: "ordinary walker" },
-  deepak: { name: "Deepak", note: "office \u2018fitness person\u2019" },
+  deepak: { name: "Deepak", note: "keen walker" },
   marcus: { name: "Marcus", note: "new starter" },
 };
 
@@ -290,7 +290,7 @@ function AverageWinnerCard() {
                 name={PLAYER_META[id].name}
                 note={PLAYER_META[id].note}
                 percent={percent}
-                points={`+${points} pts`}
+                points={`+${points} points`}
                 highlight={rank === 0}
                 translateY={rank * ROW_STEP_PX}
               />
@@ -298,9 +298,9 @@ function AverageWinnerCard() {
           })}
         </div>
         <p className="mt-5 text-sm leading-relaxed text-on-navy-muted">
-          Priya and Deepak walked wildly different distances today. Same
-          percentage over their own average, same points. That&apos;s the
-          whole game.
+          Priya and Deepak have very different usual walks, but each is scored
+          against their own average, and today they earned the same points.
+          That&apos;s the whole game.
         </p>
       </div>
     </div>

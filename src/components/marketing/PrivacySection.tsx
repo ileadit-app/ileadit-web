@@ -1,10 +1,11 @@
+import Link from "next/link";
 import { EyeOff, LockKeyhole, ShieldCheck } from "lucide-react";
 
 const POINTS = [
   {
     icon: LockKeyhole,
     title: "Step counts stay private",
-    body: "Nobody sees another player\u2019s step count. Not a rival, not a manager, not us on a dashboard. Ever.",
+    body: "Other players and competition organisers never see your step count. Not a rival, not a manager.",
   },
   {
     icon: EyeOff,
@@ -13,8 +14,8 @@ const POINTS = [
   },
   {
     icon: ShieldCheck,
-    title: "Built in, not promised",
-    body: "This isn't a policy we could quietly change. Individual step data simply never leaves a player's own view.",
+    title: "What we do with your steps",
+    body: "Your phone sends us your daily step total so the game can score it. We don’t sell it or share it with advertisers or data brokers, and the daily records are deleted automatically 30 days after the day, or 30 days after the end of a competition that day counted towards, whichever is later.",
   },
 ];
 
@@ -27,14 +28,23 @@ export function PrivacySection() {
             Privacy, for employers and everyone else
           </p>
           <h2 className="mt-3 text-balance text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl">
-            There&apos;s nothing to leak, because there&apos;s nothing to
-            compare.
+            Rivals see your points. Never your steps.
           </h2>
           <p className="mt-4 text-lg leading-relaxed text-muted-foreground">
             Since every player runs against their own average, there was
             never a reason to show anyone else&apos;s steps in the first
-            place. Employers see participation and engagement across the
-            competition — never a single employee&apos;s personal step data.
+            place. Organisers see points, lives and leaderboard position —
+            never anyone&apos;s step count.
+          </p>
+          <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
+            The full detail is in our{" "}
+            <Link
+              href="/privacy"
+              className="font-semibold text-foreground underline underline-offset-2"
+            >
+              privacy policy
+            </Link>
+            .
           </p>
         </div>
 

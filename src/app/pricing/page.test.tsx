@@ -13,7 +13,7 @@ import Pricing from "./page";
 describe("Pricing stub page", () => {
   it("MUT-TOKEN: the body paragraph uses a real token, not the undefined text-text-primary", () => {
     render(<Pricing />);
-    const paragraph = screen.getByText(/choose the plan that fits your competition needs/i);
+    const paragraph = screen.getByText(/company pilots are free in january/i);
     expect(paragraph.className).toContain("text-muted-foreground");
     expect(paragraph.className).not.toContain("text-text-primary");
   });

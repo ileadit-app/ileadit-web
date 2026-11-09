@@ -8,21 +8,21 @@ const TIERS = [
     tone: "coral" as const,
   },
   {
+    label: "50%",
+    detail: "of your own average",
+    result: "Bonus points",
+    tone: "muted" as const,
+  },
+  {
     label: "75%",
     detail: "of your own average",
-    result: "Small bonus",
-    tone: "muted" as const,
+    result: "Bigger bonus",
+    tone: "gold" as const,
   },
   {
     label: "100%",
     detail: "of your own average",
-    result: "Solid bonus",
-    tone: "gold" as const,
-  },
-  {
-    label: "Over 100%",
-    detail: "of your own average",
-    result: "Big bonus",
+    result: "Biggest bonus",
     tone: "goldStrong" as const,
   },
 ];
@@ -68,7 +68,7 @@ export function AverageMechanicSection() {
           <p className="mt-4 text-lg leading-relaxed text-muted-foreground">
             Every player is scored against their own rolling average — a
             number that only tracks them. So the office&apos;s most active
-            walker and its most sedentary have identical odds of winning
+            walker and its least active have identical odds of winning
             today.
           </p>
         </div>
@@ -79,8 +79,16 @@ export function AverageMechanicSection() {
               Same day, two players
             </p>
             <div className="mt-5 space-y-4">
-              <ComparisonRow name="Sam" avg="2,400" today="2,650" percent={110} />
-              <ComparisonRow name="Jordan" avg="14,800" today="16,280" percent={110} />
+              <ComparisonRow
+                name="Sam"
+                usual="Usually takes it easy"
+                percent={110}
+              />
+              <ComparisonRow
+                name="Jordan"
+                usual="Usually covers plenty of ground"
+                percent={110}
+              />
             </div>
             <div className="mt-5 flex items-center gap-2 rounded-2xl bg-brand-gold/15 px-4 py-3 text-sm font-bold text-brand-navy">
               <Sparkles className="size-4 shrink-0" aria-hidden="true" />
@@ -123,15 +131,15 @@ export function AverageMechanicSection() {
   );
 }
 
+// Deliberately no step numbers: the site never shows anyone's step count, not
+// even in an illustrative example (WEB-HONEST-1).
 function ComparisonRow({
   name,
-  avg,
-  today,
+  usual,
   percent,
 }: {
   name: string;
-  avg: string;
-  today: string;
+  usual: string;
   percent: number;
 }) {
   return (
@@ -142,15 +150,7 @@ function ComparisonRow({
           {percent}% of own average
         </span>
       </div>
-      <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
-        <span>
-          Rolling average: <strong className="text-foreground">{avg}</strong>{" "}
-          steps
-        </span>
-        <span>
-          Today: <strong className="text-foreground">{today}</strong> steps
-        </span>
-      </div>
+      <p className="mt-3 text-sm text-muted-foreground">{usual}</p>
       <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-border">
         <div
           className="h-full rounded-full bg-brand-gold"

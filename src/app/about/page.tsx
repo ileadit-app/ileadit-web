@@ -164,14 +164,14 @@ export default function About() {
               Privacy is the whole design, not a policy bolted on
             </p>
             <h2 className="mt-3 text-balance text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl">
-              Nobody sees your step count. Not rivals, not your employer, not
-              us on a dashboard.
+              Other players never see your step count. Not rivals, not your
+              employer.
             </h2>
             <p className="mt-4 text-lg leading-relaxed text-muted-foreground">
               What other players — and, in a workplace competition, what HR
               — ever see is your points and your leaderboard position. The
-              raw number of steps behind them is never shown to anyone but
-              you.
+              raw number of steps behind them is never shown to other players
+              or organisers.
             </p>
           </div>
           <div className="mt-8 flex items-start gap-3 rounded-2xl border border-border bg-card p-5 sm:max-w-2xl">

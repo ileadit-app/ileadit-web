@@ -4,7 +4,7 @@ import { Logo } from "@/components/brand/Logo";
 const FOOTER_LINKS = [
   { href: "/#how-it-works", label: "How it works" },
   { href: "/#average", label: "Why average wins" },
-  { href: "/#teams", label: "Teams" },
+  { href: "/#companies", label: "For companies" },
   { href: "/#privacy", label: "Privacy" },
   { href: "/#pricing", label: "Pricing" },
   { href: "/download", label: "Download" },
