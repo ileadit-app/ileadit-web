@@ -20,10 +20,14 @@ vi.mock("./functions", () => ({
   getFunctionsClient: () => ({}),
 }));
 
-function functionsError(code: FunctionsError["code"], message: string): FunctionsError {
+function functionsError(
+  code: FunctionsError["code"],
+  message: string,
+  details?: unknown,
+): FunctionsError {
   const error = new Error(message) as unknown as FunctionsError;
   (error as { code: FunctionsError["code"] }).code = code;
-  (error as { details?: unknown }).details = undefined;
+  (error as { details?: unknown }).details = details;
   return error;
 }
 
@@ -160,6 +164,49 @@ describe("acceptInvite", () => {
       expect(outcome.failure.kind).toBe("invite-unavailable");
       expect(acceptInviteFailureMessage(outcome.failure)).toMatch(/isn't available any more/i);
     }
+  });
+});
+
+describe("JOIN-CODE-W helpers and age-not-confirmed", () => {
+  it("formatInviteCodeSpaced groups 4+4 with a space; the hyphen form is unchanged", async () => {
+    const { formatInviteCodeSpaced, formatInviteCodeForDisplay } = await import("./invites");
+    expect(formatInviteCodeSpaced("k7m4-pqx2")).toBe("K7M4 PQX2");
+    expect(formatInviteCodeForDisplay("k7m4pqx2")).toBe("K7M4-PQX2");
+    expect(formatInviteCodeSpaced("BEAN26")).toBe("BEAN26");
+  });
+
+  it("buildAppInviteUrl is ileadit://invite/ plus the plain 8-character code", async () => {
+    const { buildAppInviteUrl } = await import("./invites");
+    expect(buildAppInviteUrl("k7m4 pqx2")).toBe("ileadit://invite/K7M4PQX2");
+  });
+
+  it("MUT-AGE-1: details.reason age-not-confirmed maps to its own kind with the app message", async () => {
+    mockCallable.mockRejectedValueOnce(
+      functionsError("functions/failed-precondition", "age not confirmed", {
+        reason: "age-not-confirmed",
+      }),
+    );
+    const { acceptInvite, acceptInviteFailureMessage } = await import("./invites");
+    const outcome = await acceptInvite("K7M4-PQX2");
+    expect(outcome.status).toBe("failure");
+    if (outcome.status === "failure") {
+      expect(outcome.failure.kind).toBe("age-not-confirmed");
+      expect(acceptInviteFailureMessage(outcome.failure, "K7M4 PQX2")).toBe(
+        "Finish setting up your account in the ileadit app first, then join with code K7M4 PQX2 in the app or here.",
+      );
+      expect(acceptInviteFailureMessage(outcome.failure)).toMatch(/finish setting up your account/i);
+    }
+  });
+
+  it("a different details.reason does not become age-not-confirmed", async () => {
+    mockCallable.mockRejectedValueOnce(
+      functionsError("functions/failed-precondition", "competition is not open for joining", {
+        reason: "something-else",
+      }),
+    );
+    const { acceptInvite } = await import("./invites");
+    const outcome = await acceptInvite("K7M4-PQX2");
+    expect(outcome.status === "failure" && outcome.failure.kind).toBe("join-refused");
   });
 });
 
