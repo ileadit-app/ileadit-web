@@ -457,4 +457,64 @@ describe("CompetitionDetail — Invite only (INVITE-2)", () => {
     render(<CompetitionDetail competitionId={COMPETITION_ID} />);
     expect(screen.queryByTestId("invite-panel")).not.toBeInTheDocument();
   });
+
+  const INVITE_ONLY_LINE = "This competition is invite only. Ask the organiser for an invite code.";
+
+  it("MUT-NOJOIN-1: a non-member, non-organiser sees no Join button on an invite-only competition, just the line", () => {
+    withInviteOnly(true);
+    render(<CompetitionDetail competitionId={COMPETITION_ID} />);
+    expect(screen.queryByRole("button", { name: /join competition/i })).not.toBeInTheDocument();
+    expect(screen.getByText(INVITE_ONLY_LINE)).toBeInTheDocument();
+  });
+
+  it("MUT-NOJOIN-2: the same holds on an active competition's first day", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-09-21T10:00:00Z"));
+    try {
+      const detailMock = useCompetitionDetailMock;
+      const current = detailMock();
+      detailMock.mockReturnValue({
+        status: "success",
+        competition: {
+          ...current.competition,
+          status: "active",
+          startDate: "2026-09-21",
+          endDate: "2026-09-28",
+          timeZone: "Europe/London",
+          inviteOnly: true,
+        },
+      });
+      render(<CompetitionDetail competitionId={COMPETITION_ID} />);
+      expect(screen.queryByRole("button", { name: /join competition/i })).not.toBeInTheDocument();
+      expect(screen.getByText(INVITE_ONLY_LINE)).toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("MUT-NOJOIN-3: the organiser of an invite-only competition sees no change (Join stays, no line)", () => {
+    withInviteOnly(true);
+    organiserMock.mockReturnValue("organiser");
+    render(<CompetitionDetail competitionId={COMPETITION_ID} />);
+    expect(screen.getByRole("button", { name: /join competition/i })).toBeInTheDocument();
+    expect(screen.queryByText(INVITE_ONLY_LINE)).not.toBeInTheDocument();
+  });
+
+  it("MUT-NOJOIN-4: a member of an invite-only competition sees no change (You're in, no line)", () => {
+    withInviteOnly(true);
+    useOwnMembershipMock.mockReturnValue({ status: "member", player: { points: 0 } });
+    render(<CompetitionDetail competitionId={COMPETITION_ID} />);
+    expect(screen.getByText("You're in")).toBeInTheDocument();
+    expect(screen.queryByText(INVITE_ONLY_LINE)).not.toBeInTheDocument();
+  });
+
+  it("MUT-NOJOIN-5: a non-invite-only competition still offers Join, with no line", () => {
+    for (const value of [false, undefined]) {
+      withInviteOnly(value);
+      const { unmount } = render(<CompetitionDetail competitionId={COMPETITION_ID} />);
+      expect(screen.getByRole("button", { name: /join competition/i })).toBeInTheDocument();
+      expect(screen.queryByText(INVITE_ONLY_LINE)).not.toBeInTheDocument();
+      unmount();
+    }
+  });
 });

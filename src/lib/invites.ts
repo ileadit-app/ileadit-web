@@ -212,8 +212,19 @@ export async function createInvite(input: CreateInviteInput): Promise<CreateInvi
     getFunctionsClient(),
     "createInvite",
   );
+  // The engine's strict zod schema takes `label`/`expiresAt`/`maxUses` as
+  // optional (absent is fine) but REFUSES null, and the Functions SDK turns
+  // `undefined` into null on the wire. So an optional field with no value
+  // must be left out of the payload, not sent (WEB-INVITE-FIXES-1).
+  const label = typeof input.label === "string" ? input.label.trim() : "";
+  const payload: CreateInviteInput = {
+    competitionId: input.competitionId,
+    ...(label ? { label } : {}),
+    ...(input.expiresAt ? { expiresAt: input.expiresAt } : {}),
+    ...(typeof input.maxUses === "number" ? { maxUses: input.maxUses } : {}),
+  };
   try {
-    const result = await callable(input);
+    const result = await callable(payload);
     return { status: "success", result: result.data };
   } catch (error) {
     return {
@@ -331,6 +342,10 @@ export type AcceptInviteOutcome =
 /** `details.reason` the engine sends when the player has not confirmed 16+. */
 const AGE_NOT_CONFIRMED_REASON = "age-not-confirmed";
 
+/** `details.reason` values the engine sends on `failed-precondition` from
+ * both `joinCompetition` and `acceptInvite` (ILR-16-ENG overlap, INVITE-1). */
+const JOIN_REFUSAL_REASONS = ["overlap", "invite-only"];
+
 const JOIN_REFUSAL_MESSAGE_SUBSTRINGS = [
   "is not open for joining",
   "call ensureAccount first",
@@ -355,7 +370,8 @@ export async function acceptInvite(code: string): Promise<AcceptInviteOutcome> {
     if (
       isFunctionsError(error) &&
       error.code === "functions/failed-precondition" &&
-      JOIN_REFUSAL_MESSAGE_SUBSTRINGS.some((substring) => error.message.includes(substring))
+      (JOIN_REFUSAL_REASONS.includes(toInviteCallableFailure(error, "").reason ?? "") ||
+        JOIN_REFUSAL_MESSAGE_SUBSTRINGS.some((substring) => error.message.includes(substring)))
     ) {
       return {
         status: "failure",
