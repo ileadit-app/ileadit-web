@@ -1,27 +1,36 @@
 import { Building2, Globe2 } from "lucide-react";
 
-const DEPARTMENTS = [
-  { name: "Marketing", points: "18,240 pts", place: "1st" },
-  { name: "Sales", points: "17,960 pts", place: "2nd" },
-  { name: "Finance", points: "15,110 pts", place: "3rd" },
-  { name: "Engineering", points: "14,730 pts", place: "4th" },
+/**
+ * WEB-HONEST-1. This section used to be "Teams & rivalries" (department vs
+ * department, company vs company). Team-vs-team competitions do not exist in
+ * the app: every competition is a single leaderboard of individual players
+ * ranked on points. This section now describes only what exists.
+ *
+ * The example leaderboard is illustrative (fictional names) and shows points
+ * only, never steps.
+ */
+const EXAMPLE_PLAYERS = [
+  { name: "Priya", points: "412 points", place: "1st" },
+  { name: "Sam", points: "398 points", place: "2nd" },
+  { name: "Marcus", points: "371 points", place: "3rd" },
+  { name: "Jordan", points: "340 points", place: "4th" },
 ];
 
-export function TeamsSection() {
+export function CompanySection() {
   return (
-    <section id="teams" className="bg-background py-20 sm:py-28">
+    <section id="companies" className="bg-background py-20 sm:py-28">
       <div className="mx-auto max-w-6xl px-5 sm:px-6">
         <div className="max-w-2xl">
           <p className="text-sm font-bold uppercase tracking-wide text-coral-text">
-            Teams &amp; rivalries
+            For companies
           </p>
           <h2 className="mt-3 text-balance text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl">
-            Marketing vs Sales. Or Marketing vs the World.
+            Everyone in the office, on one leaderboard.
           </h2>
           <p className="mt-4 text-lg leading-relaxed text-muted-foreground">
-            Every competition works the same way, whichever players you put
-            in it. Run it inside your walls, or open it up and let your
-            company take on someone else&apos;s.
+            Run a private competition for your colleagues. Everyone plays as
+            themselves, scored on points against their own average, so the
+            keenest walker and the busiest desk-worker start level.
           </p>
         </div>
 
@@ -33,35 +42,37 @@ export function TeamsSection() {
               </div>
               <div>
                 <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
-                  Inside your walls
+                  Inside your company
                 </p>
                 <h3 className="text-lg font-bold text-foreground">
-                  Department vs department
+                  Colleagues, ranked on points
                 </h3>
               </div>
             </div>
             <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
-              Pit Marketing against Sales against Finance. Every team&apos;s
-              score is built from players beating their own averages — so a
-              department full of casual walkers competes just as hard as one
-              full of marathoners.
+              Invite colleagues to a private competition and watch the
+              leaderboard move. Organisers see points, lives and leaderboard
+              position, never anyone&apos;s step count.
             </p>
-            <div className="mt-5 space-y-2">
-              {DEPARTMENTS.map((dept) => (
+            <p className="mt-5 text-xs font-bold uppercase tracking-wide text-muted-foreground">
+              Example leaderboard
+            </p>
+            <div className="mt-2 space-y-2">
+              {EXAMPLE_PLAYERS.map((player) => (
                 <div
-                  key={dept.name}
+                  key={player.name}
                   className="flex items-center justify-between rounded-xl bg-muted px-4 py-2.5"
                 >
                   <div className="flex items-center gap-3">
                     <span className="text-xs font-extrabold text-coral-text">
-                      {dept.place}
+                      {player.place}
                     </span>
                     <span className="text-sm font-bold text-foreground">
-                      {dept.name}
+                      {player.name}
                     </span>
                   </div>
                   <span className="text-sm font-semibold text-muted-foreground">
-                    {dept.points}
+                    {player.points}
                   </span>
                 </div>
               ))}
@@ -75,40 +86,18 @@ export function TeamsSection() {
               </div>
               <div>
                 <p className="text-xs font-bold uppercase tracking-wide text-on-navy-muted">
-                  Open to the world
+                  Or open to anyone
                 </p>
                 <h3 className="text-lg font-bold text-on-navy-foreground">
-                  Your company vs theirs
+                  Public competitions
                 </h3>
               </div>
             </div>
             <p className="mt-4 text-sm leading-relaxed text-on-navy-muted">
-              A competition is just players, however they&apos;re grouped.
-              That means your team can go head-to-head with another
-              company&apos;s team, or join a public competition open to
-              anyone who wants in. Beating a rival firm is a better story
-              than beating Karen in Accounts.
+              Not ready to bring the whole company in? Anyone can join a
+              public competition from the app and play against people they
+              have never met.
             </p>
-            <div className="mt-5 rounded-2xl bg-white/10 p-4">
-              <p className="text-xs font-bold uppercase tracking-wide text-brand-gold">
-                Live rivalry
-              </p>
-              <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
-                <span className="text-base font-extrabold text-on-navy-foreground">
-                  ileadit HQ
-                </span>
-                <span className="text-xs font-bold text-on-navy-muted">vs</span>
-                <span className="text-base font-extrabold text-on-navy-foreground">
-                  Northwind Co.
-                </span>
-              </div>
-              <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-white/15">
-                <div className="h-full w-[58%] rounded-full bg-brand-gold" />
-              </div>
-              <p className="mt-2 text-xs font-semibold text-on-navy-muted">
-                ileadit HQ leads by 340 pts, day 4 of 7
-              </p>
-            </div>
           </div>
         </div>
       </div>

@@ -4,12 +4,12 @@ const STEPS = [
   {
     icon: Footprints,
     title: "We learn your normal",
-    body: "A couple of weeks of walking however you already walk sets your personal rolling average. No targets, no minimums, no judgement.",
+    body: "The app works out your normal daily level from your recent walking and keeps it up to date as you play. No fixed targets, no judgement.",
   },
   {
     icon: Gauge,
     title: "Beat it, score it",
-    body: "Hit 75%, 100%, or over 100% of your own average and the points climb. Drop below half your average and you lose a life.",
+    body: "Hit 50%, 75% or 100% of your own average and you earn bonus points. Drop below half your average and you lose a life.",
   },
   {
     icon: TrendingUp,
@@ -19,7 +19,7 @@ const STEPS = [
   {
     icon: Trophy,
     title: "Play for something",
-    body: "Climb team leaderboards, take on rivals, or join public competitions that anyone, anywhere, can enter.",
+    body: "Join a public competition anyone can enter, or a private one your company runs, and climb the leaderboard on points.",
   },
 ];
 
@@ -32,7 +32,7 @@ export function HowItWorksSection() {
             How it works
           </p>
           <h2 className="mt-3 text-balance text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl">
-            Four steps. Zero targets to fail.
+            Four steps. Your own average is the only target.
           </h2>
         </div>
 

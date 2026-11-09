@@ -12,7 +12,7 @@ export default function Pricing() {
           `/#pricing` (see PricingSection.tsx) — no other content was added
           here as part of this fix. */}
       <p className="mt-4 text-lg text-muted-foreground">
-        Choose the plan that fits your competition needs.
+        Company pilots are free in January. Get in touch to take part.
       </p>
     </div>
   );
