@@ -17,6 +17,11 @@ export const metadata: Metadata = {
  * shorten, or "improve" any sentence here without going back to Paul for a
  * new approval, per this ticket's instructions.
  *
+ * WEB-PRIVACY-ALIGN-1 (11 Nov 2026) is a DRAFT alignment of this text with what
+ * the apps and engine actually do. Each change is traced to a fact-table row in
+ * `docs/privacy-alignment-20261111.md`; none of it is approved wording until Paul
+ * signs it off. The recorded legal version (`privacy-v2`) is NOT changed here.
+ *
  * Replaces the placeholder skeleton (LegalPagePlaceholder-based) that
  * previously lived at this route. `/terms` now has the approved Terms of Use.
  */
@@ -35,7 +40,7 @@ export default function Privacy() {
       <section className="bg-background py-12 sm:py-16">
         <div className="mx-auto max-w-3xl px-5 sm:px-6">
           <p className="text-sm font-semibold text-muted-foreground">
-            <Rich text="**Last updated:** 3 November 2026" keyPrefix="last-updated" />
+            <Rich text="**Last updated:** 11 November 2026" keyPrefix="last-updated" />
           </p>
 
           <PolicySection id="short-version" title="The short version">
@@ -71,7 +76,8 @@ export default function Privacy() {
               items={[
                 "**Email address.** If you sign in with Google, Google gives us the email address and name on your Google account. If you sign in with Apple, Apple gives us your email address, and your name if you choose to share it. If you use Apple's \"Hide My Email\", we receive a private relay address instead of your real one. We use your email address to sign you in and keep your account secure. It is never shown to other players.",
                 "**Password**, if you sign up with email. We never see it: our sign-in provider (Google Firebase) stores only a scrambled version.",
-                "**Confirmation that you are 16 or over.** We ask you to confirm this when you sign up. We don't ask for your date of birth.",
+                "**Confirmation that you are 16 or over.** We ask you to confirm this when you sign up, and we store only that you confirmed it, and when. We don't ask for your date of birth.",
+                "**Which version of our Terms of Use and this Privacy Policy you accepted, and when.** We record this when you create your account, so we can show what you agreed to.",
                 `**Your time zone**, taken from your phone, so that "today" in the game matches your own day.`,
               ]}
             />
@@ -118,7 +124,7 @@ export default function Privacy() {
             />
             <RichP
               keyPrefix="s2-steps-p5"
-              text="**What we do with it.** Your steps are compared with **your own** normal level to work out your **points** and whether you **lose a life**. Your normal level adjusts as you play. We also run automatic checks for step counts that look implausible, such as sudden huge jumps or lots of hand-entered steps. Only the ileadit team can see those checks, and they don't change your score or your account on their own."
+              text="**What we do with it.** Your steps are compared with **your own** normal level to work out your **points** and whether you **lose a life**. Your normal level adjusts as you play. We also run automatic checks for step counts that look implausible, such as sudden huge jumps or lots of hand-entered steps. Only the ileadit team can see those checks, and they don't change your score or your account on their own. If you win a prize, a flagged day can pause the prize while the ileadit team takes a look. A flag never takes a prize away by itself."
             />
             <RichP
               keyPrefix="s2-steps-p6"
@@ -141,6 +147,18 @@ export default function Privacy() {
                 "**Challenges.** The players involved in a challenge can see who challenged whom, the target that was set and the result.",
                 "**Coins.** We keep a record of the game coins you earn and spend. Coins are game currency only: they can't be bought and have no cash value.",
                 `**Notifications.** We keep the messages we send you, such as "You've been challenged!", in your in-app inbox, and a **device token** so we can send notifications to your phone. Notification text can appear on your lock screen. You can turn notifications off in the app's settings or in your phone's settings.`,
+                "**Prizes.** Some organisers offer a prize for the top places. If you win one, we record that you won, whether and when you claimed it and, where we ask, that you confirmed you are 18 or over. You have a set time to claim (currently 14 days). If you decline, or the time runs out, the prize passes to the next eligible player, and the reason is never shown to other players. We don't ask you for your address, phone number or other contact details for a prize, and we don't give the organiser your email address. The organiser arranges the prize, not ileadit.",
+              ]}
+            />
+
+            <SubHeading>Reports, blocking and name checks</SubHeading>
+            <RichList
+              keyPrefix="s2-moderation"
+              items={[
+                "**Reports.** You can report a player's name or photo, a competition, or behaviour such as cheating or harassment. We keep who made the report, who or what it is about, the reason you chose, the time, and the optional note you add (up to 300 characters). Only the ileadit team can see reports. We use them to keep the game safe and fair, and reports are deleted automatically after 12 months.",
+                "**If you delete your account,** your account ID is removed from any report you made, and your note is deleted. If the player you reported deletes their account, their account ID is removed from the report, but your note stays until the report expires.",
+                "**Blocking.** If you block a player, we store their account ID and the time on your account, and only you can see it. Your app then hides their name and photo. Nothing else changes: you can still be in the same competitions, and they are not told. Your block list is deleted when you delete your account.",
+                `**Name checks.** Display names, competition names and descriptions, and prize text go through an automatic word filter. If a name is rejected, it is replaced, either by your previous name or by "Player" and a number, and any part of it held in your private name details is cleared. We don't keep the rejected name. If the ileadit team resets your name or removes your photo after a report, you can't change your name or photo again for 7 days.`,
               ]}
             />
 
@@ -254,11 +272,22 @@ export default function Privacy() {
                   `Not stored: we keep only the single "normal" figure worked out from it`,
                 ],
                 ["Your average steps per competition", "Your last 10 competitions only"],
-                ["Anti-cheat checks", "A rolling 30 days"],
+                [
+                  "Anti-cheat checks",
+                  "A rolling 30 days. A short record of which days were flagged, and why (never step counts), is kept for up to 400 days so that prize results can be checked fairly",
+                ],
                 ["Notification inbox", "Until you delete a message or your account"],
                 ["Device tokens for notifications", "Until they stop working or you delete your account"],
+                ["Record of the terms and policy versions you accepted", "Until you delete your account"],
+                ["Reports you make, or that are about you", "Deleted automatically after 12 months"],
+                ["Your block list", "Until you unblock a player or delete your account"],
+                ["Prize claim record", "Until you delete your account"],
                 ["Server logs", "30 days"],
                 ["Crash reports", "90 days"],
+                [
+                  "Backups",
+                  "Google keeps backups of our database for up to 30 days, and can restore it to any point in the last 7 days. Data you delete can stay in a backup until it ages out. We don't use backups for anything else",
+                ],
               ]}
             />
           </PolicySection>
@@ -274,7 +303,7 @@ export default function Privacy() {
             />
             <RichP
               keyPrefix="s7-p3"
-              text="When your account is deleted, we delete your profile, photo, private details, step and points history, coins, notifications, device tokens and sign-in account, and we remove you from your competitions. Any challenge you were part of is cancelled, and coins held for it are returned to the other player."
+              text="When your account is deleted, we delete your profile, photo, private details, step and points history, coins, notifications, device tokens, block list, prize claim record, the record of which terms and policy versions you accepted, and your sign-in account, and we remove you from your competitions. Any challenge you were part of is cancelled, and coins held for it are returned to the other player."
             />
             <RichP keyPrefix="s7-p4" text="**What we keep, and why:**" />
             <RichList
@@ -284,7 +313,12 @@ export default function Privacy() {
                 `**Challenge records:** your account ID is replaced with "deleted-user".`,
                 `**Other players' messages:** notifications other players already received, such as "Sam T challenged you", keep your display name until they delete them.`,
                 "**Welcome bonus record:** a scrambled, one-way version of your email address, the date and your old account ID, so the same email can't claim the welcome coins twice. It can't be turned back into your email address.",
+                "**Reports about you:** if you were reported and then delete your account, your account ID is removed from the report, but the note the other player wrote stays until the report is deleted automatically (section 6).",
               ]}
+            />
+            <RichP
+              keyPrefix="s7-backups"
+              text="**Backups.** Backups of our database (section 6) age out on their own. Anything you delete can remain in a backup for up to 30 days, and is not used for anything else."
             />
           </PolicySection>
 
@@ -298,7 +332,7 @@ export default function Privacy() {
                 "**Delete:** have your data deleted (section 7).",
                 "**Restrict:** ask us to limit how we use your data.",
                 "**Portability:** receive the data you gave us, including your step history, in a common machine-readable format.",
-                "**Object:** object to anything we do on the basis of our legitimate interests, such as crash reports or security logs.",
+                "**Object:** object to anything we do on the basis of our legitimate interests, such as crash reports, security logs or reports of misuse.",
                 "**Withdraw consent** at any time, including for step data (section 2). This doesn't affect anything we did before you withdrew.",
               ]}
             />

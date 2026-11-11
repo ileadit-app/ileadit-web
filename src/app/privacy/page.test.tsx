@@ -11,6 +11,11 @@ import Privacy from "./page";
  * to name Apple App Attest and the website's reCAPTCHA (Fraud Defense) use, added a new
  * "Signing in on our website" item, and bumped the last-updated date.
  *
+ * WEB-PRIVACY-ALIGN-1 (11 Nov 2026, DRAFT, pending Paul): the alignment tests at
+ * the bottom pin each added disclosure to its row in
+ * docs/privacy-alignment-20261111.md. They only prove the wording is present,
+ * not that Paul has approved it.
+ *
  * `next/link` is stubbed to a plain anchor — routing context isn't under
  * test here.
  */
@@ -77,7 +82,7 @@ describe("/privacy — approved policy (WEB-LEGAL-1)", () => {
   it("shows the approved last-updated date", () => {
     render(<Privacy />);
 
-    expect(screen.getByText(/3 november 2026/i)).toBeInTheDocument();
+    expect(screen.getByText(/11 november 2026/i)).toBeInTheDocument();
   });
 
   it("covers the iPhone app and Apple Health, and drops the Android-only scope line", () => {
@@ -136,6 +141,90 @@ describe("/privacy — approved policy (WEB-LEGAL-1)", () => {
     const h2s = screen.getAllByRole("heading", { level: 2 });
     expect(h2s.length).toBeGreaterThan(5);
     const h3s = screen.getAllByRole("heading", { level: 3 });
-    expect(h3s.length).toBe(5); // Your account / Your player profile / Your steps / Playing the game / Keeping the app working and secure
+    // Your account / Your player profile / Your steps / Playing the game /
+    // Reports, blocking and name checks / Keeping the app working and secure
+    expect(h3s.length).toBe(6);
+  });
+  describe("WEB-PRIVACY-ALIGN-1 draft additions", () => {
+    function section(name: RegExp): HTMLElement {
+      const heading = screen.getByRole("heading", { name });
+      const el = heading.closest("section");
+      expect(el).not.toBeNull();
+      return el as HTMLElement;
+    }
+
+    it("F4: says only the 16+ confirmation and its time are stored, still no date of birth", () => {
+      render(<Privacy />);
+
+      const text = section(/2\. what we collect/i).textContent ?? "";
+      expect(text).toMatch(/store only that you confirmed it, and when/);
+      expect(text).toMatch(/don't ask for your date of birth/);
+    });
+
+    it("F5: discloses the legal acceptance record, in collection, retention and deletion", () => {
+      render(<Privacy />);
+
+      expect(section(/2\. what we collect/i)).toHaveTextContent(
+        /which version of our terms of use and this privacy policy you accepted, and when/i,
+      );
+      expect(section(/6\. how long/i)).toHaveTextContent(/record of the terms and policy versions you accepted/i);
+      expect(section(/7\. deleting your account/i)).toHaveTextContent(
+        /record of which terms and policy versions you accepted/i,
+      );
+    });
+
+    it("F6: describes reports, expiry, reporter-note removal and what a block hides", () => {
+      render(<Privacy />);
+
+      const text = section(/2\. what we collect/i).textContent ?? "";
+      expect(text).toMatch(/up to 300 characters/);
+      expect(text).toMatch(/deleted automatically after 12 months/);
+      expect(text).toMatch(/your note is deleted/);
+      expect(text).toMatch(/Your app then hides their name and photo/);
+      expect(text).toMatch(/they are not told/);
+      expect(section(/6\. how long/i)).toHaveTextContent(/reports you make, or that are about you/i);
+      expect(section(/6\. how long/i)).toHaveTextContent(/your block list/i);
+    });
+
+    it("F7: describes the name filter reset and the 7-day lock", () => {
+      render(<Privacy />);
+
+      const text = section(/2\. what we collect/i).textContent ?? "";
+      expect(text).toMatch(/automatic word filter/);
+      expect(text).toMatch(/We don't keep the rejected name/);
+      expect(text).toMatch(/can't change your name or photo again for 7 days/);
+    });
+
+    it("F8: describes prize data and the claim window, and says no contact details are collected", () => {
+      render(<Privacy />);
+
+      const text = section(/2\. what we collect/i).textContent ?? "";
+      expect(text).toMatch(/currently 14 days/);
+      expect(text).toMatch(/We don't ask you for your address, phone number or other contact details for a prize/);
+      expect(section(/6\. how long/i)).toHaveTextContent(/prize claim record/i);
+    });
+
+    it("F9: anti-cheat retention is no longer 'a rolling 30 days' alone, and a prize hold is disclosed", () => {
+      render(<Privacy />);
+
+      expect(section(/6\. how long/i)).toHaveTextContent(/up to 400 days/);
+      expect(section(/2\. what we collect/i)).toHaveTextContent(/pause the prize while the ileadit team takes a look/);
+    });
+
+    it("F9/F10: states backup retention and that deleted data can linger in backups", () => {
+      render(<Privacy />);
+
+      expect(section(/6\. how long/i)).toHaveTextContent(/up to 30 days.*last 7 days/);
+      expect(section(/7\. deleting your account/i)).toHaveTextContent(
+        /remain in a backup for up to 30 days/,
+      );
+    });
+
+    it("never prints a step number anywhere on the page", () => {
+      render(<Privacy />);
+
+      const text = document.body.textContent ?? "";
+      expect(text).not.toMatch(/\d[\d,]*\s+steps/);
+    });
   });
 });
