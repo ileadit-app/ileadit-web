@@ -53,7 +53,8 @@ describe("/account-deletion — approved copy (WEB-LEGAL-1)", () => {
     render(<AccountDeletion />);
 
     expect(screen.getByText(/delete the account within one month/i)).toBeInTheDocument();
-    expect(screen.queryByText(/30 days/i)).not.toBeInTheDocument();
+    // Backups (section 7) legitimately say "up to 30 days"; the old banned claim was a 30-day deletion SLA.
+    expect(screen.queryByText(/within 30 days/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/provisional/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/legal counsel/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/official sla/i)).not.toBeInTheDocument();
@@ -134,10 +135,10 @@ describe("/account-deletion — approved copy (WEB-LEGAL-1)", () => {
   // sign-in bullet is now a flat, unconditional sentence regardless of the
   // isMicrosoftSignInEnabled() flag (which this view no longer reads at
   // all).
-  it("names the sign-in bullet as email/password or Google, unconditionally", () => {
+  it("names the sign-in bullet as email/password, Google or Apple, unconditionally", () => {
     render(<AccountDeletion />);
 
-    expect(screen.getByText(/your ileadit sign-in \(email and password, or google\)/i)).toBeInTheDocument();
+    expect(screen.getByText(/your ileadit sign-in \(email and password, google or apple\)/i)).toBeInTheDocument();
   });
 
   it("has an explicit, standalone \"what can't be undone\" irreversibility statement", () => {
