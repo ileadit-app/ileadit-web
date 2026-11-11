@@ -7,6 +7,13 @@ import { useUser } from "@/context/AuthContext";
 import { Rich, RichList, RichP } from "@/components/legal/RichText";
 
 /**
+ * WEB-DELETION-PAGE-ALIGN-1 (11 Nov 2026): the "what gets deleted" and "what we
+ * keep" lists below were brought into line with section 7 of `/privacy` (itself
+ * a DRAFT alignment, WEB-PRIVACY-ALIGN-1, not yet signed off by Paul). Added:
+ * block list, prize claim record, legal-acceptance record, Apple sign-in, the
+ * reports-about-you item and the backups paragraph. `page.test.tsx` fails if
+ * the two pages drift apart, so change both together.
+ *
  * WEB-LEGAL-1. The approved `/account-deletion` copy, published word-for-
  * word from `.ticket-refs/account-deletion-APPROVED-20261026.md` (Paul, 26
  * Oct 2026) — do not reword, shorten, or "improve" any sentence here
@@ -76,9 +83,12 @@ export function AccountDeletionView() {
             "Your coins and points",
             "Your daily step and points history",
             "Your notifications, notification settings and registered devices",
+            "Your block list",
+            "Your prize claim record",
+            "The record of which terms and policy versions you accepted",
             "Your place in your competitions",
             "Any challenge you're part of: it's cancelled, and any coins held for it go back to the other player",
-            "Your ileadit sign-in (email and password, or Google)",
+            "Your ileadit sign-in (email and password, Google or Apple)",
           ]}
         />
       </Section>
@@ -92,8 +102,14 @@ export function AccountDeletionView() {
             `**Challenge records:** your account ID is replaced with "deleted-user".`,
             `**Other players' messages:** notifications other players already received, such as "Sam T challenged you", keep your display name until they delete them.`,
             "**Welcome bonus record:** a scrambled, one-way version of your email address, the date and your old account ID, so the same email can't claim the welcome coins twice. It can't be turned back into your email address.",
+            `**Reports about you:** if you were reported and then delete your account, your account ID is removed from the report, but the note the other player wrote stays until the report is deleted automatically (reports are deleted after 12 months).`,
             "**Competitions you organised** carry on for the players in them.",
           ]}
+        />
+        <RichP
+          keyPrefix="backups"
+          text="**Backups.** Backups of our database age out on their own. Anything you delete can remain in a backup for up to 30 days, and is not used for anything else."
+          className="mt-3 text-sm leading-relaxed text-muted-foreground"
         />
         <p className="mt-3 text-sm font-semibold leading-relaxed text-foreground">
           Never kept: your step counts. They are deleted with your account.
