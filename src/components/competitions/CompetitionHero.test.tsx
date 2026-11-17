@@ -29,23 +29,45 @@ describe("CompetitionHero — sponsor line (WEB-SPONSOR-NAME)", () => {
   });
 });
 
-describe("CompetitionHero — logo plate (COMP-BRAND-1)", () => {
-  it("is a 64 px round plate with the whole logo fitted inside (contain, not cover)", () => {
+describe("CompetitionHero — logo fills the round badge (WEB-LOGO-FILL-1)", () => {
+  it("is a 64 px round badge and the logo fills it (cover, full size, no inset, no white plate)", () => {
     const { container } = render(
       <CompetitionHero competition={{ ...base, imageUrl: "https://storage.example/logo.png" }} />,
     );
-    const plate = screen.getByTestId("hero-logo-plate");
-    expect(plate.style.width).toBe("64px");
-    expect(plate.style.height).toBe("64px");
-    expect(plate.className).toContain("rounded-full");
+    const badge = screen.getByTestId("hero-logo-badge");
+    expect(badge.style.width).toBe("64px");
+    expect(badge.style.height).toBe("64px");
+    expect(badge.className).toContain("rounded-full");
+    expect(badge.className).toContain("overflow-hidden");
+    expect(badge.className).not.toContain("bg-white");
 
     const img = container.querySelector("img") as HTMLImageElement;
     expect(img).toHaveAttribute("src", "https://storage.example/logo.png");
-    expect(img.className).toContain("object-contain");
-    expect(img.className).not.toContain("object-cover");
-    // Inside the square inscribed in the plate's inner circle: (64 − 4) / √2 ≈ 42.
-    expect(parseFloat(img.style.width)).toBeLessThanOrEqual((64 - 4) / Math.SQRT2);
-    expect(parseFloat(img.style.width)).toBeGreaterThan(40);
+    expect(img.className).toContain("object-cover");
+    expect(img.className).not.toContain("object-contain");
+    expect(img.className).toContain("h-full");
+    expect(img.className).toContain("w-full");
+    // The old contain-fit inset the image to a fixed inscribed square.
+    expect(img.style.width).toBe("");
+    expect(img.style.height).toBe("");
+  });
+
+  it("with a banner, the logo badge fills the circle the same way", () => {
+    const { container } = render(
+      <CompetitionHero
+        competition={{
+          ...base,
+          backgroundImageUrl: "https://storage.example/banner.jpg",
+          imageUrl: "https://storage.example/logo.png",
+        }}
+      />,
+    );
+    const badge = screen.getByTestId("hero-logo-badge");
+    const logo = badge.querySelector("img") as HTMLImageElement;
+    expect(logo).toHaveAttribute("src", "https://storage.example/logo.png");
+    expect(logo.className).toContain("object-cover");
+    expect(badge.className).not.toContain("bg-white");
+    expect(container.querySelectorAll("img")).toHaveLength(2);
   });
 });
 

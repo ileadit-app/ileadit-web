@@ -347,7 +347,7 @@ export function ArtworkUploadField({
               ? LOGO_CROP_INSTRUCTIONS
               : "Drag to reposition, pinch or use the slider to zoom. The banner is 3:1. The app shows it in full on list cards and trims it slightly (to 13:5) on the details and leaderboard screens."
           }
-          logoPlateGuide={kind === "tile"}
+          roundFrame={kind === "tile"}
           guides={guides}
           guidesNote={
             guides

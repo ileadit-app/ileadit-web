@@ -243,7 +243,7 @@ describe("CreateCompetitionForm — image upload guidance (WEB-SPONSOR-NAME)", (
     render(<CreateCompetitionForm />);
     expect(
       screen.getByText(
-        "Logo: square, 512 × 512 px, ideally a transparent PNG. It's shown in full inside a circle.",
+        "Logo: square, at least 512 × 512 px. It fills the round badge in the app, so the corners are trimmed; keep anything important near the middle.",
       ),
     ).toBeInTheDocument();
   });

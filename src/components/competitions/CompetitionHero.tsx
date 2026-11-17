@@ -34,7 +34,7 @@ function useTickingNow(intervalMs: number = 60_000): Date {
 
 /**
  * The competition hero — the banner band, the status/date line, the name,
- * and the round logo plate that overlaps the band's bottom edge.
+ * and the round logo badge that overlaps the band's bottom edge.
  *
  * Extracted verbatim from `CompetitionDetail.tsx` so the creation form's
  * artwork preview can render THE hero rather than a lookalike. That
@@ -85,15 +85,14 @@ const HERO_TEXT_BLOCK_CLASS = {
 const BANNER_STRIP_CLASS = "aspect-[3/1]";
 
 /**
- * The logo plate, matching the app's details screen (COMP-BRAND-1): a
- * 64 px round white plate with a thin ring. The WHOLE logo is fitted
- * (`object-contain`) inside the square inscribed in the plate's inner
- * circle, so a square logo's corners stay inside the ring and nothing is
- * cropped. Inner circle = 64 − 2 × 2 px border = 60 px; the inscribed
- * square is 60 / √2 ≈ 42 px.
+ * The round logo badge (WEB-LOGO-FILL-1, Paul 17 Nov 2026): a 64 px circle
+ * the competition logo FILLS edge to edge (`object-cover`, clipped round,
+ * so a square logo's corners are trimmed). There is no white plate and no
+ * inset square any more. This replaces the COMP-BRAND-1 contain-fit.
+ *
+ * With no logo uploaded the app mark sits on a white disc, as before.
  */
-const HERO_LOGO_PLATE_PX = 64;
-const HERO_LOGO_INNER_SQUARE_PX = 42;
+const HERO_LOGO_BADGE_PX = 64;
 
 function HeroLogo({
   imageUrl,
@@ -104,18 +103,15 @@ function HeroLogo({
 }) {
   return (
     <span
-      data-testid="hero-logo-plate"
-      style={{ width: HERO_LOGO_PLATE_PX, height: HERO_LOGO_PLATE_PX }}
-      className={`flex shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-border bg-white shadow-lg ${className}`}
+      data-testid="hero-logo-badge"
+      style={{ width: HERO_LOGO_BADGE_PX, height: HERO_LOGO_BADGE_PX }}
+      className={`flex shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-border shadow-lg ${
+        imageUrl ? "" : "bg-white"
+      } ${className}`}
     >
       {imageUrl ? (
         // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={imageUrl}
-          alt=""
-          style={{ width: HERO_LOGO_INNER_SQUARE_PX, height: HERO_LOGO_INNER_SQUARE_PX }}
-          className="object-contain"
-        />
+        <img src={imageUrl} alt="" className="h-full w-full rounded-full object-cover" />
       ) : (
         <LogoMark className="h-8 w-8" />
       )}

@@ -1,7 +1,12 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { ArtworkUploadField } from "./ArtworkUploadField";
-import { LOGO_PLATE_GUIDE, MAX_SOURCE_FILE_BYTES_BY_KIND } from "@/lib/competitionArtwork";
+import {
+  LOGO_CROP_FRAME,
+  LOGO_CROP_INSTRUCTIONS,
+  LOGO_UPLOAD_GUIDANCE,
+  MAX_SOURCE_FILE_BYTES_BY_KIND,
+} from "@/lib/competitionArtwork";
 
 /**
  * What a person actually sees when they pick a file — asserted on the
@@ -27,7 +32,7 @@ import { LOGO_PLATE_GUIDE, MAX_SOURCE_FILE_BYTES_BY_KIND } from "@/lib/competiti
  */
 
 // The props the dialog last handed the cropper, so a test can pin that the
-// logo crop is a plain square frame and not a round mask.
+// logo crop is a round mask and the banner crop is not.
 const cropperProps: { current: Record<string, unknown> } = { current: {} };
 
 vi.mock("react-easy-crop", async () => {
@@ -220,45 +225,57 @@ describe("ArtworkUploadField — banner crop guides (COMP-BRAND-1)", () => {
     expect(screen.getByText(/round logo sits over the banner/i)).toBeInTheDocument();
   });
 
-  it("logo crop: a square frame with no round mask, the plate circle as a guide, and the new copy", async () => {
+  it("logo crop: a round mask of the fixed frame size, no plate or square guides, and the new copy", async () => {
     const { input } = renderField();
     pick(input, makeFile());
 
     await screen.findByTestId("cropper");
-    // Square frame: never the library's round mask.
-    expect(cropperProps.current.cropShape).toBe("rect");
+    // The circle the organiser frames is the circle players see.
+    expect(cropperProps.current.cropShape).toBe("round");
     expect(cropperProps.current.aspect).toBe(1);
-    // Starts with the whole of a square image inside the frame.
+    expect(cropperProps.current.showGrid).toBe(false);
+    // `cover` + minZoom 1 + restrictPosition: the image can never leave
+    // part of the circle empty.
     expect(cropperProps.current.objectFit).toBe("cover");
+    expect(cropperProps.current.minZoom).toBe(1);
+    expect(cropperProps.current.restrictPosition).toBe(true);
     expect(cropperProps.current.cropSize).toEqual({
-      width: LOGO_PLATE_GUIDE.frameSidePx,
-      height: LOGO_PLATE_GUIDE.frameSidePx,
+      width: LOGO_CROP_FRAME.diameterPx,
+      height: LOGO_CROP_FRAME.diameterPx,
     });
+    // The cropper's box is exactly the frame, so a square image opens
+    // filling the circle.
+    const box = screen.getByTestId("logo-crop-box");
+    expect(box.style.width).toBe(`${LOGO_CROP_FRAME.diameterPx}px`);
+    expect(box.style.height).toBe(`${LOGO_CROP_FRAME.diameterPx}px`);
 
-    // The plate's ring is drawn through the frame's corners: diameter = side × √2.
-    const ring = screen.getByTestId("logo-plate-ring");
-    expect(ring.className).toContain("rounded-full");
-    expect(parseFloat(ring.style.width)).toBeCloseTo(LOGO_PLATE_GUIDE.frameSidePx * Math.SQRT2, 4);
-    expect(parseFloat(ring.style.height)).toBeCloseTo(LOGO_PLATE_GUIDE.frameSidePx * Math.SQRT2, 4);
+    // The inscribed-square / dashed plate-ring guides are gone.
+    expect(screen.queryByTestId("logo-plate-ring")).not.toBeInTheDocument();
+    expect(screen.queryByText(/white plate/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/dashed circle/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/whole logo/i)).not.toBeInTheDocument();
 
-    // Exact copy from the ticket; the old "shown as a circle" claim is gone.
-    expect(
-      screen.getByText(
-        "Your logo is shown whole on a round white plate in the app. Keep it inside the square; a transparent PNG works best.",
-      ),
-    ).toBeInTheDocument();
-    expect(screen.queryByText(/shown as a circle/i)).not.toBeInTheDocument();
+    // Plain-words copy.
+    expect(screen.getByText(LOGO_CROP_INSTRUCTIONS)).toBeInTheDocument();
+    expect(LOGO_CROP_INSTRUCTIONS).toMatch(/fills the round badge/i);
+    expect(LOGO_CROP_INSTRUCTIONS).toMatch(/corners are trimmed/i);
   });
 
-  it("banner crop: rect frame, no plate ring", async () => {
+  it("logo upload guidance is the new plain wording", () => {
+    expect(LOGO_UPLOAD_GUIDANCE).toBe(
+      "Logo: square, at least 512 × 512 px. It fills the round badge in the app, so the corners are trimmed; keep anything important near the middle.",
+    );
+  });
+
+  it("banner crop: rect frame, no round mask, no logo frame", async () => {
     pick(renderBannerField(), makeFile());
     await screen.findByTestId("banner-safe-zone");
     expect(cropperProps.current.cropShape).toBe("rect");
     expect(cropperProps.current.cropSize).toBeUndefined();
-    expect(screen.queryByTestId("logo-plate-ring")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("logo-crop-box")).not.toBeInTheDocument();
   });
 
-  it("draws no banner guides on the square logo crop", async () => {
+  it("draws no banner guides on the round logo crop", async () => {
     const { input } = renderField();
     pick(input, makeFile());
 
