@@ -21,21 +21,17 @@
  * ------------------------------------------------------------------ */
 
 /**
- * `imageUrl` — the logo. **Uploaded as a 1:1 square, and NEVER cropped to
- * a circle** (COMP-BRAND-1, approved by Paul on 5 Nov 2026; build notes in
- * `qa-refs/compbrand/COMP-BRAND-1-build-notes.md`).
+ * `imageUrl` — the logo. **Uploaded as a 1:1 square that FILLS the round
+ * badge** (WEB-LOGO-FILL-1, decided by Paul on 17 Nov 2026; Android and iOS
+ * changed the same way). This replaces the COMP-BRAND-1 rule of 5 Nov 2026,
+ * under which the whole square was contain-fitted inside a white plate.
  *
- * The apps show it on a round white plate with a thin ring: the WHOLE
- * uploaded square is fitted (aspect-fit) inside the square inscribed in
- * the plate's inner circle, so a square photo's corners stay visible
- * inside the ring, just smaller. Nothing is cut off. The plate is 52 px on
- * the list card and 64 px on the details, leaderboard and result screens;
- * the web detail hero matches the 64 px one (`CompetitionHero.tsx`).
- *
- * So the crop step only chooses which square to upload; the circle is a
- * guide on top of it (`LOGO_PLATE_GUIDE`), not a mask. An earlier version
- * masked the crop to a circle and said "shown as a circle everywhere",
- * which made organisers expect the corners to be trimmed.
+ * Everywhere a competition logo is shown it is cropped to a circle
+ * (`object-fit: cover`, clipped round, no plate inset), so the square's
+ * corners are trimmed. The crop step therefore uses a ROUND mask: the
+ * circle the organiser frames is exactly the circle players see. The
+ * output file is still the square that bounds that circle
+ * (`ARTWORK_OUTPUT_SIZE.tile`), so its inscribed circle is what was framed.
  */
 export const TILE_ASPECT = 1;
 
@@ -297,33 +293,22 @@ export const BANNER_UPLOAD_GUIDANCE =
   "Banner: 2400 × 800 px (3:1). Keep logos and text inside the centre area, away from the bottom-left corner, where the round logo sits. Don't put text in the image; the app shows the name and prize.";
 
 export const LOGO_UPLOAD_GUIDANCE =
-  "Logo: square, 512 × 512 px, ideally a transparent PNG. It's shown in full inside a circle.";
+  "Logo: square, at least 512 × 512 px. It fills the round badge in the app, so the corners are trimmed; keep anything important near the middle.";
 
-/** Instructions line in the logo crop dialog (COMP-BRAND-1). Exact words
- * from the ticket. */
+/** Instructions line in the logo crop dialog (WEB-LOGO-FILL-1). */
 export const LOGO_CROP_INSTRUCTIONS =
-  "Your logo is shown whole on a round white plate in the app. Keep it inside the square; a transparent PNG works best.";
-
-/** Legend lines under the logo crop frame, one per guide. */
-export const LOGO_PLATE_RING_NOTE =
-  "The dashed circle is the edge of the round white plate in the app.";
-export const LOGO_SQUARE_NOTE =
-  "The square is your whole logo. Its corners sit just inside the ring, so nothing is cut off.";
+  "Drag to reposition, pinch or use the slider to zoom. Your logo fills the round badge in the app, so the dimmed corners are trimmed. Keep anything important near the middle.";
 
 /**
- * Geometry of the logo crop guide. The crop frame IS the square inscribed
- * in the plate's inner circle, so the circle that passes through the
- * frame's four corners has a diameter of `frameSide × √2`. The frame is a
- * fixed pixel size (passed to the cropper as `cropSize`) so the guide can
- * be drawn from constants without measuring anything; it is sized so the
- * circle fits the dialog's crop area (288 px tall, ≥ 248 px wide on a
- * 320 px phone) with a margin.
+ * Geometry of the logo crop frame: a circle of this diameter, drawn by the
+ * cropper's round mask. The cropper sits in a square box of exactly this
+ * size so the library's `cover` fit starts with a square image filling the
+ * frame (see `ImageCropDialog`). Sized so it fits the dialog's crop area
+ * (288 px tall, at least 248 px wide on a 320 px phone) with a margin.
  */
-export const LOGO_PLATE_GUIDE = {
-  /** Side of the square crop frame, in CSS px. */
-  frameSidePx: 176,
-  /** Circle diameter as a multiple of the frame side: √2. */
-  circleDiameterRatio: Math.SQRT2,
+export const LOGO_CROP_FRAME = {
+  /** Diameter of the round crop frame, in CSS px. */
+  diameterPx: 224,
 } as const;
 
 /* ------------------------------------------------------------------ *
@@ -429,9 +414,8 @@ export function artworkStoragePath(
  * The mime type the crop is re-encoded to.
  *
  * PNG when the source could carry transparency (PNG/WebP/GIF) and the
- * output is the tile — the logo sits on a white plate in the app, so a
- * transparent surround must stay transparent rather than gaining an opaque
- * square of its own.
+ * output is the tile — a transparent area in the logo must stay
+ * transparent rather than gaining an opaque background of its own.
  * JPEG otherwise, including for every banner: the banner is a full-bleed
  * photographic band sitting on solid navy under a gradient overlay, where
  * alpha buys nothing and PNG would multiply the file size of a 1536px

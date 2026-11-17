@@ -3,12 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Cropper, { type Area, type Point } from "react-easy-crop";
 import "react-easy-crop/react-easy-crop.css";
-import {
-  LOGO_PLATE_GUIDE,
-  LOGO_PLATE_RING_NOTE,
-  LOGO_SQUARE_NOTE,
-  type BannerGuides,
-} from "@/lib/competitionArtwork";
+import { LOGO_CROP_FRAME, type BannerGuides } from "@/lib/competitionArtwork";
 import type { CropArea } from "@/lib/imageCrop";
 
 /**
@@ -47,7 +42,7 @@ export function ImageCropDialog({
   instructions,
   guides,
   guidesNote,
-  logoPlateGuide = false,
+  roundFrame = false,
   confirmLabel = "Use this crop",
   onCancel,
   onConfirm,
@@ -63,11 +58,12 @@ export function ImageCropDialog({
   guides?: BannerGuides;
   /** Plain-words legend for the two guides, shown under the cropper. */
   guidesNote?: string;
-  /** Logo crop (COMP-BRAND-1): the frame stays a plain SQUARE (never a
-   * round mask — the apps show the whole square), at the fixed size in
-   * `LOGO_PLATE_GUIDE`, with a dashed circle drawn through its corners to
-   * show the round plate the whole square sits inside. */
-  logoPlateGuide?: boolean;
+  /** Logo crop (WEB-LOGO-FILL-1): a ROUND mask of the fixed diameter in
+   * `LOGO_CROP_FRAME` — the circle the organiser sees in the app, which the
+   * logo fills edge to edge. The image can never leave part of the circle
+   * empty (`restrictPosition` + `minZoom` 1 keep it covering the frame).
+   * The returned crop area is still the square that bounds the circle. */
+  roundFrame?: boolean;
   confirmLabel?: string;
   onCancel: () => void;
   onConfirm: (area: CropArea) => void;
@@ -138,14 +134,14 @@ export function ImageCropDialog({
       crop={crop}
       zoom={zoom}
       aspect={aspect}
-      cropShape="rect"
-      showGrid={!logoPlateGuide}
-      objectFit={logoPlateGuide ? "cover" : "contain"}
+      cropShape={roundFrame ? "round" : "rect"}
+      showGrid={!roundFrame}
+      objectFit={roundFrame ? "cover" : "contain"}
       cropSize={
-        logoPlateGuide
+        roundFrame
           ? {
-              width: LOGO_PLATE_GUIDE.frameSidePx,
-              height: LOGO_PLATE_GUIDE.frameSidePx,
+              width: LOGO_CROP_FRAME.diameterPx,
+              height: LOGO_CROP_FRAME.diameterPx,
             }
           : undefined
       }
@@ -180,35 +176,21 @@ export function ImageCropDialog({
 
         <div
           className={`relative mt-4 overflow-hidden rounded-xl bg-brand-navy-deep ${
-            logoPlateGuide ? "h-72" : "h-64 sm:h-80"
+            roundFrame ? "h-72" : "h-64 sm:h-80"
           }`}
         >
-          {logoPlateGuide ? (
-            <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-              <div
-                data-testid="logo-plate-ring"
-                className="shrink-0 rounded-full border-2 border-dashed border-brand-gold/90 bg-white/15"
-                style={{
-                  width:
-                    LOGO_PLATE_GUIDE.frameSidePx *
-                    LOGO_PLATE_GUIDE.circleDiameterRatio,
-                  height:
-                    LOGO_PLATE_GUIDE.frameSidePx *
-                    LOGO_PLATE_GUIDE.circleDiameterRatio,
-                }}
-              />
-            </div>
-          ) : null}
-          {logoPlateGuide ? (
-            // The logo cropper lives in a box exactly the size of the square
-            // frame, centred, so the library's `cover` fit starts with the
-            // WHOLE of a square image inside the frame (not a crop into the
-            // middle of it), and the plate circle can be drawn around it.
+          {roundFrame ? (
+            // The logo cropper lives in a box exactly the size of the round
+            // frame's bounding square, centred, so the library's `cover` fit
+            // starts with a square image filling the frame (not a crop into
+            // the middle of it). The mask dims the four corners that the
+            // circle trims.
             <div
-              className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 overflow-hidden"
+              data-testid="logo-crop-box"
+              className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 overflow-hidden bg-white"
               style={{
-                width: LOGO_PLATE_GUIDE.frameSidePx,
-                height: LOGO_PLATE_GUIDE.frameSidePx,
+                width: LOGO_CROP_FRAME.diameterPx,
+                height: LOGO_CROP_FRAME.diameterPx,
               }}
             >
               {cropper}
@@ -248,25 +230,6 @@ export function ImageCropDialog({
             </div>
           ) : null}
         </div>
-
-        {logoPlateGuide ? (
-          <ul className="mt-2 space-y-1.5 text-xs text-muted-foreground">
-            <li className="flex items-start gap-2">
-              <span
-                className="mt-0.5 inline-block size-3.5 shrink-0 rounded-full border-2 border-dashed border-brand-gold/90"
-                aria-hidden="true"
-              />
-              <span>{LOGO_PLATE_RING_NOTE}</span>
-            </li>
-            <li className="flex items-start gap-2">
-              <span
-                className="mt-0.5 inline-block size-3 shrink-0 border-2 border-brand-navy"
-                aria-hidden="true"
-              />
-              <span>{LOGO_SQUARE_NOTE}</span>
-            </li>
-          </ul>
-        ) : null}
 
         {guides && guidesNote ? (
           <ul className="mt-2 space-y-1.5 text-xs text-muted-foreground">
