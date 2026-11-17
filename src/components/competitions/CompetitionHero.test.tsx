@@ -30,7 +30,7 @@ describe("CompetitionHero — sponsor line (WEB-SPONSOR-NAME)", () => {
 });
 
 describe("CompetitionHero — logo fills the round badge (WEB-LOGO-FILL-1)", () => {
-  it("is a 64 px round badge and the logo fills it (cover, full size, no inset, no white plate)", () => {
+  it("is a 64 px round badge and the logo fills it (cover, full size, no inset) on a white backing", () => {
     const { container } = render(
       <CompetitionHero competition={{ ...base, imageUrl: "https://storage.example/logo.png" }} />,
     );
@@ -39,7 +39,7 @@ describe("CompetitionHero — logo fills the round badge (WEB-LOGO-FILL-1)", () 
     expect(badge.style.height).toBe("64px");
     expect(badge.className).toContain("rounded-full");
     expect(badge.className).toContain("overflow-hidden");
-    expect(badge.className).not.toContain("bg-white");
+    expect(badge.className).toContain("bg-white");
 
     const img = container.querySelector("img") as HTMLImageElement;
     expect(img).toHaveAttribute("src", "https://storage.example/logo.png");
@@ -66,7 +66,7 @@ describe("CompetitionHero — logo fills the round badge (WEB-LOGO-FILL-1)", () 
     const logo = badge.querySelector("img") as HTMLImageElement;
     expect(logo).toHaveAttribute("src", "https://storage.example/logo.png");
     expect(logo.className).toContain("object-cover");
-    expect(badge.className).not.toContain("bg-white");
+    expect(badge.className).toContain("bg-white");
     expect(container.querySelectorAll("img")).toHaveLength(2);
   });
 });

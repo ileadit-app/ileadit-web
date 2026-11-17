@@ -87,10 +87,13 @@ const BANNER_STRIP_CLASS = "aspect-[3/1]";
 /**
  * The round logo badge (WEB-LOGO-FILL-1, Paul 17 Nov 2026): a 64 px circle
  * the competition logo FILLS edge to edge (`object-cover`, clipped round,
- * so a square logo's corners are trimmed). There is no white plate and no
- * inset square any more. This replaces the COMP-BRAND-1 contain-fit.
+ * so a square logo's corners are trimmed). There is no inset square any
+ * more. This replaces the COMP-BRAND-1 contain-fit.
  *
- * With no logo uploaded the app mark sits on a white disc, as before.
+ * The badge ALWAYS keeps a white background (FIX1): a transparent PNG/WebP/
+ * GIF logo must not show the banner or page through it. Android and iOS
+ * keep a white background behind the full-size logo too. With no logo the
+ * app mark sits on that same white disc.
  */
 const HERO_LOGO_BADGE_PX = 64;
 
@@ -105,9 +108,7 @@ function HeroLogo({
     <span
       data-testid="hero-logo-badge"
       style={{ width: HERO_LOGO_BADGE_PX, height: HERO_LOGO_BADGE_PX }}
-      className={`flex shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-border shadow-lg ${
-        imageUrl ? "" : "bg-white"
-      } ${className}`}
+      className={`flex shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-border bg-white shadow-lg ${className}`}
     >
       {imageUrl ? (
         // eslint-disable-next-line @next/next/no-img-element

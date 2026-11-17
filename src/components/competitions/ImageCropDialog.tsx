@@ -187,7 +187,7 @@ export function ImageCropDialog({
             // circle trims.
             <div
               data-testid="logo-crop-box"
-              className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 overflow-hidden"
+              className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 overflow-hidden bg-white"
               style={{
                 width: LOGO_CROP_FRAME.diameterPx,
                 height: LOGO_CROP_FRAME.diameterPx,
