@@ -225,7 +225,7 @@ describe("/privacy — approved policy (WEB-LEGAL-1)", () => {
 
       const collect = section(/2\. what we collect/i).textContent ?? "";
       expect(collect).toMatch(/Claim to Fame\. This gives you weekly trophies/);
-      expect(collect).toMatch(/It is optional\. If you turn it on, we also use your first name, town and avatar/);
+      expect(collect).toMatch(/The extra name and place trophies are optional\. If you turn them on, we also use your first name, town and avatar/);
       expect(collect).toMatch(/We record when you turned it on or off, and which version of the explanation you agreed to\./);
       expect(collect).toMatch(/Only you can see your trophies\. Other players can't\./);
       expect(section(/6\. how long/i)).toHaveTextContent(
