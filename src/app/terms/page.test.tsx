@@ -33,6 +33,16 @@ describe("/terms — approved Terms of Use v1", () => {
     expect(text).toMatch(/Apple and Google are not sponsors of, and are not involved in, any ileadit competition or prize\./);
   });
 
+  it("WEB-POLICY-1: bans alcohol, tobacco, vaping and gambling prizes, and shows the new date", () => {
+    render(<Terms />);
+
+    const text = document.body.textContent ?? "";
+    expect(text).toMatch(
+      /Prizes can't be alcohol, tobacco or vaping products, or anything to do with gambling \(for example betting credit or lottery tickets\)\./,
+    );
+    expect(text).toMatch(/Version 1\. Last updated: 23 November 2026/);
+  });
+
   it("links the privacy policy and the contact email", () => {
     render(<Terms />);
 

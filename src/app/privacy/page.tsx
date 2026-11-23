@@ -22,6 +22,11 @@ export const metadata: Metadata = {
  * `docs/privacy-alignment-20261111.md`; none of it is approved wording until Paul
  * signs it off. The recorded legal version (`privacy-v2`) is NOT changed here.
  *
+ * WEB-POLICY-1 (23 Nov 2026): Claim to Fame (section 2, "Playing the game", and
+ * section 6) and usage limits (section 2, "Keeping the app working and secure",
+ * and section 6) added. Wording is DRAFT until Paul approves it. The recorded
+ * legal version (`privacy-v2`) is NOT changed here.
+ *
  * Replaces the placeholder skeleton (LegalPagePlaceholder-based) that
  * previously lived at this route. `/terms` now has the approved Terms of Use.
  */
@@ -40,7 +45,7 @@ export default function Privacy() {
       <section className="bg-background py-12 sm:py-16">
         <div className="mx-auto max-w-3xl px-5 sm:px-6">
           <p className="text-sm font-semibold text-muted-foreground">
-            <Rich text="**Last updated:** 11 November 2026" keyPrefix="last-updated" />
+            <Rich text="**Last updated:** 23 November 2026" keyPrefix="last-updated" />
           </p>
 
           <PolicySection id="short-version" title="The short version">
@@ -148,6 +153,7 @@ export default function Privacy() {
                 "**Coins.** We keep a record of the game coins you earn and spend. Coins are game currency only: they can't be bought and have no cash value.",
                 `**Notifications.** We keep the messages we send you, such as "You've been challenged!", in your in-app inbox, and a **device token** so we can send notifications to your phone. Notification text can appear on your lock screen. You can turn notifications off in the app's settings or in your phone's settings.`,
                 "**Prizes.** Some organisers offer a prize for the top places. If you win one, we record that you won, whether and when you claimed it and, where we ask, that you confirmed you are 18 or over. You have a set time to claim (currently 14 days). If you decline, or the time runs out, the prize passes to the next eligible player, and the reason is never shown to other players. We don't ask you for your address, phone number or other contact details for a prize, and we don't give the organiser your email address. The organiser arranges the prize, not ileadit.",
+                `**Claim to Fame.** This gives you weekly trophies by comparing your points with other players' points, for example "#1 of 12 players this week" or "Best player in your league". It is **optional**. If you turn it on, we also use your first name, town and avatar to make extra comparisons, for example "Best Alex this week" or "Best player in Northfield this week". You can turn it off at any time in the app. We record when you turned it on or off, and which version of the explanation you agreed to. Only you can see your trophies. Other players can't. Trophies are deleted automatically after 52 weeks, and they are also deleted if you delete your account. We use this data to run the game you signed up for (UK GDPR Article 6(1)(b)).`,
               ]}
             />
 
@@ -170,6 +176,7 @@ export default function Privacy() {
                 "**App integrity checks** (Firebase App Check), which confirm that requests come from the genuine ileadit app or website. On Android this uses Google Play Integrity, and on iPhone it uses Apple App Attest. On our website it uses Google reCAPTCHA (part of Google Cloud Fraud Defense), which looks at technical signals from your browser, such as your IP address and how the page is used, to tell people apart from automated bots. Google's privacy policy applies to reCAPTCHA, and it may set cookies in your browser for this purpose.",
                 "**Signing in on our website.** When you sign in on ileadit.co.uk, your browser stores a sign-in token so you stay signed in. We don't use advertising or analytics cookies on the website.",
                 `**Server logs.** Our servers record technical events, such as "player X's day was closed on date Y", so we can find and fix faults. These contain your account ID, never your step count.`,
+                "**Usage limits.** To stop abuse and automated attacks, we count how often each account uses certain features within a short time window, for example up to 30 challenges a minute. The public invite-preview page has no signed-in account, so there we count by a scrambled code made from the visitor's network address and a secret key. We don't store the address itself. These counters are deleted automatically shortly after each time window ends. We do this for security and to prevent abuse, which is our legitimate interest.",
               ]}
             />
             <RichP
@@ -282,7 +289,9 @@ export default function Privacy() {
                 ["Reports you make, or that are about you", "Deleted automatically after 12 months"],
                 ["Your block list", "Until you unblock a player or delete your account"],
                 ["Prize claim record", "Until you delete your account"],
+                ["Claim to Fame trophies", "Deleted automatically after 52 weeks, or when you delete your account"],
                 ["Server logs", "30 days"],
+                ["Usage limit counters", "Deleted automatically shortly after each time window ends"],
                 ["Crash reports", "90 days"],
                 [
                   "Backups",
