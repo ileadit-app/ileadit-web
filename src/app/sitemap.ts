@@ -14,7 +14,7 @@ const SITE_URL = "https://ileadit.co.uk";
  */
 export default function sitemap(): MetadataRoute.Sitemap {
   const lastModified = new Date();
-  const paths = ["/", "/pricing", "/about", "/privacy", "/terms", "/account-deletion", "/download"];
+  const paths = ["/", "/pricing", "/about", "/privacy", "/terms", "/account-deletion", "/download", "/support"];
   return paths.map((path) => ({
     url: `${SITE_URL}${path}`,
     lastModified,

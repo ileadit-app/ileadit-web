@@ -12,6 +12,7 @@ describe("sitemap", () => {
       "https://ileadit.co.uk/terms",
       "https://ileadit.co.uk/account-deletion",
       "https://ileadit.co.uk/download",
+      "https://ileadit.co.uk/support",
     ]);
   });
 
