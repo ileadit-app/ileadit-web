@@ -29,7 +29,7 @@ export default function Terms() {
       <section className="bg-background py-12 sm:py-16">
         <div className="mx-auto max-w-3xl px-5 sm:px-6">
           <p className="text-sm font-semibold text-muted-foreground">
-            <Rich text="**Version 1. Last updated:** 27 October 2026" keyPrefix="last-updated" />
+            <Rich text="**Version 1. Last updated:** 23 November 2026" keyPrefix="last-updated" />
           </p>
 
           <PolicySection id="the-short-version" title="The short version">
@@ -130,6 +130,7 @@ export default function Terms() {
               items={[
                 "Competitions are set up by ileadit or by an organiser, such as an employer or a group of friends. The organiser chooses the name, dates and any prize.",
                 "**Entry is always free.** No competition or prize will ever require you to pay or buy anything.",
+                "Prizes can't be alcohol, tobacco or vaping products, or anything to do with gambling (for example betting credit or lottery tickets).",
                 "When a competition has a prize, it has its own **prize terms**, shown in the app and on ileadit.co.uk. They say who provides the prize, how the winner is chosen, how ties are decided, and how the prize is handed over. If the prize terms and these terms disagree about a prize, the prize terms apply.",
                 "Unless the prize terms say otherwise, the prize is provided by the organiser, not by ileadit. ileadit runs the game, decides the result and tells the winner.",
                 "Before a prize is released we check the result for 48 hours, to allow late syncs and fair-play checks.",

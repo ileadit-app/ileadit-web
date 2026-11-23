@@ -82,7 +82,7 @@ describe("/privacy — approved policy (WEB-LEGAL-1)", () => {
   it("shows the approved last-updated date", () => {
     render(<Privacy />);
 
-    expect(screen.getByText(/11 november 2026/i)).toBeInTheDocument();
+    expect(screen.getByText(/23 november 2026/i)).toBeInTheDocument();
   });
 
   it("covers the iPhone app and Apple Health, and drops the Android-only scope line", () => {
@@ -217,6 +217,31 @@ describe("/privacy — approved policy (WEB-LEGAL-1)", () => {
       expect(section(/6\. how long/i)).toHaveTextContent(/up to 30 days.*last 7 days/);
       expect(section(/7\. deleting your account/i)).toHaveTextContent(
         /remain in a backup for up to 30 days/,
+      );
+    });
+
+    it("WEB-POLICY-1: describes Claim to Fame, its retention and who can see trophies", () => {
+      render(<Privacy />);
+
+      const collect = section(/2\. what we collect/i).textContent ?? "";
+      expect(collect).toMatch(/Claim to Fame\. This gives you weekly trophies/);
+      expect(collect).toMatch(/The extra name and place trophies are optional\. If you turn them on, we also use your first name, town and avatar/);
+      expect(collect).toMatch(/We record when you turned it on or off, and which version of the explanation you agreed to\./);
+      expect(collect).toMatch(/Only you can see your trophies\. Other players can't\./);
+      expect(section(/6\. how long/i)).toHaveTextContent(
+        /Claim to Fame trophies.*Deleted automatically after 52 weeks, or when you delete your account/,
+      );
+    });
+
+    it("WEB-POLICY-1: describes usage limits without storing the network address", () => {
+      render(<Privacy />);
+
+      const collect = section(/2\. what we collect/i).textContent ?? "";
+      expect(collect).toMatch(/Usage limits\. To stop abuse and automated attacks/);
+      expect(collect).toMatch(/We don't store the address itself\./);
+      expect(collect).toMatch(/which is our legitimate interest/);
+      expect(section(/6\. how long/i)).toHaveTextContent(
+        /Usage limit counters.*Deleted automatically shortly after each time window ends/,
       );
     });
 
