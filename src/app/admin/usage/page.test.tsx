@@ -81,6 +81,8 @@ function signedIn(user: ReturnType<typeof userWith>) {
   useUserMock.mockReturnValue({ status: "signed-in", user });
 }
 
+let alertPresent = false;
+
 function serveFixtureDocuments() {
   const fx = buildFixture("5", NOW);
   getDocsMock.mockImplementation(async (q: { source?: { path?: string } }) => {
@@ -90,9 +92,12 @@ function serveFixtureDocuments() {
     }
     return { empty: fx.runs.length === 0, docs: fx.runs.map((r) => ({ data: () => r })) };
   });
-  getDocMock.mockResolvedValue({
-    exists: () => fx.live !== null,
-    data: () => ({ dates: fx.live?.dates, computedAt: fx.live?.computedAt }),
+  getDocMock.mockImplementation(async (ref: { path?: string }) => {
+    if (ref?.path === "ops/alerts/jobFailed/usageMetrics") return { exists: () => alertPresent, data: () => ({}) };
+    return {
+      exists: () => fx.live !== null,
+      data: () => ({ dates: fx.live?.dates, computedAt: fx.live?.computedAt }),
+    };
   });
 }
 
@@ -106,6 +111,7 @@ beforeEach(() => {
   queryMock.mockClear();
   unsubscribeMock.mockClear();
   tokenListener = null;
+  alertPresent = false;
   vi.spyOn(console, "error").mockImplementation(() => {});
 });
 
@@ -187,7 +193,7 @@ describe("/admin/usage: strict admin gate", () => {
     expect(firestoreCalls()).toBe(0);
   });
 
-  it("admin: forces a token refresh, then reads only the three usage paths and renders the page", async () => {
+  it("admin: forces a token refresh, then reads only the four usage paths and renders the page", async () => {
     const user = userWith(async () => ({ claims: { admin: true } }));
     signedIn(user);
     serveFixtureDocuments();
@@ -202,9 +208,26 @@ describe("/admin/usage: strict admin gate", () => {
       ...docMock.mock.calls.map((c) => c.slice(1).join("/")),
     ];
     expect(new Set(paths)).toEqual(
-      new Set(["ops/metrics/daily", "ops/metrics/live/current", "ops/jobRuns/usageMetrics"]),
+      new Set([
+        "ops/metrics/daily",
+        "ops/metrics/live/current",
+        "ops/jobRuns/usageMetrics",
+        "ops/alerts/jobFailed/usageMetrics",
+      ]),
     );
     expect(paths.some((p) => p.startsWith("users"))).toBe(false);
+  });
+
+  it("the failure alert document alone shows the banner even when the latest run is ok", async () => {
+    signedIn(userWith(async () => ({ claims: { admin: true } })));
+    serveFixtureDocuments();
+    alertPresent = true;
+    render(<AdminUsagePage />);
+
+    const banner = await screen.findByRole("alert");
+    expect(banner).toHaveTextContent("The nightly job failed");
+    // The run is ok, so there is no stage or error code to show.
+    expect(banner).not.toHaveTextContent(/Stage:|Error code:/);
   });
 
   it("a claim revoked mid-session closes the page; a changed token that still has it does not", async () => {

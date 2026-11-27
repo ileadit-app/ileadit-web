@@ -23,7 +23,7 @@ export function UsageDashboard() {
   const model = useMemo(
     () =>
       data
-        ? buildModel({ docs: data.docs, live: data.live, lastRun: data.lastRun, now: new Date(), rangeKey: range })
+        ? buildModel({ docs: data.docs, live: data.live, lastRun: data.lastRun, alertPresent: data.alertPresent, now: new Date(), rangeKey: range })
         : null,
     [data, range],
   );

@@ -2,7 +2,7 @@
 // admin-web/test/usage-render.test.mjs (ileadit engine repo): the written empty
 // states, markers and meanings, run against fixture models.
 import { render, screen, within } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { buildModel } from "@/lib/usageMetrics";
 import { buildFixture, type FixtureName } from "@/lib/usageMetricsFixtures";
 import { CompetitionTable, UsageBanner, UsageContent, UsageEmpty, UsageLastRun, UsageMeta } from "./UsageView";
@@ -108,10 +108,48 @@ describe("written states", () => {
   it("the last-run line names the outcome, and stays out of the way of the failure banner", () => {
     const ok = modelFor("5");
     const { unmount } = render(<UsageLastRun run={ok.lastRun} />);
-    expect(screen.getByTestId("last-run")).toHaveTextContent(/Last nightly run: ok at 26 Nov 2026/);
+    expect(screen.getByTestId("last-run")).toHaveTextContent(/^Last run: ok at 26 Nov 2026/);
+    expect(screen.getByTestId("last-run")).not.toHaveTextContent(/nightly/i);
     unmount();
     render(<UsageLastRun run={modelFor("failed").lastRun} />);
     expect(screen.queryByTestId("last-run")).toBeNull();
+  });
+
+  it("the last-run status is shown only when known; anything else reads unknown", () => {
+    const at = new Date("2026-11-26T01:00:00Z");
+    for (const status of ["ok", "running"]) {
+      const { unmount } = render(<UsageLastRun run={{ status, stage: null, errorCode: null, startedAt: at, finishedAt: null, failedAt: null }} />);
+      expect(screen.getByTestId("last-run")).toHaveTextContent(`Last run: ${status} at`);
+      unmount();
+    }
+    for (const status of ["weird", "<b>x</b>", "OK", null]) {
+      const { unmount } = render(<UsageLastRun run={{ status, stage: null, errorCode: null, startedAt: at, finishedAt: null, failedAt: null }} />);
+      const line = screen.getByTestId("last-run");
+      expect(line).toHaveTextContent("Last run: unknown at");
+      expect(line.textContent).not.toMatch(/weird|<b>|OK/);
+      unmount();
+    }
+  });
+
+  it("the banner shows for the alert document alone, with no stage or code from an ok run", () => {
+    const f = buildFixture("5", NOW);
+    const m = buildModel({ docs: f.daily.map((d) => d.data), live: f.live, lastRun: f.runs[0], alertPresent: true, now: NOW, rangeKey: "28" });
+    expect(m.failed).toBe(true);
+    render(<UsageBanner model={m} />);
+    const banner = screen.getByRole("alert");
+    expect(banner).toHaveTextContent("The nightly job failed.");
+    expect(banner).not.toHaveTextContent(/Stage:|Error code:/);
+  });
+
+  it("long stage and error-code identifiers wrap instead of widening the page", () => {
+    const m = modelFor("failed");
+    const long = "A".repeat(58);
+    const run = { ...m.lastRun!, stage: long, errorCode: long };
+    render(<UsageBanner model={{ ...m, lastRun: run }} />);
+    const banner = screen.getByRole("alert");
+    expect(banner).toHaveTextContent(long);
+    expect(banner.className).toMatch(/break-words/);
+    expect(banner.className).toMatch(/overflow-wrap:anywhere/);
   });
 
   it("the excluded line lists demo, listed and robots separately", () => {
@@ -185,12 +223,72 @@ describe("charts and series", () => {
     }
   });
 
-  it("charts scale to the container: a viewBox and no fixed pixel width", () => {
+  it("charts are drawn 1:1 at their width (1 unit = 1 CSS px) with axis text of at least 11px", () => {
     const { container } = content("500");
-    for (const s of Array.from(container.querySelectorAll("svg[role=img]"))) {
-      expect(s.getAttribute("viewBox")).toMatch(/^0 0 \d+ \d+$/);
-      expect(s.getAttribute("width")).toBeNull();
+    const svgs = Array.from(container.querySelectorAll("svg[role=img]"));
+    expect(svgs.length).toBeGreaterThanOrEqual(3);
+    for (const s of svgs) {
+      const w = s.getAttribute("width");
+      expect(s.getAttribute("viewBox")).toBe(`0 0 ${w} ${s.getAttribute("height")}`);
+      const sizes = Array.from(s.querySelectorAll("text")).map((t) => Number(t.getAttribute("font-size")));
+      expect(sizes.length).toBeGreaterThan(0);
+      for (const size of sizes) expect(size).toBeGreaterThanOrEqual(11);
     }
+  });
+
+  it("a chart follows its container's measured width, clamped, so a phone does not shrink the text", () => {
+    const spy = vi.spyOn(HTMLElement.prototype, "getBoundingClientRect");
+    try {
+      for (const [measured, drawn] of [[288, 288], [100, 240], [2000, 672]] as const) {
+        spy.mockReturnValue({ width: measured, height: 0, x: 0, y: 0, top: 0, left: 0, right: measured, bottom: 0, toJSON: () => ({}) });
+        const { container, unmount } = content("500");
+        for (const s of Array.from(container.querySelectorAll("svg[role=img]"))) {
+          expect(s.getAttribute("width")).toBe(String(drawn));
+          expect(s.getAttribute("viewBox")).toBe(`0 0 ${drawn} ${s.getAttribute("height")}`);
+          for (const t of Array.from(s.querySelectorAll("text"))) expect(Number(t.getAttribute("font-size"))).toBeGreaterThanOrEqual(11);
+        }
+        unmount();
+      }
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  it("provisional bars have a dashed outline as well as lower opacity", () => {
+    const { container } = content("5");
+    const bars = Array.from(container.querySelectorAll("rect[data-provisional=true]"));
+    expect(bars.length).toBeGreaterThan(0);
+    for (const b of bars) {
+      expect(b.getAttribute("stroke-dasharray")).toBeTruthy();
+      expect(b.getAttribute("stroke")).toBeTruthy();
+      expect(Number(b.getAttribute("opacity"))).toBeLessThan(1);
+    }
+    const finals = Array.from(container.querySelectorAll("svg[role=img] rect[fill]:not([data-provisional])"));
+    for (const r of finals) expect(r.getAttribute("stroke-dasharray")).toBeNull();
+  });
+});
+
+describe("narrow screens", () => {
+  it("every scroll box that holds sr-only text is positioned, so it cannot widen the page", () => {
+    for (const name of ["5", "500", "failed"] as const) {
+      const { container, unmount } = content(name);
+      const boxes = Array.from(container.querySelectorAll(".overflow-x-auto"));
+      expect(boxes.length, name).toBeGreaterThanOrEqual(2);
+      for (const box of boxes) expect(box.className, name).toMatch(/(^|\s)relative(\s|$)/);
+      unmount();
+    }
+  });
+
+  it("retention cells that include a provisional day say so to a screen reader", () => {
+    const { container } = content("5");
+    const cells = Array.from(container.querySelectorAll("td[data-provisional=true]"));
+    expect(cells.length).toBeGreaterThan(0);
+    for (const td of cells) {
+      const sr = td.querySelector("span.sr-only");
+      expect(sr).not.toBeNull();
+      expect(sr).toHaveTextContent("(provisional)");
+    }
+    expect(container.querySelectorAll("td:not([data-provisional=true]) .sr-only")).toHaveLength(0);
   });
 });
 

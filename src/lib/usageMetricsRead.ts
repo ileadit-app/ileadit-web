@@ -3,6 +3,7 @@
 //   ops/metrics/daily/*             (newest first, bounded)
 //   ops/metrics/live/current
 //   ops/jobRuns/usageMetrics/*      (newest run only)
+//   ops/alerts/jobFailed/usageMetrics  (existence only; its fields are not read)
 //
 // Reads only: getDoc / getDocs / query. Nothing here writes. Call these only
 // once the strict admin gate has passed (`useStrictAdmin() === "allowed"`); the
@@ -18,6 +19,8 @@ export interface UsageSide {
   live: { dates: Record<string, unknown>; computedAt: unknown } | null;
   /** Newest job run, reduced to the allowlisted fields. */
   lastRun: UsageRun | null;
+  /** Whether the engine's job-failure alert document exists. */
+  alertPresent: boolean;
 }
 
 export async function fetchDaily(n: number): Promise<unknown[]> {
@@ -30,9 +33,10 @@ export async function fetchDaily(n: number): Promise<unknown[]> {
 
 export async function fetchSide(): Promise<UsageSide> {
   const db = getFirebaseDb();
-  const [liveSnap, runSnap] = await Promise.all([
+  const [liveSnap, runSnap, alertSnap] = await Promise.all([
     getDoc(doc(db, ...USAGE_PATHS.live)),
     getDocs(query(collection(db, ...USAGE_PATHS.runs), orderBy("startedAt", "desc"), limit(1))),
+    getDoc(doc(db, ...USAGE_PATHS.alert)),
   ]);
   let live: UsageSide["live"] = null;
   if (liveSnap.exists()) {
@@ -45,5 +49,9 @@ export async function fetchSide(): Promise<UsageSide> {
   }
   // errorMessage and the run id never leave this function: normalizeRun keeps
   // an allowlist of six fields.
-  return { live, lastRun: runSnap.empty ? null : normalizeRun(runSnap.docs[0].data()) };
+  return {
+    live,
+    lastRun: runSnap.empty ? null : normalizeRun(runSnap.docs[0].data()),
+    alertPresent: alertSnap.exists(),
+  };
 }

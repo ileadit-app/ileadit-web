@@ -1,7 +1,7 @@
 // Ported from admin-web/test/usage-model.test.mjs (ileadit engine repo). The
-// emulator-switch tests, the alert-document cases and the coin-ledger replay are
-// not ported: this page has no emulator mode, reads no alert document, and its
-// fixtures are a smaller stand-in (see usageMetricsFixtures.ts).
+// emulator-switch tests and the coin-ledger replay are not ported: this page has
+// no emulator mode and its fixtures are a smaller stand-in (see
+// usageMetricsFixtures.ts). The alert-document read IS ported (`alert` path).
 import { describe, expect, it } from "vitest";
 import {
   SMALL_COMPETITION_MEMBERS,
@@ -21,6 +21,8 @@ import {
   normalizeDay,
   normalizeDays,
   normalizeRun,
+  knownRunStatus,
+  partialDays,
   ofText,
   rangeLimit,
   retentionRows,
@@ -53,7 +55,8 @@ describe("paths", () => {
     expect(USAGE_PATHS.daily).toEqual(["ops", "metrics", "daily"]);
     expect(USAGE_PATHS.live).toEqual(["ops", "metrics", "live", "current"]);
     expect(USAGE_PATHS.runs).toEqual(["ops", "jobRuns", "usageMetrics"]);
-    expect(Object.keys(USAGE_PATHS).sort()).toEqual(["daily", "live", "runs"]);
+    expect(USAGE_PATHS.alert).toEqual(["ops", "alerts", "jobFailed", "usageMetrics"]);
+    expect(Object.keys(USAGE_PATHS).sort()).toEqual(["alert", "daily", "live", "runs"]);
   });
 });
 
@@ -137,6 +140,10 @@ describe("the view model", () => {
     expect(jobFailed({ status: "ok" })).toBe(false);
     expect(jobFailed({ status: "failed" })).toBe(true);
     expect(jobFailed(undefined)).toBe(false);
+    // The engine's alert document alone is enough (the run write itself may have failed).
+    expect(jobFailed(null, true)).toBe(true);
+    expect(jobFailed({ status: "ok" }, true)).toBe(true);
+    expect(jobFailed({ status: "ok" }, false)).toBe(false);
   });
 
   it("range limits read enough history and never open-endedly", () => {
@@ -332,6 +339,105 @@ describe("the per-competition table", () => {
     ]);
     expect(t?.list).toEqual([{ id: "c1", name: null, status: "active", members: 6, active: 0, eliminated: 0, joinedViaInvite: 0 }]);
     expect(t?.small).toBeNull();
+  });
+});
+
+// The key tree of one daily document as the engine writes it (the `fresh` object
+// in fullPass, functions/src/services/usageMetrics.ts). The fixtures must have
+// the same, so a page test never runs against a shape the job does not write.
+const WRITER_DAILY_KEYS = [
+  "v", "date", "final", "backfilled", "partial", "computedAt", "runId",
+  "excluded.demo", "excluded.listed", "excluded.robots",
+  "accounts.total", "accounts.ageConfirmed", "accounts.seeded", "accounts.everJoined", "accounts.inLiveCompetition",
+  "signups", "deletionsDerived",
+  "active.dau", "active.wau", "active.mau", "active.new", "active.returning", "active.lapsed",
+  "activeBySignupAge",
+  "funnel7.cohortDate", "funnel7.created", "funnel7.ageConfirmed", "funnel7.seeded", "funnel7.synced", "funnel7.joined",
+  "competitions.scheduled", "competitions.live", "competitions.finishedTotal", "competitions.created", "competitions.finalised",
+  "competitions.membersLive", "competitions.joins", "competitions.joinsViaInvite", "competitions.eliminations",
+  "competitions.finishers", "competitions.finishedMembers",
+  "competitionsTable",
+  "challenges.created.direct", "challenges.created.duel", "challenges.created.streak",
+  "tools.forceField", "tools.stickTo", "tools.enabled",
+  "coins.outstanding", "coins.earned", "coins.spent",
+];
+const OPAQUE_MAPS = new Set(["activeBySignupAge", "challenges.created.direct", "tools.enabled", "coins.earned", "coins.spent"]);
+
+function keyPaths(obj: Record<string, unknown>, prefix = ""): string[] {
+  const out: string[] = [];
+  for (const [k, v] of Object.entries(obj)) {
+    const p = prefix ? `${prefix}.${k}` : k;
+    if (v !== null && typeof v === "object" && !(v instanceof Date) && !Array.isArray(v) && !OPAQUE_MAPS.has(p)) {
+      out.push(...keyPaths(v as Record<string, unknown>, p));
+    } else out.push(p);
+  }
+  return out;
+}
+
+const sumOf = (o: unknown): number => Object.values(o as Record<string, number>).reduce((s, v) => s + v, 0);
+
+describe("fixtures: shape and consistency", () => {
+  it("daily documents have exactly the writer key tree", () => {
+    for (const name of ["0", "5", "500", "short", "failed"] as const) {
+      const f = buildFixture(name, NOW);
+      expect(f.daily.length, name).toBeGreaterThan(0);
+      for (const { id, data } of f.daily) {
+        expect((data as { date: string }).date).toBe(id);
+        expect(keyPaths(data).sort(), `${name} ${id}`).toEqual([...WRITER_DAILY_KEYS].sort());
+      }
+    }
+  });
+
+  it("5 players: coins spent never exceed coins earned across the fixture", () => {
+    const f = buildFixture("5", NOW);
+    const coins = f.daily.map((d) => (d.data as { coins: { earned: unknown; spent: unknown; outstanding: number } }).coins);
+    const earned = coins.reduce((s, c) => s + sumOf(c.earned), 0);
+    const spent = coins.reduce((s, c) => s + sumOf(c.spent), 0);
+    expect(spent).toBeLessThanOrEqual(earned);
+    expect(coins[coins.length - 1].outstanding).toBeGreaterThan(0);
+    expect(spent).toBeGreaterThan(0);
+  });
+
+  it("no table row carries more eliminated or active than members", () => {
+    for (const name of ["5", "500"] as const) {
+      for (const { data } of buildFixture(name, NOW).daily) {
+        const table = (data as { competitionsTable: { members: number; active: number; eliminated: number }[] }).competitionsTable;
+        expect(table.length, name).toBeGreaterThan(0);
+        for (const r of table) {
+          expect(r.active, `${name} ${JSON.stringify(r)}`).toBeLessThanOrEqual(r.members);
+          expect(r.eliminated, `${name} ${JSON.stringify(r)}`).toBeLessThanOrEqual(r.members);
+        }
+      }
+    }
+  });
+
+  it("only the failed set carries the alert document", () => {
+    expect(buildFixture("failed", NOW).alert).not.toBeNull();
+    for (const name of ["0", "5", "500", "none", "short"] as const) expect(buildFixture(name, NOW).alert).toBeNull();
+  });
+});
+
+describe("partialDays", () => {
+  const rows = (...partials: string[][]) => partials.map((partial, i) => normalizeDay(doc(`2026-11-0${i + 1}`, { partial }))!);
+
+  it("counts a day for each of the late-written reasons: signups, competitions, coins", () => {
+    expect(partialDays(rows(["signups"]))).toBe(1);
+    expect(partialDays(rows(["competitions"]))).toBe(1);
+    expect(partialDays(rows(["coins"]))).toBe(1);
+  });
+
+  it("does not count deletions-only, unknown reasons or complete days; a day counts once", () => {
+    expect(partialDays(rows(["deletions"], ["mystery"], []))).toBe(0);
+    expect(partialDays(rows(["signups", "competitions", "coins", "deletions"], ["coins"], []))).toBe(2);
+  });
+});
+
+describe("run status", () => {
+  it("knows ok, failed and running; anything else is null", () => {
+    expect(knownRunStatus("ok")).toBe("ok");
+    expect(knownRunStatus("failed")).toBe("failed");
+    expect(knownRunStatus("running")).toBe("running");
+    for (const bad of ["OK", "done", "", null, undefined, 1, {}]) expect(knownRunStatus(bad)).toBeNull();
   });
 });
 

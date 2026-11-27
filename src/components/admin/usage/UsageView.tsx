@@ -19,6 +19,7 @@ import {
   funnel,
   hasAnyD30,
   isShortSeries,
+  knownRunStatus,
   ofText,
   partialDays,
   retentionRows,
@@ -158,14 +159,18 @@ function runWhen(run: UsageRun): string {
   return fmtDateTimeUtc(run.finishedAt ?? run.failedAt ?? run.startedAt);
 }
 
-/** The last nightly run, in one line: when and whether it succeeded. */
+/**
+ * The last run, in one line: when and whether it succeeded. The job runs
+ * hourly, so this is not "nightly". The status is shown only when it is one
+ * the page knows (ok / failed / running); anything else reads "unknown".
+ */
 export function UsageLastRun({ run }: { run: UsageRun | null }) {
   if (run === null || run.status === "failed") return null;
   const when = runWhen(run);
-  const state = run.status === null ? "recorded" : run.status;
+  const state = knownRunStatus(run.status) ?? "unknown";
   return (
     <p className="mt-1 text-sm text-muted-foreground" data-testid="last-run">
-      {`Last nightly run: ${state}${when ? ` at ${when}` : ""}.`}
+      {`Last run: ${state}${when ? ` at ${when}` : ""}.`}
     </p>
   );
 }
@@ -177,7 +182,9 @@ export function UsageLastRun({ run }: { run: UsageRun | null }) {
  */
 export function UsageBanner({ model }: { model: UsageModel }) {
   if (!model.failed) return null;
-  const run = model.lastRun;
+  // Only a run recorded as failed has a stage, code and time worth showing. The
+  // banner can also come from the alert document alone (run write failed).
+  const run = model.lastRun?.status === "failed" ? model.lastRun : null;
   const stage = run?.stage ?? null;
   const errorCode = run?.errorCode ?? null;
   const detail = [stage ? `Stage: ${stage}.` : null, errorCode ? `Error code: ${errorCode}.` : null]
@@ -186,7 +193,10 @@ export function UsageBanner({ model }: { model: UsageModel }) {
   const good = model.newest ? fmtDate(model.newest.date) : null;
   const at = run ? fmtDateTimeUtc(run.failedAt ?? run.startedAt) : "";
   return (
-    <div role="alert" className="rounded-2xl border border-accent bg-accent/15 p-4 text-sm leading-relaxed text-foreground">
+    <div
+      role="alert"
+      className="break-words rounded-2xl border border-accent bg-accent/15 p-4 text-sm leading-relaxed text-foreground [overflow-wrap:anywhere]"
+    >
       <strong>The nightly job failed</strong>
       {at ? ` at ${at}.` : "."}
       {detail ? ` ${detail}` : null}
@@ -399,7 +409,7 @@ function Retention({ model }: { model: ReadyModel }) {
         <p className={EMPTY}>No players signed up in this range, so there are no cohorts to follow.</p>
       ) : (
         <>
-          <div className="mt-3 overflow-x-auto">
+          <div className="relative mt-3 overflow-x-auto">
             <table className="w-full min-w-[30rem] border-collapse">
               <caption className="sr-only">Retention by sign-up cohort</caption>
               <thead>
@@ -511,7 +521,7 @@ export function CompetitionTable({ date, table }: { date: string; table: Competi
   return (
     <>
       <p className={SUB}>{`On ${fmtDate(date)}: competitions that were live or finished that day.`}</p>
-      <div className="mt-3 overflow-x-auto">
+      <div className="relative mt-3 overflow-x-auto">
         <table className="w-full min-w-[34rem] border-collapse" data-testid="by-competition">
           <thead>
             <tr className="border-b border-border">
@@ -616,7 +626,7 @@ function Competitions({ model }: { model: ReadyModel }) {
         <p className={EMPTY}>No competitions have finished in this range.</p>
       ) : (
         <>
-          <div className="mt-3 overflow-x-auto">
+          <div className="relative mt-3 overflow-x-auto">
             <table className="w-full min-w-[28rem] border-collapse">
               <thead>
                 <tr className="border-b border-border">

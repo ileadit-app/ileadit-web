@@ -8,18 +8,19 @@
  *
  * The page reads the aggregate documents the nightly engine job writes
  * (engine `docs/usage-metrics/DESIGN.md` section 4.3, `docs/FIRESTORE_SCHEMA.md`
- * "Usage metrics"): `ops/metrics/daily/{date}`, `ops/metrics/live/current` and
- * `ops/jobRuns/usageMetrics/{runId}`. Counts and coin sums only: there is no
+ * "Usage metrics"): `ops/metrics/daily/{date}`, `ops/metrics/live/current`,
+ * `ops/jobRuns/usageMetrics/{runId}` and, for existence only, the failure alert
+ * `ops/alerts/jobFailed/usageMetrics` (its content is never read). Counts and coin sums only: there is no
  * step figure, uid or email in those documents and none is read here. Every
  * normaliser below copies named, documented fields only, so anything else a
  * document might carry cannot reach the page.
  *
  * Deliberate differences from the reference:
  * - No emulator switch and no fixture paths: the page only ever reads the
- *   three production paths in `USAGE_PATHS`.
- * - No `ops/alerts/jobFailed/usageMetrics` read. The ticket limits the page to
- *   three read paths; that alert is deleted by the next successful run, so
- *   "the latest run is recorded as failed" is the same signal.
+ *   four production paths in `USAGE_PATHS`.
+ * - The alert document is read for existence only (`alertPresent`), as the
+ *   reference does, so a failure still shows the banner when the run-document
+ *   write itself failed. The next successful run deletes it again.
  */
 
 // ---------------------------------------------------------------------------
@@ -30,6 +31,7 @@ export const USAGE_PATHS = Object.freeze({
   daily: ["ops", "metrics", "daily"] as const,
   live: ["ops", "metrics", "live", "current"] as const,
   runs: ["ops", "jobRuns", "usageMetrics"] as const,
+  alert: ["ops", "alerts", "jobFailed", "usageMetrics"] as const,
 });
 
 // ---------------------------------------------------------------------------
@@ -430,6 +432,18 @@ export function normalizeDay(doc: unknown): UsageDay | null {
 // display).
 // ---------------------------------------------------------------------------
 
+/**
+ * The run statuses the page recognises. The engine job writes "ok" and
+ * "failed" (`functions/src/scheduled/usageMetrics.ts`, `services/ops.ts`);
+ * "running" is accepted for an in-progress record. Anything else is "unknown".
+ */
+export const RUN_STATUSES = ["ok", "failed", "running"] as const;
+export type RunStatus = (typeof RUN_STATUSES)[number];
+
+export function knownRunStatus(value: unknown): RunStatus | null {
+  return typeof value === "string" && (RUN_STATUSES as readonly string[]).includes(value) ? (value as RunStatus) : null;
+}
+
 export interface UsageRun {
   status: string | null;
   stage: string | null;
@@ -503,9 +517,12 @@ export function selectRange(days: UsageDay[], rangeKey: string): UsageDay[] {
   return days.filter((d) => d.date >= from);
 }
 
-/** A failed job: the latest run is recorded as failed. */
-export function jobFailed(lastRun: { status?: unknown } | null | undefined): boolean {
-  return lastRun !== null && lastRun !== undefined && lastRun.status === "failed";
+/**
+ * A failed job: the latest run is recorded as failed, or the engine's alert
+ * document is present (the next successful run deletes it).
+ */
+export function jobFailed(lastRun: { status?: unknown } | null | undefined, alertPresent = false): boolean {
+  return alertPresent === true || (lastRun !== null && lastRun !== undefined && lastRun.status === "failed");
 }
 
 export interface Tile {
@@ -546,15 +563,17 @@ export interface BuildModelInput {
   live: unknown;
   /** Newest `ops/jobRuns/usageMetrics` document (raw or normalised) or null. */
   lastRun: unknown;
+  /** True when `ops/alerts/jobFailed/usageMetrics` exists. */
+  alertPresent?: boolean;
   now: Date;
   rangeKey: string;
 }
 
-export function buildModel({ docs, live, lastRun, now, rangeKey }: BuildModelInput): UsageModel {
+export function buildModel({ docs, live, lastRun, alertPresent, now, rangeKey }: BuildModelInput): UsageModel {
   const range: RangeKey = (RANGE_KEYS as readonly string[]).includes(rangeKey) ? (rangeKey as RangeKey) : DEFAULT_RANGE;
   const all = normalizeDays(docs);
   const run = normalizeRun(lastRun);
-  const failed = jobFailed(run);
+  const failed = jobFailed(run, alertPresent === true);
   const base: UsageModelBase = { range, failed, lastRun: run };
   if (all.length === 0) return { ...base, state: "empty", all, rows: [], newest: null };
   const rows = selectRange(all, range);

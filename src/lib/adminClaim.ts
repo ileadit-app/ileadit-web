@@ -53,16 +53,6 @@ export async function isCurrentUserAdmin(): Promise<boolean> {
 const COMPETITION_CREATOR_CLAIM_KEY = "canCreateCompetitions";
 
 /**
- * "Can this signed-in user create a competition?" — true for the ileadit
- * admin claim OR the capability claim above. UI GATING ONLY, same caveat as
- * `isCurrentUserAdmin()` above: this decides whether `/competitions/new`
- * renders a form or a refusal, never whether the create actually succeeds.
- * The `createCompetition` callable re-checks this server-side (or will,
- * once Ivor's authorisation follow-up lands — see the P1.4 ticket) and a
- * user who reaches the form without either claim will still be refused
- * there.
- */
-/**
  * The STRICT admin test: only `claims.admin === true`. Pure, so the gate for
  * admin-only pages (`/admin/usage`, via `useStrictAdmin`) and its tests share
  * one definition.
@@ -76,6 +66,16 @@ export function hasStrictAdminClaim(claims: Record<string, unknown> | null | und
   return claims?.admin === true;
 }
 
+/**
+ * "Can this signed-in user create a competition?" — true for the ileadit
+ * admin claim OR the capability claim above. UI GATING ONLY, same caveat as
+ * `isCurrentUserAdmin()` above: this decides whether `/competitions/new`
+ * renders a form or a refusal, never whether the create actually succeeds.
+ * The `createCompetition` callable re-checks this server-side (or will,
+ * once Ivor's authorisation follow-up lands — see the P1.4 ticket) and a
+ * user who reaches the form without either claim will still be refused
+ * there.
+ */
 export async function canCreateCompetitions(): Promise<boolean> {
   const claims = await getForcedRefreshClaims();
   if (!claims) return false;

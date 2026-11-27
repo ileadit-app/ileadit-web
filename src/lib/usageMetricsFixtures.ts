@@ -21,6 +21,8 @@ export interface FixtureSet {
   live: { dates: Record<string, number>; computedAt: Date } | null;
   /** Newest first, as the page reads them. */
   runs: Obj[];
+  /** `ops/alerts/jobFailed/usageMetrics` when present (the "failed" set), else null. */
+  alert: Obj | null;
 }
 
 const FINAL_HOUR_UTC = 22;
@@ -164,13 +166,14 @@ function runDoc(now: Date, minutesAgo: number, status: "ok" | "failed"): Obj {
 
 export function buildFixture(name: FixtureName, now: Date): FixtureSet {
   const newest = addDays(londonDate(now), -1);
-  if (name === "none") return { daily: [], live: null, runs: [] };
+  if (name === "none") return { daily: [], live: null, runs: [], alert: null };
   if (name === "0") {
     const docs = Array.from({ length: 10 }, (_, i) => zeroDoc(addDays(newest, -(9 - i)), now));
     return {
       daily: docs.map((d) => ({ id: d.date as string, data: d })),
       live: { dates: { [londonDate(now)]: 0, [newest]: 0 }, computedAt: new Date(now.getTime() - 9 * 60000) },
       runs: [runDoc(now, 22, "ok")],
+      alert: null,
     };
   }
   const shape: Shape =
@@ -191,5 +194,9 @@ export function buildFixture(name: FixtureName, now: Date): FixtureSet {
       computedAt: new Date(now.getTime() - 9 * 60000),
     },
     runs: name === "failed" ? [runDoc(now, 20, "failed"), runDoc(now, 80, "ok")] : [runDoc(now, 22, "ok"), runDoc(now, 82, "ok")],
+    alert:
+      name === "failed"
+        ? { job: "usageMetrics", kind: "jobFailed", at: new Date(now.getTime() - 20 * 60000) }
+        : null,
   };
 }
