@@ -62,6 +62,20 @@ const COMPETITION_CREATOR_CLAIM_KEY = "canCreateCompetitions";
  * user who reaches the form without either claim will still be refused
  * there.
  */
+/**
+ * The STRICT admin test: only `claims.admin === true`. Pure, so the gate for
+ * admin-only pages (`/admin/usage`, via `useStrictAdmin`) and its tests share
+ * one definition.
+ *
+ * Do NOT use `canCreateCompetitions()` below to gate an admin-only page: it
+ * also returns true for the `canCreateCompetitions` capability claim, which is
+ * held by organisers who must not see operational data such as the usage
+ * numbers. Admin pages use this, or `isCurrentUserAdmin()`.
+ */
+export function hasStrictAdminClaim(claims: Record<string, unknown> | null | undefined): boolean {
+  return claims?.admin === true;
+}
+
 export async function canCreateCompetitions(): Promise<boolean> {
   const claims = await getForcedRefreshClaims();
   if (!claims) return false;
