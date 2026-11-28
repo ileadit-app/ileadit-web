@@ -113,3 +113,24 @@ body {
   background-color: var(--color-background);
   color: var(--color-foreground);
 }
+
+/*
+ * Admin usage page (/admin/usage, WEB-PORTAL-USAGE-1): ten categorical chart
+ * colours, copied from the old admin viewer so the numbers read the same. They
+ * are plain custom properties (not @theme tokens) because the charts take them
+ * through inline SVG `fill`/`stroke`, never through generated utility classes.
+ * Each is at least 3:1 against #ffffff (graphical objects, WCAG 1.4.11); series
+ * are also told apart by pattern or by a labelled legend, not by colour alone.
+ */
+:root {
+  --usage-cat-1: #1d5fd1;
+  --usage-cat-2: #b4541a;
+  --usage-cat-3: #1f7a5c;
+  --usage-cat-4: #6b4fb3;
+  --usage-cat-5: #a3365a;
+  --usage-cat-6: #7a6a00;
+  --usage-cat-7: #0b7285;
+  --usage-cat-8: #c62828;
+  --usage-cat-9: #6b7280;
+  --usage-cat-10: #3d4a5c;
+}

@@ -6,6 +6,7 @@ import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { useUser } from "@/context/AuthContext";
 import { CreatedCompetitions } from "@/components/dashboard/CreatedCompetitions";
 import { PlayingCompetitions } from "@/components/dashboard/PlayingCompetitions";
+import { AdminUsageLink } from "@/components/dashboard/AdminUsageLink";
 import { useCanCreateCompetitions } from "@/lib/useCanCreateCompetitions";
 import { GOLD_BUTTON_LIGHT_BORDER_CLASSNAME } from "@/components/ui/buttonStyles";
 
@@ -103,6 +104,8 @@ function DashboardContent() {
           <CreatedCompetitions uid={user.uid} />
         </section>
       )}
+
+      <AdminUsageLink />
     </div>
   );
 }

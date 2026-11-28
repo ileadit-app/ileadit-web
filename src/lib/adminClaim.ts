@@ -53,6 +53,20 @@ export async function isCurrentUserAdmin(): Promise<boolean> {
 const COMPETITION_CREATOR_CLAIM_KEY = "canCreateCompetitions";
 
 /**
+ * The STRICT admin test: only `claims.admin === true`. Pure, so the gate for
+ * admin-only pages (`/admin/usage`, via `useStrictAdmin`) and its tests share
+ * one definition.
+ *
+ * Do NOT use `canCreateCompetitions()` below to gate an admin-only page: it
+ * also returns true for the `canCreateCompetitions` capability claim, which is
+ * held by organisers who must not see operational data such as the usage
+ * numbers. Admin pages use this, or `isCurrentUserAdmin()`.
+ */
+export function hasStrictAdminClaim(claims: Record<string, unknown> | null | undefined): boolean {
+  return claims?.admin === true;
+}
+
+/**
  * "Can this signed-in user create a competition?" — true for the ileadit
  * admin claim OR the capability claim above. UI GATING ONLY, same caveat as
  * `isCurrentUserAdmin()` above: this decides whether `/competitions/new`
