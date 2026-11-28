@@ -176,7 +176,7 @@ function Svg({
         viewBox={`0 0 ${width} ${height}`}
         role="img"
         aria-label={label}
-        className="block h-auto max-w-full"
+        className="block h-auto max-w-full overflow-visible"
       >
         <title>{label}</title>
         {children}

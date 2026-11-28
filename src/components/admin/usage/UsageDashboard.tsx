@@ -32,7 +32,7 @@ export function UsageDashboard() {
     <div className="mx-auto max-w-5xl px-4 py-10 sm:py-14">
       <h1 className="text-3xl font-extrabold text-brand-navy sm:text-4xl">Usage</h1>
       {model ? <UsageMeta model={model} /> : null}
-      {model ? <UsageLastRun run={model.lastRun} /> : null}
+      {model ? <UsageLastRun run={model.lastRun} failed={model.failed} /> : null}
 
       <div className="mt-5 flex flex-wrap items-center gap-2" role="group" aria-label="Date range">
         {RANGE_KEYS.map((key) => (

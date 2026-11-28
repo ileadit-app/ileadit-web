@@ -164,8 +164,10 @@ function runWhen(run: UsageRun): string {
  * hourly, so this is not "nightly". The status is shown only when it is one
  * the page knows (ok / failed / running); anything else reads "unknown".
  */
-export function UsageLastRun({ run }: { run: UsageRun | null }) {
-  if (run === null || run.status === "failed") return null;
+export function UsageLastRun({ run, failed = false }: { run: UsageRun | null; failed?: boolean }) {
+  // Hidden whenever the failure banner shows (including a failure known only from
+  // the alert document), so the page never says "failed" and "ok" at once.
+  if (failed || run === null || run.status === "failed") return null;
   const when = runWhen(run);
   const state = knownRunStatus(run.status) ?? "unknown";
   return (

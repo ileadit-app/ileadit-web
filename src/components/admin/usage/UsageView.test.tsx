@@ -115,6 +115,19 @@ describe("written states", () => {
     expect(screen.queryByTestId("last-run")).toBeNull();
   });
 
+  it("the last-run line is hidden whenever the failure banner shows, even if the run itself says ok", () => {
+    const ok = modelFor("5");
+    render(<UsageLastRun run={ok.lastRun} failed />);
+    expect(screen.queryByTestId("last-run")).toBeNull();
+  });
+
+  it("charts let edge axis labels draw outside the plot box, so the last date is not clipped", () => {
+    const { container } = content("5");
+    const svgs = Array.from(container.querySelectorAll("svg[role=img]"));
+    expect(svgs.length).toBeGreaterThanOrEqual(3);
+    for (const svg of svgs) expect((svg.getAttribute("class") ?? "").split(" ")).toContain("overflow-visible");
+  });
+
   it("the last-run status is shown only when known; anything else reads unknown", () => {
     const at = new Date("2026-11-26T01:00:00Z");
     for (const status of ["ok", "running"]) {
