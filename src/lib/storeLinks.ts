@@ -11,7 +11,7 @@
  * page. The shared rendering lives in `StoreButtons.tsx`; the shared words
  * live in `storeAvailabilityCopy` below.
  */
-export const PLAY_STORE_URL: string | null = null; // e.g. "https://play.google.com/store/apps/details?id=..."
+export const PLAY_STORE_URL: string | null = "https://play.google.com/store/apps/details?id=app.ileadit";
 export const APP_STORE_URL: string | null = null; // e.g. "https://apps.apple.com/app/id..."
 
 /**
