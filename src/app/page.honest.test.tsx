@@ -40,11 +40,12 @@ describe("homepage honesty (WEB-HONEST-1)", () => {
     expect(text).toMatch(/up to 3 free pilot/i);
   });
 
-  it("shows no store buttons or store links while no listing is public", () => {
+  it("links only to the public Google Play listing; no App Store button until that listing is public", () => {
     const { container } = render(<Home />);
     expect(screen.queryByText(/download on the app store/i)).toBeNull();
-    expect(screen.queryByText(/get it on google play/i)).toBeNull();
-    expect(container.querySelector('a[href="/download"]')).toBeNull();
+    expect(container.querySelector('a[href*="apps.apple.com"]')).toBeNull();
+    const play = container.querySelector('a[href="https://play.google.com/store/apps/details?id=app.ileadit"]');
+    expect(play).not.toBeNull();
   });
 
   it("never uses fitness wording, 'pts', or shows step numbers", () => {
